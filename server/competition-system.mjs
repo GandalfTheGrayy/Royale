@@ -2161,7 +2161,7 @@ export function getCompetitionDashboard(database, userId) {
   const weekScanStart = new Date(`${currentWeekKey}T00:00:00.000Z`);
   weekScanStart.setUTCDate(weekScanStart.getUTCDate() - 1);
   const belongsToCurrentWeek = (value) =>
-    competitionWeekKey(database, value) === currentWeekKey;
+    weekKeyFor(value, runtimeConfig.schedule.timeZone) === currentWeekKey;
   const excludedIds = new Set(runtimeConfig.eligibility.excludedUserIds);
   const biggestHit = database
     .prepare(

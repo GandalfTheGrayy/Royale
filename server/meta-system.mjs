@@ -38,16 +38,22 @@ const eventIdFor = (record) =>
     )
     .digest("hex")}`;
 
+const calendarFormatters = new Map();
+function calendarFormatter(timeZone) {
+  let formatter = calendarFormatters.get(timeZone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" });
+    if (calendarFormatters.size >= 32) calendarFormatters.delete(calendarFormatters.keys().next().value);
+    calendarFormatters.set(timeZone, formatter);
+  }
+  return formatter;
+}
+
 export function weekKeyFor(value = new Date(), timeZone = "UTC") {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) throw new Error("Geçersiz hafta tarihi.");
   const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-CA", {
-      timeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    })
+    calendarFormatter(timeZone)
       .formatToParts(date)
       .filter((part) => part.type !== "literal")
       .map((part) => [part.type, Number(part.value)]),
@@ -67,7 +73,7 @@ function configuredCompetitionTimeZone(database) {
       .get();
     const timeZone = JSON.parse(row?.config_json ?? "{}").schedule?.timeZone;
     if (timeZone) {
-      new Intl.DateTimeFormat("en", { timeZone }).format();
+      calendarFormatter(timeZone).format();
       return timeZone;
     }
   } catch {
@@ -376,6 +382,8 @@ export function initializeMetaSystem(database) {
     CREATE INDEX IF NOT EXISTS idx_meta_settlement_game_time ON meta_round_settlements(game_id, settled_at DESC);
     CREATE INDEX IF NOT EXISTS idx_meta_settlement_time ON meta_round_settlements(settled_at DESC);
     CREATE INDEX IF NOT EXISTS idx_meta_settlement_valid_game_time ON meta_round_settlements(game_id, settled_at DESC) WHERE invalidated_at IS NULL;
+    CREATE INDEX IF NOT EXISTS idx_meta_settlement_record_payout ON meta_round_settlements(payout_micro DESC) WHERE competitive_eligible=1 AND invalidated_at IS NULL;
+    CREATE INDEX IF NOT EXISTS idx_meta_settlement_record_multiplier ON meta_round_settlements(multiplier DESC) WHERE competitive_eligible=1 AND invalidated_at IS NULL;
     CREATE INDEX IF NOT EXISTS idx_meta_settlement_competitive ON meta_round_settlements(competitive_eligible, settled_at DESC);
     CREATE TABLE IF NOT EXISTS meta_settlement_invalidations (
       event_id TEXT PRIMARY KEY,invalidated_at TEXT NOT NULL,invalidated_by TEXT NOT NULL REFERENCES users(id),

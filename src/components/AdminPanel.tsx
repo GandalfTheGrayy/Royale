@@ -505,8 +505,13 @@ export default function AdminPanel({ balance, setBalance, onClose }: Props) {
   const musicPreviewUrlRef = useRef("");
 
   useEffect(() => {
+    // These screens load their own data; don't download game history behind them.
+    if (tab === "users" || tab === "competition") return;
     let active = true;
-    const refresh = () =>
+    let inFlight = false;
+    const refresh = () => {
+      if (!active || inFlight || document.hidden) return;
+      inFlight = true;
       void Promise.all([
         getCasinoSummary('all'),
         getCasinoRounds('all'),
@@ -531,16 +536,21 @@ export default function AdminPanel({ balance, setBalance, onClose }: Props) {
           setConversations(nextConversations);
           setStorage(nextStorage);
         },
-      );
+      ).catch(() => {
+        if (active) setNotice("Veriler yenilenemedi; bağlantı düzeldiğinde yeniden denenecek.");
+      }).finally(() => { inFlight = false; });
+    };
     refresh();
     const poll = window.setInterval(refresh, 5000);
     const unsubscribe = subscribeCasinoDatabase(refresh);
+    document.addEventListener("visibilitychange", refresh);
     return () => {
       active = false;
       window.clearInterval(poll);
       unsubscribe();
+      document.removeEventListener("visibilitychange", refresh);
     };
-  }, []);
+  }, [tab]);
 
   useEffect(
     () => () => {
