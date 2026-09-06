@@ -3,8 +3,17 @@ import { Component, type ErrorInfo, type ReactNode } from 'react'
 type Props = { children: ReactNode }
 type State = { error: Error | null }
 
+const CHUNK_RECOVERY_KEY = 'pehlevan:chunk-recovery'
+
+export function isRecoverableChunkLoadError(error: Error) {
+  return /failed to fetch dynamically imported module|importing a module script failed|chunkloaderror|loading chunk .* failed/i.test(
+    `${error.name} ${error.message}`,
+  )
+}
+
 export default class AppErrorBoundary extends Component<Props, State> {
   state: State = { error: null }
+  private recoveryTimer: number | undefined
 
   static getDerivedStateFromError(error: Error): State {
     return { error }
@@ -12,6 +21,30 @@ export default class AppErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('[Pehlevan Royale] Görünüm güvenli moda alındı.', error, info)
+
+    if (!isRecoverableChunkLoadError(error)) return
+
+    try {
+      if (window.sessionStorage.getItem(CHUNK_RECOVERY_KEY) === '1') return
+      window.sessionStorage.setItem(CHUNK_RECOVERY_KEY, '1')
+      window.location.reload()
+    } catch {
+      // Depolama kapalıysa kullanıcı ekrandaki yeniden yükleme düğmesini kullanabilir.
+    }
+  }
+
+  componentDidMount() {
+    this.recoveryTimer = window.setTimeout(() => {
+      try {
+        window.sessionStorage.removeItem(CHUNK_RECOVERY_KEY)
+      } catch {
+        // Gizli mod veya tarayıcı ilkeleri sessionStorage erişimini engelleyebilir.
+      }
+    }, 15_000)
+  }
+
+  componentWillUnmount() {
+    if (this.recoveryTimer !== undefined) window.clearTimeout(this.recoveryTimer)
   }
 
   render() {
@@ -30,4 +63,3 @@ export default class AppErrorBoundary extends Component<Props, State> {
     </main>
   }
 }
-

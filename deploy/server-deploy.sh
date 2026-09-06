@@ -60,6 +60,16 @@ npm exec tsc -- -b --force
 npm exec vite build -- --outDir dist-next
 node scripts/optimize-static-assets.mjs dist-next/assets
 
+echo "==> Acik tarayicilar icin onceki surum parcalari korunuyor"
+if [[ -d "$APP_DIR/dist/assets" ]]; then
+  find "$APP_DIR/dist/assets" -maxdepth 1 -type f \
+    \( -name '*.js' -o -name '*.css' -o -name '*.map' \) \
+    -exec cp -p -n {} "$APP_DIR/dist-next/assets/" \;
+fi
+find "$APP_DIR/dist-next/assets" -maxdepth 1 -type f \
+  \( -name '*.js' -o -name '*.css' -o -name '*.map' \) \
+  -mtime +14 -delete
+
 echo "==> Sistem kullanicisi ve kalici veri dizini hazirlaniyor"
 if ! id -u royale >/dev/null 2>&1; then
   useradd --system --home-dir "$DATA_DIR" --shell /usr/sbin/nologin royale

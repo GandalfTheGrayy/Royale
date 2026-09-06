@@ -810,7 +810,7 @@ function CasinoHoldemTable({
           >
             <button
               className="poker-modal-close"
-              onClick={() => setSummaryOpen(false)}
+              onClick={reset}
               aria-label="Kapat"
             >
               ×
