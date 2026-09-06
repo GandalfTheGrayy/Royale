@@ -454,6 +454,24 @@
 .event-wheel-spin.event-side-might .allah-wheel.might img,.event-wheel-spin.event-side-mercy .allah-wheel.mercy img { animation: allahWheelSpin .95s cubic-bezier(.08,.72,.18,1); }
 .event-wheel-anticipation.event-side-might .allah-wheel.might img,.event-wheel-anticipation.event-side-mercy .allah-wheel.mercy img { animation: allahWheelTease .24s ease-in-out 3 alternate; }
 .event-global-merge .allah-global-value { animation: allahGlobalMerge .55s ease-out; }
+.event-global-row-charge .allah-global-value,
+.event-global-row-apply .allah-global-value { animation: allahGlobalMerge var(--allah-event-duration) ease-out; color: #fff1a7; }
+.allah-global-core { position: relative; }
+.allah-global-row-caption { background: #10212e; border: 1px solid #e6ba64; border-radius: 6px; bottom: -23px; color: #ffedb4; font-size: clamp(8px,.8vw,12px); left: 50%; padding: 4px 10px; position: absolute; transform: translateX(-50%); white-space: nowrap; z-index: 15; }
+.allah-cell.global-applied { border-color: #d9b363; box-shadow: inset 0 0 14px rgba(255,209,105,.18); }
+.event-global-row-charge .allah-cell.event-target,
+.event-global-row-apply .allah-cell.event-target { border-color: #fff2a4; box-shadow: inset 0 0 28px rgba(255,204,80,.38), 0 0 15px rgba(255,214,114,.38); z-index: 4; }
+.allah-global-coin-equation { background: rgba(5,19,29,.92); border: 1px solid #caa75f; border-radius: 5px; color: #fff0be; font: 800 clamp(8px,.85vw,13px)/1.25 Inter,sans-serif; left: 50%; padding: 4px 6px; position: absolute; top: 12%; transform: translateX(-50%); white-space: nowrap; z-index: 6; }
+.allah-global-coin-equation i { color: #7df0e1; font-style: normal; }
+.event-global-row-apply .allah-global-coin-equation { animation: allahGlobalEquationOut var(--allah-event-duration) ease-out both; }
+.allah-cell b.allah-global-new-value { animation: allahGlobalValueIn var(--allah-event-duration) cubic-bezier(.17,.85,.28,1.2) both; color: #fff5ae; }
+.allah-cell.kind-collector b.allah-global-new-value { animation-name: allahGlobalCollectorValueIn; color: #291805; }
+.allah-global-row-wave { background: linear-gradient(90deg,transparent,rgba(255,219,117,.15),rgba(255,246,199,.55),transparent); border-block: 1px solid rgba(255,220,130,.65); height: calc(100% / 6); left: 0; overflow: hidden; pointer-events: none; position: absolute; top: calc(var(--global-row) * 100% / 6); width: 100%; z-index: 5; animation: allahGlobalRowSweep var(--allah-event-duration) ease-out both; }
+.allah-global-row-wave span { color: #fff6c8; font: 900 clamp(12px,2vw,27px)/1 Georgia,serif; position: absolute; right: 3%; text-shadow: 0 0 16px #f1b748; top: 12%; }
+@keyframes allahGlobalRowSweep { 0% { clip-path: inset(0 100% 0 0); opacity: 0; } 35% { opacity: 1; } 80% { clip-path: inset(0); opacity: .7; } 100% { clip-path: inset(0); opacity: 0; } }
+@keyframes allahGlobalEquationOut { 0%,20% { opacity: 1; transform: translate(-50%,0); } 65%,100% { opacity: 0; transform: translate(-50%,-12px); } }
+@keyframes allahGlobalValueIn { 0%,18% { opacity: 0; transform: translate(-50%,-20%) scale(.55); } 62% { opacity: 1; transform: translate(-50%,-50%) scale(1.5); text-shadow: 0 0 18px #ffc750; } 100% { opacity: 1; transform: translate(-50%,-50%) scale(1); } }
+@keyframes allahGlobalCollectorValueIn { 0%,18% { opacity: 0; transform: translateX(-50%) scale(.55); } 62% { opacity: 1; transform: translateX(-50%) scale(1.4); } 100% { opacity: 1; transform: translateX(-50%) scale(1); } }
 .event-board-multiplier-wake .allah-cell.event-target { animation:allahMultiplierWake .42s ease-out; z-index:4; }
 .event-board-multiplier-apply .allah-cell.event-target { animation:allahMultiplierApply .26s cubic-bezier(.18,.82,.2,1.35); }
 .event-board-multiplier-wave .allah-cell.event-target::after { animation: allahMultiplierWave .75s ease-out; }

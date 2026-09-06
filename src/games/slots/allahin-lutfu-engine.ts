@@ -85,6 +85,8 @@ export type AllahFeatureEventType =
   | "wheel-anticipation"
   | "wheel-spin"
   | "global-merge"
+  | "global-row-charge"
+  | "global-row-apply"
   | "board-multiplier-wake"
   | "board-multiplier-cast"
   | "board-multiplier-apply"
@@ -122,6 +124,8 @@ export type AllahFeatureEvent = {
   minimumCoinTier: number;
   globalMultiplier: number;
   collectorValues: Record<string, number>;
+  /** Presentation-only values after the final global multiplier, keyed by cell id. */
+  globalAppliedValues: Record<string, number>;
 };
 
 export type AllahPersistentState = {
@@ -171,6 +175,7 @@ export type AllahSpinResult = {
   nextBonus?: AllahBonusState;
   persistent: AllahPersistentState;
   collectorValues: Record<string, number>;
+  globalAppliedValues: Record<string, number>;
   globalKeySlots: Array<number | null>;
   featureCycles: number;
 };
@@ -327,6 +332,8 @@ const normalDurations: Record<AllahFeatureEventType, [number, number]> = {
   "wheel-anticipation": [480, 150],
   "wheel-spin": [980, 300],
   "global-merge": [480, 150],
+  "global-row-charge": [360, 100],
+  "global-row-apply": [640, 180],
   "board-multiplier-wake": [420, 110],
   "board-multiplier-cast": [340, 85],
   "board-multiplier-apply": [260, 65],
@@ -778,6 +785,7 @@ export function runAllahSpin(
   const grid = cloneGrid(initialGrid);
   const events: AllahFeatureEvent[] = [];
   const collectorValues: Record<string, number> = {};
+  const globalAppliedValues: Record<string, number> = {};
   const collectedCoinIds = new Set<string>();
   let globalKeySlots: Array<number | null> = state.globalMultiplier > 1
     ? [state.globalMultiplier, null, null]
@@ -803,6 +811,7 @@ export function runAllahSpin(
       minimumCoinTier: state.minimumCoinTier,
       globalMultiplier: state.globalMultiplier,
       collectorValues: { ...collectorValues },
+      globalAppliedValues: { ...globalAppliedValues },
     });
   };
 
@@ -1311,6 +1320,31 @@ export function runAllahSpin(
         roundX((lineWinX + coinWinX + collectorWinX) * state.globalMultiplier),
       );
   const payout = roundMoney(Math.max(0, request.wager) * grossMultiplier);
+  // The money calculation above already applies the global factor exactly once.
+  // Reveal that same factor row by row without modifying payable grid values.
+  // Swept coins are represented by their collector, not awarded a second time.
+  if (state.globalMultiplier > 1 && !maxCoin) {
+    for (let row = 0; row < ALLAH_ROWS; row += 1) {
+      const cells = grid[row].flatMap((cell, column) =>
+        (cell.kind === "coin" && !collectedCoinIds.has(cell.id) && cell.value > 0) ||
+        (cell.kind === "collector" && (collectorValues[cell.id] ?? 0) > 0)
+          ? [{ row, column }] : [],
+      );
+      if (!cells.length) continue;
+      const before = roundX(cells.reduce((sum, { column }) => {
+        const cell = grid[row][column];
+        return sum + (cell.kind === "coin" ? cell.value : collectorValues[cell.id] ?? 0);
+      }, 0));
+      const payload = { row, multiplier: state.globalMultiplier, before, after: roundX(before * state.globalMultiplier) };
+      emit("global-row-charge", cells, payload);
+      for (const { column } of cells) {
+        const cell = grid[row][column];
+        const value = cell.kind === "coin" ? cell.value : collectorValues[cell.id] ?? 0;
+        globalAppliedValues[cell.id] = roundX(value * state.globalMultiplier);
+      }
+      emit("global-row-apply", cells, payload);
+    }
+  }
   emit("payout-count", [], {
     lineWinX,
     coinWinX,
@@ -1361,6 +1395,7 @@ export function runAllahSpin(
     nextBonus,
     persistent: state,
     collectorValues,
+    globalAppliedValues,
     globalKeySlots,
     featureCycles,
   };

@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   DEFAULT_ALLAH_TUNING,
+  DEFAULT_MINE_DROP_TUNING,
+  migrateMineDropTuning,
   applyAdminAllahPreset,
   getAdminSettings,
   resetAdminSettings,
@@ -11,6 +13,25 @@ import {
 
 describe("casino admin settings", () => {
   afterEach(() => resetAdminSettings());
+
+  it("eski Baykuş Madeni sembol dengesini taşır, özel admin ayarlarını korur", () => {
+    const saved = structuredClone(DEFAULT_MINE_DROP_TUNING);
+    saved.profileName = "baykus-madeni-v2-drop-choreography-967";
+    saved.symbolWeights.obsidian = { tool: 72, eye: 2, tnt: 8, book: 5, maxBook: 2, empty: 11 };
+    saved.symbolWeights.diamond.tool = 49;
+    saved.animation.hitMs = 725;
+    saved.modeCosts.obsidian = 1200;
+    const migrated = migrateMineDropTuning(saved)!;
+    expect(migrated.symbolWeights.obsidian).toEqual(DEFAULT_MINE_DROP_TUNING.symbolWeights.obsidian);
+    expect(migrated.symbolWeights.diamond.tool).toBe(49);
+    expect(migrated.animation.hitMs).toBe(725);
+    expect(migrated.modeCosts.obsidian).toBe(1200);
+    expect(migrated.profileName).toBe(DEFAULT_MINE_DROP_TUNING.profileName);
+    expect(saved.symbolWeights.obsidian.tool).toBe(72);
+    expect(migrateMineDropTuning(migrated)).toBe(migrated);
+    saved.profileName = "özel-profil";
+    expect(migrateMineDropTuning(saved)).toBe(saved);
+  });
 
   it("oyun ayarlarını diğer feature anahtarlarını kaybetmeden günceller", () => {
     updateAdminGame("neon-kasasi", {

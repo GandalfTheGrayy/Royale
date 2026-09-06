@@ -19,8 +19,11 @@ import { SlotAudio } from "./slot-audio";
 import {
   cloneMine,
   createMine,
+  createMineBonusProgress,
   rollMysteryOutcome,
   runMineSpin,
+  settleMineBonusSpin,
+  type MineBonusProgress,
   type MineBlock,
   type MineBonusTier,
   type MinePaidMode,
@@ -40,6 +43,8 @@ type BonusSession = {
   remaining: number;
   played: number;
   totalWin: number;
+  progress: MineBonusProgress;
+  maxWinX: number;
   openedChests: number;
   mine: MineState;
 };
@@ -60,6 +65,7 @@ type ChestMath = {
   totalWinX: number;
   payout: number;
   credited: boolean;
+  capped: boolean;
 };
 type PendingBuy = { kind: MineBonusTier | "mystery"; label: string; costX: number };
 
@@ -175,7 +181,7 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
     });
   };
 
-  const playPresentation = async (spinResult: MineSpinResult) => {
+  const playPresentation = async (spinResult: MineSpinResult, activeBonus?: BonusSession, activeMode: MinePaidMode = mode) => {
     setResult(undefined);
     setRoundWinX(0);
     setActors([]);
@@ -194,6 +200,13 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
     setPhase("dig");
     let displayedBlockWin = 0;
     let displayedChestMultiplier = 1;
+    const scale = activeBonus
+      ? tuning.payoutScales[`bonus-${activeBonus.tier}`] * (activeBonus.source === "mystery" ? tuning.payoutScales.mystery : 1)
+      : tuning.payoutScales[activeMode];
+    const progressBefore = activeBonus?.progress ?? { blockWinX: 0, chestMultiplierX: 1, totalWinX: 0 };
+    const displaySettlement = () => settleMineBonusSpin(progressBefore, {
+      blockWinX: displayedBlockWin, chestMultiplierX: displayedChestMultiplier,
+    }, scale, activeBonus?.maxWinX ?? tuning.maxWinX);
 
     for (const event of spinResult.events.filter((candidate) => candidate.kind === "upgrade")) {
       if (!mountedRef.current) return;
@@ -256,19 +269,20 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
         addBurst(event, "chest");
         audioRef.current?.play("multiplierImpact", event.column ?? 0);
       }
-      if (chests.length) {
-        const totalWinX = displayedBlockWin * displayedChestMultiplier;
+      const displayed = displaySettlement();
+      if (chests.length || (breaks.length && displayed.chestMultiplierX > 1)) {
         setChestMath({
           id: ++eventId.current,
-          blockWinX: displayedBlockWin,
-          chestMultiplierX: displayedChestMultiplier,
-          totalWinX,
-          payout: Math.round(wager * totalWinX * 100) / 100,
+          blockWinX: displayed.blockWinX * scale,
+          chestMultiplierX: displayed.chestMultiplierX,
+          totalWinX: displayed.totalWinX,
+          payout: Math.round(wager * displayed.totalWinX * 100) / 100,
           credited: false,
+          capped: displayed.totalWinX < displayed.blockWinX * displayed.chestMultiplierX * scale,
         });
-        setNotice(`${chests.length} sandık açıldı · ${money.format(displayedBlockWin)}× blok kazancı ${money.format(displayedChestMultiplier)}× ile çarpılıyor.`);
+        if (chests.length) setNotice(`${chests.length} sandık açıldı · ${activeBonus ? "bonus boyunca biriken" : "bu turun"} blok kazancı ${money.format(displayed.chestMultiplierX)}× ile çarpılıyor.`);
       }
-      setRoundWinX(displayedBlockWin * displayedChestMultiplier);
+      setRoundWinX(displayed.creditWinX);
       const waveWait = Math.max(
         hits.length ? tuning.animation.hitMs : 0,
         breaks.length ? tuning.animation.breakMs : 0,
@@ -316,9 +330,11 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
       net: payout - cost, outcome: payout > cost ? "win" : payout < cost ? "loss" : "push",
       balanceBefore, balanceAfter: balanceBefore - cost + payout,
       result: {
-        telemetryVersion: 2, rngModel: tuning.profileName, visibleRuleset: "minedrop-2-flow-reconstruction-v2",
+        telemetryVersion: 3, rngModel: tuning.profileName, visibleRuleset: "minedrop-2-session-chests-v3",
         reel: spinResult.reel, mine: spinResult.mine, eyeCount: spinResult.eyeCount, triggeredBonus: spinResult.triggeredBonus,
         blockWinX: spinResult.blockWinX, chestMultiplierX: spinResult.chestMultiplierX, grossMultiplier: spinResult.totalWinX, events: spinResult.events,
+        bonusProgressBefore: activeBonus?.progress,
+        bonusProgressAfter: activeBonus ? settleMineBonusSpin(activeBonus.progress, spinResult, tuning.payoutScales[`bonus-${activeBonus.tier}`] * (activeBonus.source === "mystery" ? tuning.payoutScales.mystery : 1), activeBonus.maxWinX) : undefined,
       },
       modifiers: { bonus: Boolean(activeBonus), bonusTier: activeBonus?.tier, bonusSource: activeBonus?.source, mode: activeMode, costX: activeBonus ? 0 : tuning.modeCosts[activeMode] },
     });
@@ -346,7 +362,8 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
     if (spinResult.totalWinX > 0) audioRef.current?.play(spinResult.totalWinX >= 25 ? "bigWin" : "win");
     if (spinResult.eyeCount) audioRef.current?.play("eye");
     if (spinResult.triggeredBonus) {
-      const session: BonusSession = { tier: spinResult.triggeredBonus, source: "natural", remaining: tuning.bonusSpins, played: 0, totalWin: 0, openedChests: 0, mine: spinResult.mine };
+      const session: BonusSession = { tier: spinResult.triggeredBonus, source: "natural", remaining: tuning.bonusSpins, played: 0, totalWin: 0, progress: createMineBonusProgress(spinResult.mine), maxWinX: tuning.maxWinX - spinResult.totalWinX, openedChests: 0, mine: spinResult.mine };
+      setRoundWinX(0);
       setBonus(session); setFeatureIntro(spinResult.triggeredBonus);
       setNotice(`${bonusCopy[spinResult.triggeredBonus].title} açıldı.`);
     } else setNotice(spinResult.totalWinX ? `${money.format(spinResult.totalWinX)}× · ${money.format(payout)} PR` : "Kazmalar sustu; yeni duvar hazırlanıyor.");
@@ -362,18 +379,19 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
       const roundId = `baykus-madeni-bonus-${Date.now()}-${crypto.randomUUID()}`;
       const startedAt = new Date().toISOString();
       const spinResult = runMineSpin({ mine: session.mine, mode: "base", bonusTier: session.tier, tuning });
-      await playPresentation(spinResult);
-      if (!mountedRef.current) return;
       const sourceScale = session.source === "mystery" ? tuning.payoutScales.mystery : 1;
-      const totalWinX = Math.min(tuning.maxWinX, spinResult.totalWinX * sourceScale);
-      const settledResult = { ...spinResult, totalWinX };
-      const payout = Math.round(wager * totalWinX * 100) / 100;
+      const progress = settleMineBonusSpin(session.progress, spinResult, tuning.payoutScales[`bonus-${session.tier}`] * sourceScale, session.maxWinX);
+      const settledResult = { ...spinResult, totalWinX: progress.creditWinX };
+      await playPresentation(settledResult, session);
+      if (!mountedRef.current) return;
+      const totalWin = Math.round(wager * progress.totalWinX * 100) / 100;
+      const payout = Math.round((totalWin - session.totalWin) * 100) / 100;
       changeBalance(payout);
-      showBalanceCredit(payout, totalWinX);
+      showBalanceCredit(totalWin, progress.totalWinX);
       recordSpin(settledResult, roundId, startedAt, balanceBefore, 0, payout, "base", session);
       session = {
         ...session, mine: spinResult.mine, remaining: session.remaining - 1,
-        played: session.played + 1, totalWin: session.totalWin + payout, openedChests: session.openedChests + spinResult.openedChests.length,
+        played: session.played + 1, totalWin, progress, openedChests: session.openedChests + spinResult.openedChests.length,
       };
       setBonus(session); setMine(spinResult.mine); setRoundWinX(0);
       setNotice(`${bonusCopy[session.tier].title} · ${session.remaining} dönüş kaldı · toplam ${money.format(session.totalWin)} PR`);
@@ -425,7 +443,8 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
         const freshMine = createMine(undefined, tuning);
         const tier: MineBonusTier = outcome;
         setMine(freshMine); setDisplayMine(cloneMine(freshMine));
-        setBonus({ tier, source: "mystery", remaining: tuning.bonusSpins, played: 0, totalWin: 0, openedChests: 0, mine: freshMine });
+        setRoundWinX(0);
+        setBonus({ tier, source: "mystery", remaining: tuning.bonusSpins, played: 0, totalWin: 0, progress: createMineBonusProgress(freshMine), maxWinX: tuning.maxWinX, openedChests: 0, mine: freshMine });
         setFeatureIntro(tier);
       }
       return;
@@ -434,7 +453,8 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
     const freshMine = createMine(undefined, tuning);
     const tier = pending.kind;
     setMine(freshMine); setDisplayMine(cloneMine(freshMine));
-    setBonus({ tier, source: "buy", remaining: tuning.bonusSpins, played: 0, totalWin: 0, openedChests: 0, mine: freshMine });
+    setRoundWinX(0);
+    setBonus({ tier, source: "buy", remaining: tuning.bonusSpins, played: 0, totalWin: 0, progress: createMineBonusProgress(freshMine), maxWinX: tuning.maxWinX, openedChests: 0, mine: freshMine });
     setFeatureIntro(tier);
   };
 
@@ -467,13 +487,13 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
           {chestMath && <div key={chestMath.id} className={`owl-chest-math ${chestMath.credited ? "credited" : ""}`} role="status" aria-live="polite">
             <small>SANDIK ÇARPANI UYGULANIYOR</small>
             <div>
-              <span><b>{money.format(chestMath.blockWinX)}×</b><em>BLOK</em></span>
+              <span><b>{money.format(chestMath.blockWinX)}×</b><em>{bonus ? "BİRİKEN BLOK" : "BLOK"}</em></span>
               <i>×</i>
               <span className="chest-factor"><b>{money.format(chestMath.chestMultiplierX)}×</b><em>SANDIK</em></span>
-              <i>=</i>
-              <span className="chest-total"><b>{money.format(chestMath.totalWinX)}×</b><em>TUR ÇARPANI</em></span>
+              <i>{chestMath.capped ? "→" : "="}</i>
+              <span className="chest-total"><b>{money.format(chestMath.totalWinX)}×</b><em>{chestMath.capped ? "AZAMİ ÖDEME SINIRI" : bonus ? "BONUS TOPLAMI" : "TUR ÇARPANI"}</em></span>
             </div>
-            <p>{money.format(wager)} PR bahis × {money.format(chestMath.totalWinX)}× = <strong>{money.format(chestMath.payout)} PR</strong> <b>{chestMath.credited ? "BAKİYEYE EKLENDİ" : "BAKİYEYE EKLENECEK"}</b></p>
+            <p>{money.format(wager)} PR bahis × {money.format(chestMath.totalWinX)}× = <strong>{money.format(chestMath.payout)} PR</strong> <b>{bonus ? chestMath.credited ? "TOPLAM ÖDENEN" : "YENİ TOPLAM · YALNIZ FARK EKLENİR" : chestMath.credited ? "BAKİYEYE EKLENDİ" : "BAKİYEYE EKLENECEK"}</b></p>
           </div>}
           <div className="owl-playfield">
             <div className="owl-depth-rail"><span>YÜZEY</span><i /><span>DERİN GALERİ</span></div>
@@ -518,14 +538,14 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
             <div><small>AKTİF PROFİL</small><b>{bonus ? bonusCopy[bonus.tier].title : modeCopy[mode].title}</b><span>{bonus ? bonusCopy[bonus.tier].detail : modeCopy[mode].detail}</span></div>
             <div className="owl-risk"><small>VOLATİLİTE</small><span>{Array.from({ length: 5 }, (_, index) => <i key={index} className={index < modeCopy[mode].risk ? "on" : ""} />)}</span></div>
             <div><small>TUR KAZANCI</small><strong>{money.format(roundWinX * wager)} PR</strong><span>{money.format(roundWinX)}× temel bahis</span></div>
-            {bonus && <div className="owl-bonus-progress"><small>TOPLAM BONUS KAZANCI</small><strong>{money.format(bonusDisplayedTotal)} PR</strong><b>{bonus.played} oynandı · {bonus.remaining} kaldı</b><span>{bonus.openedChests} sandık açıldı · bonus bitince sonuç raporu gösterilir</span></div>}
+            {bonus && <div className="owl-bonus-progress"><small>TOPLAM BONUS KAZANCI</small><strong>{money.format(bonusDisplayedTotal)} PR</strong><b>{bonus.played} oynandı · {bonus.remaining} kaldı</b><span>{bonus.openedChests} sandık açıldı · {money.format(bonus.progress.chestMultiplierX)}× kalıcı çarpan</span></div>}
           </aside>
         </div>
 
         <div className="owl-mine-notice" role="status"><i className={phase === "dig" ? "working" : ""} />{notice}</div>
         <section className="owl-mine-controls">
-          <button className="owl-feature-button" onClick={() => setBuyOpen(true)} disabled={busy}><img src={specialAssets.eye} alt="" /><span><small>VOLATİLİTE ANAHTARI</small>{mode === "base" ? "ÖZEL MODLAR" : modeCopy[mode].title}</span></button>
-          <label><span>TEMEL BAHİS</span><div><button disabled={busy} onClick={() => setWager((value) => Math.max(settings.minBet, value - 5))}>−</button><b>{money.format(wager)} PR</b><button disabled={busy} onClick={() => setWager((value) => value + 5)}>+</button></div></label>
+          <button className="owl-feature-button" onClick={() => setBuyOpen(true)} disabled={busy || Boolean(bonus)}><img src={specialAssets.eye} alt="" /><span><small>VOLATİLİTE ANAHTARI</small>{mode === "base" ? "ÖZEL MODLAR" : modeCopy[mode].title}</span></button>
+          <label><span>TEMEL BAHİS</span><div><button disabled={busy || Boolean(bonus)} onClick={() => setWager((value) => Math.max(settings.minBet, value - 5))}>−</button><b>{money.format(wager)} PR</b><button disabled={busy || Boolean(bonus)} onClick={() => setWager((value) => value + 5)}>+</button></div></label>
           <button className={`owl-turbo ${turbo ? "on" : ""}`} disabled={busy} onClick={() => setTurbo((value) => !value)}>⚡<small>{turbo ? "TURBO" : "NORMAL"}</small></button>
           <button className="owl-spin" disabled={!canPlay} onClick={() => void playPaidSpin()}><span>{busy ? "KAZILIYOR" : "DÜŞÜR"}</span><small>{money.format(currentCost)} PR</small></button>
           <button className="owl-rules-button" onClick={() => setRulesOpen(true)}>i<small>KURALLAR</small></button>
@@ -570,7 +590,7 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
         <p>Kazmalar 5×3 panelden yalnız kendi sütunlarına düşer. Her salınım 1 hasar verir; kazma yukarı seker ve kalan dayanıklılığıyla aynı dikey hattaki bir sonraki sağlam bloğa yeniden düşer. Basamaklı yüzey nedeniyle sütun yükseklikleri farklı başlayabilir. Sütundaki altı mantıksal katman temizlenince sandık anında açılır.</p>
         <h3>Kazmalar</h3><div className="owl-rule-grid tools">{(Object.keys(tuning.toolDurability) as MineTool[]).map((tool) => <span key={tool}><img src={toolAssets[tool]} alt="" /><b>{toolNames[tool]}</b>{tuning.toolDurability[tool]} ayrı vuruş</span>)}</div>
         <h3>Bloklar</h3><div className="owl-rule-grid blocks">{(Object.keys(tuning.blockRules) as MineBlock[]).map((block) => <span key={block}><img src={blockAssets[block]} alt="" /><b>{blockNames[block]}</b>{tuning.blockRules[block].hp} vuruş · {block === "mystery" ? "2,5–100×" : `${tuning.blockRules[block].payoutX}×`}</span>)}</div>
-        <h3>Özel akış</h3><ul><li>Geliştirme kitabı bütün kazmaları Elmas; MAX kitap Obsidyen yapar.</li><li>TNT kazmalardan sonra düşer ve 3×3 alana 2 hasar verir.</li><li>Patlayıcı Cevher kırılınca sekiz komşusuna 1 hasar gönderir; zincirleme patlayabilir.</li><li>Bir sütun temizlenince sandık açılır ve değeri o turun bütün blok kazancını çarpar. Aynı turda açılan birden fazla sandık sırayla çarpılır.</li><li>3/4/5 Göz, Blok/Süper/Epik bonus açar. Bonus duvarı dönüşler arasında korunur ve bonus admin panelinde tanımlı sabit tur sayısında tamamlanır.</li><li>Elmas ve Obsidyen dönüşleri önceden kazılmış sahayla başlar; satır sayısı admin panelinden değişir.</li></ul>
+        <h3>Özel akış</h3><ul><li>Geliştirme kitabı bütün kazmaları en az Elmas; MAX kitap Obsidyen yapar.</li><li>TNT kazmalardan sonra düşer ve 3×3 alana 2 hasar verir.</li><li>Patlayıcı Cevher kırılınca sekiz komşusuna 1 hasar gönderir; zincirleme patlayabilir.</li><li>Bir sütun temizlenince sandık açılır. Normal, Elmas ve Obsidyen dönüşlerde sandıklar o turun blok kazancını çarpar. Blok, Süper ve Epik bonuslarda sandık çarpanları dönüşler arasında korunur ve özel oyun boyunca biriken bütün blok kazancına uygulanır. Birden fazla sandığın çarpanları birbiriyle çarpılır. Önceden ödenen tutar tekrar eklenmez; yalnız toplam kazançtaki artış bakiyeye geçer.</li><li>3/4/5 Göz, Blok/Süper/Epik bonus açar. Bonus duvarı korunur ve bonus sabit tur sayısında tamamlanır. Gizemli Dönüşten açılan bonuslar da aynı birikim kuralını kullanır. Doğal bonusta tetikleyen elin ödemesi ayrıdır; o el ve devamındaki bonus birlikte azami ödeme sınırına tabidir.</li><li>Elmas ve Obsidyen dönüşleri önceden kazılmış sahayla başlar; satır sayısı admin panelinden değişir.</li></ul>
         <button className="owl-rules-close" onClick={() => setRulesOpen(false)}>Madene dön</button>
       </article></div>}
     </main>

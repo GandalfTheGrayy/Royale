@@ -11,7 +11,8 @@
     "assets:optimize": "node scripts/optimize-static-assets.mjs",
     "preview": "vite preview",
     "share": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\BASLAT-UZAKTAN-PAYLAS.ps1",
-    "test": "vitest run"
+    "test": "vitest run",
+    "math:baykus": "node scripts/run-baykus-madeni-math-report.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",

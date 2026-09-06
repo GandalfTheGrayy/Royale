@@ -47,6 +47,34 @@ export const MINE_MAX_WIN_X = DEFAULT_MINE_DROP_TUNING.maxWinX;
 export const TOOL_DURABILITY = DEFAULT_MINE_DROP_TUNING.toolDurability;
 export const BLOCK_RULES = DEFAULT_MINE_DROP_TUNING.blockRules;
 
+export type MineBonusProgress = {
+  blockWinX: number;
+  chestMultiplierX: number;
+  totalWinX: number;
+};
+
+export function createMineBonusProgress(mine: MineState): MineBonusProgress {
+  return {
+    blockWinX: 0,
+    chestMultiplierX: mine.chests.reduce((product, chest) => product * (chest.opened ? chest.multiplier ?? 1 : 1), 1),
+    totalWinX: 0,
+  };
+}
+
+// Revalue the accumulated, unmultiplied block bank. Never multiply an already
+// multiplied payout again, and only credit the increase over the previous total.
+export function settleMineBonusSpin(
+  previous: MineBonusProgress,
+  spin: Pick<MineSpinResult, "blockWinX" | "chestMultiplierX">,
+  scale = 1,
+  maxWinX = MINE_MAX_WIN_X,
+) {
+  const blockWinX = previous.blockWinX + spin.blockWinX;
+  const chestMultiplierX = previous.chestMultiplierX * spin.chestMultiplierX;
+  const totalWinX = Math.min(Math.max(0, maxWinX), blockWinX * chestMultiplierX * scale);
+  return { blockWinX, chestMultiplierX, totalWinX, creditWinX: Math.max(0, totalWinX - previous.totalWinX) };
+}
+
 function browserRandom() {
   const sample = new Uint32Array(1);
   crypto.getRandomValues(sample);

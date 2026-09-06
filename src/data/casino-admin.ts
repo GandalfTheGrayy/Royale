@@ -102,7 +102,7 @@ const mineSymbolWeights = (
 ) => ({ tool: 10.9, eye: 2, tnt: 2, book: 1, maxBook: 0.15, empty: 83.95, ...patch });
 
 export const DEFAULT_MINE_DROP_TUNING: MineDropTuningSettings = {
-  profileName: "baykus-madeni-v2-drop-choreography-967",
+  profileName: "baykus-madeni-v3-session-chests-balanced",
   maxWinX: 50_000,
   bonusSpins: 4,
   modeCosts: { base: 1, extra: 3, super: 6, diamond: 250, obsidian: 1_000 },
@@ -115,14 +115,14 @@ export const DEFAULT_MINE_DROP_TUNING: MineDropTuningSettings = {
     diamond: { hp: 6, payoutX: 5 }, obsidian: { hp: 7, payoutX: 25 },
   },
   symbolWeights: {
-    base: mineSymbolWeights(),
-    extra: mineSymbolWeights({ eye: 3.5, empty: 82.45 }),
-    super: mineSymbolWeights({ eye: 5, empty: 80.95 }),
-    diamond: mineSymbolWeights({ tool: 72, eye: 2, tnt: 8, book: 5, maxBook: 2, empty: 11 }),
-    obsidian: mineSymbolWeights({ tool: 72, eye: 2, tnt: 8, book: 5, maxBook: 2, empty: 11 }),
-    "bonus-block": mineSymbolWeights({ tool: 38, eye: 4, tnt: 7, empty: 49.85 }),
-    "bonus-super": mineSymbolWeights({ tool: 38, eye: 4, tnt: 7, empty: 49.85 }),
-    "bonus-epic": mineSymbolWeights({ tool: 38, eye: 4, tnt: 7, empty: 49.85 }),
+    base: mineSymbolWeights({ eye: 1.6, empty: 84.35 }),
+    extra: mineSymbolWeights({ eye: 3.1, empty: 82.85 }),
+    super: mineSymbolWeights({ eye: 3.05, empty: 82.9 }),
+    diamond: mineSymbolWeights({ tool: 65, eye: 2, tnt: 8, book: 5, maxBook: 2, empty: 18 }),
+    obsidian: mineSymbolWeights({ tool: 31, eye: 2, tnt: 8, book: 5, maxBook: 2, empty: 52 }),
+    "bonus-block": mineSymbolWeights({ tool: 32.7, eye: 4, tnt: 2, book: 0.3, maxBook: 0.02, empty: 60.98 }),
+    "bonus-super": mineSymbolWeights({ tool: 29.7, eye: 4, tnt: 2, book: 0.3, maxBook: 0.02, empty: 63.98 }),
+    "bonus-epic": mineSymbolWeights({ tool: 27, eye: 4, tnt: 2, book: 0.3, maxBook: 0.02, empty: 66.68 }),
   },
   toolWeights: {
     base: mineToolWeights(), extra: mineToolWeights(), super: mineToolWeights(),
@@ -148,6 +148,29 @@ export const DEFAULT_MINE_DROP_TUNING: MineDropTuningSettings = {
   payoutScales: { base: 1, extra: 1, super: 1, diamond: 1, obsidian: 1, "bonus-block": 1, "bonus-super": 1, "bonus-epic": 1, mystery: 1 },
   animation: { reelMs: 1_080, dropMs: 560, bounceMs: 190, hitMs: 360, breakMs: 280, blastMs: 540, chestMs: 680, countUpMs: 720, turboScale: 0.24 },
 };
+
+export function migrateMineDropTuning(saved: MineDropTuningSettings | undefined) {
+  if (!saved || saved.profileName !== "baykus-madeni-v2-drop-choreography-967") return saved;
+  const legacyWeights: Partial<MineDropTuningSettings["symbolWeights"]> = {
+    base: mineSymbolWeights(),
+    extra: mineSymbolWeights({ eye: 3.5, empty: 82.45 }),
+    super: mineSymbolWeights({ eye: 5, empty: 80.95 }),
+    diamond: mineSymbolWeights({ tool: 72, eye: 2, tnt: 8, book: 5, maxBook: 2, empty: 11 }),
+    obsidian: mineSymbolWeights({ tool: 72, eye: 2, tnt: 8, book: 5, maxBook: 2, empty: 11 }),
+    "bonus-block": mineSymbolWeights({ tool: 38, eye: 4, tnt: 7, empty: 49.85 }),
+    "bonus-super": mineSymbolWeights({ tool: 38, eye: 4, tnt: 7, empty: 49.85 }),
+    "bonus-epic": mineSymbolWeights({ tool: 38, eye: 4, tnt: 7, empty: 49.85 }),
+  };
+  const symbolWeights = { ...saved.symbolWeights };
+  for (const context of Object.keys(legacyWeights) as MineDropReelContext[]) {
+    const old = legacyWeights[context]!;
+    const current = symbolWeights[context];
+    if (!current || Object.entries(old).every(([key, value]) => current[key as keyof typeof current] === value)) {
+      symbolWeights[context] = { ...DEFAULT_MINE_DROP_TUNING.symbolWeights[context] };
+    }
+  }
+  return { ...saved, profileName: DEFAULT_MINE_DROP_TUNING.profileName, symbolWeights };
+}
 
 export type AllahAdminMode =
   | "base"
@@ -1231,7 +1254,8 @@ function loadSettings(): CasinoAdminSettings {
     if (!saved) return DEFAULT_ADMIN_SETTINGS;
     const games = Object.fromEntries(
       Object.entries(gameDefaults).map(([id, defaults]) => {
-        const current = saved.games?.[id as CasinoGameId];
+        const storedGame = saved.games?.[id as CasinoGameId];
+        const current = storedGame?.mineDrop ? { ...storedGame, mineDrop: migrateMineDropTuning(storedGame.mineDrop) } : storedGame;
         const legacyFisherProfile =
           id === "kaptan-mercan" &&
           [

@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   MINE_MAX_WIN_X,
   createMine,
+  createMineBonusProgress,
   runMineSpin,
   seededMineRandom,
+  settleMineBonusSpin,
 } from "./baykus-madeni-engine";
 import { DEFAULT_MINE_DROP_TUNING } from "../../data/casino-admin";
 
@@ -26,10 +28,11 @@ describe("Baykuş Madeni motoru", () => {
   });
 
   it("bonus sırasında Göz sembolleri ek dönüş vermez", () => {
+    const weights = DEFAULT_MINE_DROP_TUNING.symbolWeights["bonus-epic"];
     const result = runMineSpin({
       mine: createMine(seededMineRandom(7)),
       bonusTier: "epic",
-      random: () => 0.4,
+      random: () => (weights.tool + weights.eye / 2) / 100,
     });
     expect(result.eyeCount).toBe(15);
     expect(result.addedSpins).toBe(0);
@@ -47,7 +50,9 @@ describe("Baykuş Madeni motoru", () => {
   });
 
   it("normal geliştirme kitabı mevcut Obsidyen kazmayı Elmas seviyesine düşürmez", () => {
-    const samples = [0, 0, 0.83, ...Array.from({ length: 13 }, () => 0.99)];
+    const weights = DEFAULT_MINE_DROP_TUNING.symbolWeights.obsidian;
+    const bookSample = (weights.tool + weights.eye + weights.tnt + weights.book / 2) / 100;
+    const samples = [0, 0, bookSample, ...Array.from({ length: 13 }, () => 0.99)];
     let cursor = 0;
     const result = runMineSpin({
       mine: createMine(seededMineRandom(51)),
@@ -114,5 +119,85 @@ describe("Baykuş Madeni motoru", () => {
     tuning.layerWeights[0] = { dirt: 1, stone: 0, blast: 0, redstone: 0, mystery: 0, gold: 0, diamond: 0, obsidian: 0 };
     const mine = createMine(seededMineRandom(31), tuning);
     expect(mine.columns.every((column) => column[0].type === "dirt" && column[0].hp === 9)).toBe(true);
+  });
+
+  it("geç açılan sandık önceki ve sonraki bonus kazançlarını çarpar, yalnız farkı öder", () => {
+    let progress = { blockWinX: 0, chestMultiplierX: 1, totalWinX: 0 };
+    const credits: number[] = [];
+    for (const spin of [
+      { blockWinX: 10, chestMultiplierX: 1 },
+      { blockWinX: 5, chestMultiplierX: 1 },
+      { blockWinX: 0, chestMultiplierX: 3 },
+      { blockWinX: 2, chestMultiplierX: 2 },
+    ]) {
+      const settled = settleMineBonusSpin(progress, spin);
+      credits.push(settled.creditWinX);
+      progress = settled;
+    }
+    expect(credits).toEqual([10, 5, 30, 57]);
+    expect(progress).toMatchObject({ blockWinX: 17, chestMultiplierX: 6, totalWinX: 102 });
+    expect(credits.reduce((sum, credit) => sum + credit, 0)).toBe(102);
+    expect(settleMineBonusSpin(progress, { blockWinX: 0, chestMultiplierX: 1 }).creditWinX).toBe(0);
+  });
+
+  it("bonus ve Gizem ödeme ölçeklerini birikmiş ham kazanca bir kez uygular", () => {
+    const first = settleMineBonusSpin({ blockWinX: 0, chestMultiplierX: 1, totalWinX: 0 }, { blockWinX: 10, chestMultiplierX: 2 }, 0.5 * 0.4);
+    const second = settleMineBonusSpin(first, { blockWinX: 5, chestMultiplierX: 3 }, 0.5 * 0.4);
+    expect(first.totalWinX).toBe(4);
+    expect(second.totalWinX).toBe(18);
+    expect(second.creditWinX).toBe(14);
+  });
+
+  it("azami ödemeyi bütün bonusa uygular ve tetikleyen el için kalan sınırı gözetir", () => {
+    const first = settleMineBonusSpin({ blockWinX: 0, chestMultiplierX: 1, totalWinX: 0 }, { blockWinX: 10_000, chestMultiplierX: 2 }, 1, 45_000);
+    const second = settleMineBonusSpin(first, { blockWinX: 10_000, chestMultiplierX: 10 }, 1, 45_000);
+    const third = settleMineBonusSpin(second, { blockWinX: 1, chestMultiplierX: 2 }, 1, 45_000);
+    expect(first.creditWinX + second.creditWinX + third.creditWinX).toBe(45_000);
+    expect(third.creditWinX).toBe(0);
+  });
+
+  it.each(["block", "super", "epic"] as const)("%s bonusunda aynı sandığı tekrar açmaz, önceki çarpanı sonraki kazanca taşır", (bonusTier) => {
+    const tuning = structuredClone(DEFAULT_MINE_DROP_TUNING);
+    tuning.symbolWeights[`bonus-${bonusTier}`] = { tool: 1, eye: 0, tnt: 0, book: 0, maxBook: 0, empty: 0 };
+    tuning.toolWeights[`bonus-${bonusTier}`] = { bronze: 1, iron: 0, gold: 0, diamond: 0, obsidian: 0 };
+    tuning.chestValueWeights = { "3": 1 };
+    const mine = createMine(seededMineRandom(17), tuning);
+    mine.columns.forEach((column, index) => {
+      column.forEach((cell) => { cell.hp = 0; });
+      column[0] = { ...column[0], type: "gold", hp: index === 0 ? 1 : 4, maxHp: 4 };
+    });
+    const initial = createMineBonusProgress(mine);
+    const first = runMineSpin({ mine, bonusTier, tuning, random: () => 0 });
+    const progress = settleMineBonusSpin(initial, first);
+    expect(first.openedChests).toEqual([0]);
+    expect(progress.totalWinX).toBe(9);
+    const second = runMineSpin({ mine: first.mine, bonusTier, tuning, random: () => 0 });
+    const final = settleMineBonusSpin(progress, second);
+    expect(second.openedChests).toEqual([1, 2, 3, 4]);
+    expect(final.totalWinX).toBe(15 * 3 ** 5);
+    expect(progress.totalWinX + final.creditWinX).toBe(final.totalWinX);
+    expect(mine.chests.every((chest) => !chest.opened)).toBe(true);
+  });
+
+  it("doğal bonusa açık sandığı taşır, tetikleyen elin bloklarını tekrar ödemez", () => {
+    const mine = createMine(seededMineRandom(10));
+    mine.chests[0] = { opened: true, multiplier: 3 };
+    const progress = createMineBonusProgress(mine);
+    expect(progress).toEqual({ blockWinX: 0, chestMultiplierX: 3, totalWinX: 0 });
+    expect(settleMineBonusSpin(progress, { blockWinX: 5, chestMultiplierX: 1 }).totalWinX).toBe(15);
+  });
+
+  it("Obsidyen varsayılanında sık azami ödeme ve sürekli kâr regresyonunu engeller", () => {
+    const random = seededMineRandom(76123);
+    let total = 0, caps = 0, profits = 0;
+    for (let sample = 0; sample < 10_000; sample++) {
+      const result = runMineSpin({ mode: "obsidian", random });
+      total += result.totalWinX;
+      if (result.totalWinX >= MINE_MAX_WIN_X) caps++;
+      if (result.totalWinX > DEFAULT_MINE_DROP_TUNING.modeCosts.obsidian) profits++;
+    }
+    expect(total / (10_000 * DEFAULT_MINE_DROP_TUNING.modeCosts.obsidian)).toBeLessThan(1.3);
+    expect(caps).toBeLessThan(100);
+    expect(profits).toBeLessThan(2500);
   });
 });

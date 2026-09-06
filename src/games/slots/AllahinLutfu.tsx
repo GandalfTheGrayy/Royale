@@ -188,6 +188,8 @@ function eventSound(audio: SlotAudio | null, event: AllahFeatureEvent) {
   if (event.type === "coin-flight") audio.play("coin", event.cells[0]?.column ?? 0);
   if (event.type === "collector-wake" || event.type === "collector-merge") audio.play("collector");
   if (event.type === "board-multiplier-apply" || event.type === "coin-upgrader-charge" || event.type === "coin-upgrader-apply") audio.play("multiplierImpact");
+  if (event.type === "global-row-charge") audio.play("multiplier", Number(event.payload.row ?? 0));
+  if (event.type === "global-row-apply") audio.play("multiplierImpact", Number(event.payload.row ?? 0));
   if (event.type === "win-tier") audio.play("winTier", Math.min(4, Math.floor(Number(event.payload.grossMultiplier ?? 0) / 100)));
 }
 
@@ -232,6 +234,8 @@ export default function AllahinLutfu({
   const [displayMinTier, setDisplayMinTier] = useState(0);
   const [displayGlobalMultiplier, setDisplayGlobalMultiplier] = useState(1);
   const [displayCollectorValues, setDisplayCollectorValues] = useState<Record<string, number>>({});
+  const [globalAppliedValues, setGlobalAppliedValues] = useState<Record<string, number>>({});
+  const [eventDuration, setEventDuration] = useState(0);
   const [displayWin, setDisplayWin] = useState(0);
   const [specialSummary, setSpecialSummary] = useState<SpecialSummary>();
   const [spinSpeed, setSpinSpeed] = useState<"normal" | "quick" | "turbo">("normal");
@@ -329,6 +333,7 @@ export default function AllahinLutfu({
     setDisplayMinTier(0);
     setDisplayGlobalMultiplier(1);
     setDisplayCollectorValues({});
+    setGlobalAppliedValues({});
     for (let index = 0; index < result.events.length; index += 1) {
       if (skipPresentationRef.current) break;
       const event = result.events[index];
@@ -343,6 +348,7 @@ export default function AllahinLutfu({
       setDisplayMinTier(event.minimumCoinTier);
       setDisplayGlobalMultiplier(event.globalMultiplier);
       setDisplayCollectorValues(event.collectorValues);
+      setGlobalAppliedValues(event.globalAppliedValues);
       if (event.type === "payout-count") setDisplayWin(settledDisplayWin);
       if (event.type === "spin-commit") setVisibleColumns(new Set());
       if (event.type === "column-feed" || event.type === "reel-impact") {
@@ -358,6 +364,7 @@ export default function AllahinLutfu({
           : speed === "quick"
             ? Math.max(24, Math.round(event.durationTurbo * 0.82))
             : Math.max(20, Math.round(event.durationNormal * tuning.normalAnimationScale));
+      setEventDuration(baseDuration);
       await wait(baseDuration);
     }
     setGrid(result.finalGrid);
@@ -369,6 +376,7 @@ export default function AllahinLutfu({
     setDisplayMinTier(result.persistent.minimumCoinTier);
     setDisplayGlobalMultiplier(result.globalMultiplier);
     setDisplayCollectorValues(result.collectorValues);
+    setGlobalAppliedValues(result.globalAppliedValues);
     setDisplayWin(settledDisplayWin);
     skipPresentationRef.current = false;
   };
@@ -648,7 +656,7 @@ export default function AllahinLutfu({
   };
 
   return (
-    <main className={`allah-slot ${eventClass} ${eventSideClass} is-${spinSpeed}`}>
+    <main className={`allah-slot ${eventClass} ${eventSideClass} is-${spinSpeed}`} style={{ "--allah-event-duration": `${eventDuration}ms` } as CSSProperties}>
       <header className="allah-topbar">
         <button className="allah-back" onClick={exitRoom}>← <span>Slot salonu</span></button>
         <div className="allah-brand">
@@ -676,6 +684,9 @@ export default function AllahinLutfu({
                 })}
               </div>
               <div className="allah-global-value"><small>GLOBAL ÇARPAN</small><strong>{displayGlobalMultiplier}×</strong></div>
+              {(activeEvent?.type === "global-row-charge" || activeEvent?.type === "global-row-apply") && <div className="allah-global-row-caption" role="status">
+                {Number(activeEvent.payload.row) + 1}. SATIR · {money.format(Number(activeEvent.payload.before))}× × {displayGlobalMultiplier} = {money.format(Number(activeEvent.payload.after))}×
+              </div>}
             </div>
             <div className="allah-wheel mercy"><img src="/assets/slots/allahin-lutfu/ui/mercy-wheel.png" alt="Rahmet Çarkı" /><span>RAHMET</span></div>
           </div>
@@ -721,19 +732,25 @@ export default function AllahinLutfu({
               row.map((cell, column) => {
                 const visual = cellVisual(cell, displayCollectorValues[cell.id] ?? 0, tuning.maxWinX);
                 const key = `${rowIndex}-${column}`;
+                const globalTarget = activeCells.has(key) && (activeEvent?.type === "global-row-charge" || activeEvent?.type === "global-row-apply");
+                const appliedValue = globalAppliedValues[cell.id];
+                const displayedValue = appliedValue === undefined ? visual.value : `${compactWager(appliedValue)}×`;
                 const mysterySequenceActive = activeEvent?.type === "mystery-roll" || activeEvent?.type === "mystery-reveal";
                 const streamsUntilResolved = mysterySequenceActive && cell.kind === "mystery";
                 const modifierIsRolling = activeEvent?.type === "modifier-coin-roll" && activeCells.has(key);
                 const showMysteryFlow = streamsUntilResolved || modifierIsRolling;
                 return (
                   <div
-                    className={`allah-cell kind-${cell.kind} ${cell.fromMystery ? "mystery-born" : ""} ${activeCells.has(key) ? "event-target" : ""} ${visibleColumns.has(column) ? "is-visible" : "is-awaiting"}`}
+                    className={`allah-cell kind-${cell.kind} ${cell.fromMystery ? "mystery-born" : ""} ${activeCells.has(key) ? "event-target" : ""} ${appliedValue !== undefined ? "global-applied" : ""} ${visibleColumns.has(column) ? "is-visible" : "is-awaiting"}`}
                     key={cell.id}
                     style={{ "--row": rowIndex, "--column": column } as CSSProperties}
-                    title={visual.label}
+                    title={appliedValue === undefined ? visual.label : `${visual.label} · Global ${displayGlobalMultiplier}× → ${money.format(appliedValue)}×`}
                   >
                     {visual.image && <img src={visual.image} alt="" draggable={false} />}
-                    {visual.value && <b>{visual.value}</b>}
+                    {displayedValue && <b className={globalTarget && activeEvent?.type === "global-row-apply" ? "allah-global-new-value" : undefined}>{displayedValue}</b>}
+                    {globalTarget && <span className="allah-global-coin-equation" key={activeEvent!.id} aria-hidden="true">
+                      {visual.value} <i>× {displayGlobalMultiplier}</i>
+                    </span>}
                     {cell.kind === "redrop" && <span className="allah-feature-tag">REDROP</span>}
                     {cell.kind === "eye" && <i className="allah-cell-eye-pupil" />}
                     {showMysteryFlow && (
@@ -753,6 +770,12 @@ export default function AllahinLutfu({
                 );
               }),
             )}
+            {(activeEvent?.type === "global-row-charge" || activeEvent?.type === "global-row-apply") && <div
+              key={activeEvent.id}
+              className="allah-global-row-wave"
+              aria-hidden="true"
+              style={{ "--global-row": Number(activeEvent.payload.row) } as CSSProperties}
+            ><span>×{displayGlobalMultiplier}</span></div>}
             {activeEvent?.type === "coin-flight" && activeEvent.cells.length > 1 && (() => {
               const target = activeEvent.cells[activeEvent.cells.length - 1];
               return <div className="allah-flight-layer" aria-hidden="true">
