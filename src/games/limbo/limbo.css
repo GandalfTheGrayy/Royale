@@ -1,0 +1,12 @@
+.limbo-room { --originals-line:rgba(152,113,255,.26); --originals-gold:#cfb1ff; }
+.limbo-stage { background:#050610; }
+.limbo-art { position:absolute; inset:0; background:linear-gradient(180deg,rgba(4,5,14,.04),rgba(4,5,14,.46)),url('/assets/instant/originals/limbo-runtime-v2.png') center/cover; filter:saturate(.88); transform:scale(1.015); }
+.limbo-rings { position:absolute; inset:0; display:grid; place-items:center; z-index:2; }
+.limbo-rings i { position:absolute; width:min(43vw,460px); aspect-ratio:1; border:1px solid rgba(178,142,255,.24); border-radius:50%; box-shadow:0 0 45px rgba(111,72,255,.13),inset 0 0 35px rgba(111,72,255,.08); }
+.limbo-rings i:nth-child(2){width:min(35vw,370px);animation:limbo-spin 9s linear infinite;border-style:dashed}.limbo-rings i:nth-child(3){width:min(27vw,286px);animation:limbo-spin 5s linear infinite reverse}
+.limbo-result { position:absolute; z-index:4; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding-top:8%; text-shadow:0 4px 22px #000; }
+.limbo-result small{color:#c8b0ff;font-weight:900;letter-spacing:.22em}.limbo-result strong{font:700 clamp(62px,11vw,138px)/.95 Georgia,serif;letter-spacing:-.055em}.limbo-result strong em{font-size:.38em;color:#b9a2ff}.limbo-result span{margin-top:16px;color:#d7d1e2;font-weight:800;letter-spacing:.08em}.limbo-result b{margin-top:12px;padding:8px 16px;border:1px solid currentColor;border-radius:999px;color:#8ef5d5;background:rgba(0,0,0,.5)}
+.limbo-stage.loss .limbo-result b{color:#ff9d9d}.limbo-stage.charging .limbo-rings i{animation-duration:.42s;box-shadow:0 0 80px rgba(133,78,255,.5)}.limbo-stage.win .limbo-art{filter:saturate(1.2) brightness(1.08)}.limbo-stage.loss .limbo-art{filter:saturate(.45) brightness(.65)}
+.limbo-stage-footer{position:absolute;z-index:4;left:18px;right:18px;bottom:18px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.limbo-stage-footer span{padding:12px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(4,5,13,.72);backdrop-filter:blur(10px);color:#a9a5b6;font-size:9px;letter-spacing:.12em}.limbo-stage-footer b{display:block;margin-top:5px;color:white;font-size:14px}
+@keyframes limbo-spin{to{transform:rotate(360deg)}}
+@media(max-width:650px){.limbo-art{background-position:48% center}.limbo-rings i{width:72vw}.limbo-rings i:nth-child(2){width:60vw}.limbo-rings i:nth-child(3){width:46vw}.limbo-result{padding-top:13%}.limbo-stage-footer{left:10px;right:10px;bottom:10px}.limbo-stage-footer span{padding:9px 7px}.limbo-stage-footer b{font-size:11px}}

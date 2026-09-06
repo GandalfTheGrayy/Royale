@@ -1,0 +1,75 @@
+.database-storage {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, 1fr);
+  margin-bottom: 14px;
+}
+
+.database-storage article {
+  background: #101715;
+  border: 1px solid rgba(216, 184, 107, .1);
+  border-radius: 10px;
+  padding: 13px;
+}
+
+.database-storage small,
+.database-storage span {
+  color: #69766e;
+  display: block;
+  font-family: 'DM Mono';
+  font-size:12px;
+}
+
+.database-storage strong {
+  color: #e2ca90;
+  display: block;
+  font-family: 'Bebas Neue';
+  font-size: 22px;
+  margin-top: 7px;
+}
+
+.admin-ai-table {
+  background: #0e1412;
+  border: 1px solid rgba(255, 255, 255, .06);
+  border-radius: 12px;
+  margin-top: 14px;
+  overflow: auto;
+}
+
+.admin-ai-table > header,
+.admin-ai-table > article {
+  align-items: center;
+  display: grid;
+  gap: 13px;
+  grid-template-columns: 115px 130px 90px minmax(300px, 1fr) 70px;
+  min-width: 830px;
+  padding: 10px 14px;
+}
+
+.admin-ai-table > header {
+  background: #121a17;
+  color: #647169;
+  font-family: 'DM Mono';
+  font-size:12px;
+  letter-spacing: .11em;
+}
+
+.admin-ai-table > article { border-top: 1px solid rgba(255, 255, 255, .045); }
+.admin-ai-table time,
+.admin-ai-table em,
+.admin-ai-table small { color: #657269; font-family: 'DM Mono'; font-size:12px; font-style: normal; }
+.admin-ai-table article > span { display: flex; flex-direction: column; }
+.admin-ai-table article > span b { color: #d8c384; font-size:12px; }
+.admin-ai-table article > i { border: 1px solid rgba(255,255,255,.1); border-radius: 99px; color: #88958d; font-family: 'DM Mono'; font-size:12px; font-style: normal; padding: 5px 7px; text-align: center; }
+.admin-ai-table article > i.user { border-color: rgba(100,156,220,.3); color: #8db9e9; }
+.admin-ai-table article > i.assistant { border-color: rgba(97,214,154,.28); color: #75dda6; }
+.admin-ai-table article > p { color: #b8c2bc; font-size:12px; line-height: 1.5; margin: 0; }
+.admin-empty { color: #5d6962; font-size:12px; padding: 18px; }
+
+@media (max-width: 900px) {
+  .database-storage { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 520px) {
+  .database-storage { grid-template-columns: 1fr; }
+}

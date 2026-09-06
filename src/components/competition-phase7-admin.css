@@ -1,0 +1,94 @@
+.phase7-admin,
+.phase7-admin-loading {
+  background: #0d0c0a;
+  border: 1px solid #4b3c2b;
+  border-radius: 16px;
+  margin: 24px 0;
+  padding: 22px;
+}
+.phase7-admin > header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+.phase7-admin h3,
+.phase7-admin h4 {
+  color: #e8c683;
+  margin: 4px 0 12px;
+}
+.phase7-admin > header > button,
+.phase7-admin article > button {
+  background: #c79745;
+  border: 0;
+  border-radius: 8px;
+  color: #160e08;
+  cursor: pointer;
+  font-weight: 900;
+  padding: 11px 15px;
+}
+.phase7-admin > p {
+  background: #163025;
+  border: 1px solid #37694f;
+  border-radius: 8px;
+  color: #c9f3dd;
+  padding: 10px 13px;
+}
+.phase7-admin-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 18px;
+}
+.phase7-admin-grid article,
+.phase7-tournament-admin article {
+  background: #080807;
+  border: 1px solid #332c23;
+  border-radius: 12px;
+  padding: 16px;
+}
+.phase7-admin label {
+  color: #9f8c70;
+  display: grid;
+  font-size: 11px;
+  gap: 5px;
+  margin: 9px 0;
+}
+.phase7-admin input,
+.phase7-admin select {
+  background: #100f0d;
+  border: 1px solid #51422f;
+  border-radius: 7px;
+  color: #eee;
+  padding: 10px;
+}
+.phase7-admin article > p {
+  color: #77746e;
+  font-size: 11px;
+}
+.phase7-tournament-admin {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  margin-top: 16px;
+}
+.phase7-tournament-admin article > header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+.phase7-tournament-admin article > div {
+  margin: 12px 0;
+}
+.phase7-tournament-admin article > div label {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+.phase7-tournament-admin article > div input {
+  width: 70px;
+}
+@media (max-width: 760px) {
+  .phase7-admin-grid {
+    grid-template-columns: 1fr;
+  }
+}

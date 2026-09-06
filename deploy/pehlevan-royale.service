@@ -1,0 +1,28 @@
+[Unit]
+Description=Pehlevan Royale Web Application
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=royale
+Group=royale
+WorkingDirectory=/opt/pehlevan-royale
+Environment=NODE_ENV=production
+Environment=PEHLEVAN_DB_DIRECTORY=/var/lib/pehlevan-royale
+Environment=PATH=/opt/node-v22.15.0-linux-x64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+ExecStart=/opt/node-v22.15.0-linux-x64/bin/node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 4173 --strictPort
+Restart=always
+RestartSec=3
+TimeoutStopSec=20
+KillSignal=SIGINT
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+ReadWritePaths=/var/lib/pehlevan-royale
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

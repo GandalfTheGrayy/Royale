@@ -1,0 +1,91 @@
+.slot-progress-panel {
+  background: rgba(4, 13, 11, 0.78);
+  border: 1px solid rgba(84, 219, 169, 0.17);
+  border-radius: 10px;
+  margin: 12px 14px 0;
+  padding: 11px;
+}
+.slot-progress-panel > header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+.slot-progress-panel small {
+  color: #58c9c9;
+  font-family: "DM Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.11em;
+}
+.slot-progress-panel header b {
+  color: #a9fff1;
+  font-family: "DM Mono", monospace;
+  font-size: 11px;
+}
+.slot-progress-panel > strong {
+  color: #e5f4ef;
+  display: block;
+  font-size: 12px;
+  margin-top: 5px;
+}
+.slot-progress-track {
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 99px;
+  height: 5px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+.slot-progress-track i {
+  background: linear-gradient(90deg, #27bed3, #d347c5);
+  box-shadow: 0 0 10px #31c5d8;
+  display: block;
+  height: 100%;
+  transition: width 0.45s ease;
+}
+.slot-progress-panel p {
+  color: #758b86;
+  font-family: "DM Mono", monospace;
+  font-size: 9px;
+  margin: 7px 0 0;
+}
+.slot-progress-collection {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 9px;
+  padding-top: 8px;
+}
+.slot-progress-collection > span {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.slot-progress-collection i {
+  background: rgba(43, 193, 208, 0.09);
+  border: 1px solid rgba(43, 193, 208, 0.18);
+  border-radius: 99px;
+  color: #8ee9ee;
+  font-family: "DM Mono", monospace;
+  font-size: 9px;
+  font-style: normal;
+  padding: 3px 5px;
+}
+.slot-progress-collection em {
+  color: #566b66;
+  font-size: 9px;
+  font-style: normal;
+}
+.slot-progress-panel.kaptan-mercan {
+  border-color: rgba(211, 171, 83, 0.2);
+}
+.slot-progress-panel.kaptan-mercan small,
+.slot-progress-panel.kaptan-mercan header b {
+  color: #dfbd72;
+}
+.slot-progress-panel.kaptan-mercan .slot-progress-track i {
+  background: linear-gradient(90deg, #9f6426, #efcd77);
+  box-shadow: 0 0 10px #d7a64a;
+}
+.slot-progress-panel.kaptan-mercan .slot-progress-collection i {
+  background: rgba(215, 166, 74, 0.09);
+  border-color: rgba(215, 166, 74, 0.19);
+  color: #e9c879;
+}

@@ -1,0 +1,851 @@
+/*
+ * Pehlevan Royale responsive game shell — v2
+ * Macro layout follows the viewport; each game surface follows its own
+ * container. Artwork never decides layout size. Interactive zones stay in
+ * grid flow and scale from the smaller container axis (cqmin).
+ */
+
+.responsive-game-shell {
+  --shell-gap: clamp(6px, .8cqmin, 16px);
+  --shell-pad-x: clamp(7px, 1.65cqw, 38px);
+  --shell-pad-y: clamp(5px, .75cqh, 13px);
+  container-name: game-shell;
+  container-type: size;
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100dvh !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  width: 100%;
+}
+
+.responsive-game-shell > .topbar {
+  box-sizing: border-box;
+  display: grid !important;
+  grid-row: 1;
+  grid-template-columns: minmax(148px, 1fr) auto minmax(148px, 1fr) !important;
+  min-height: 58px;
+  min-width: 0;
+  padding-inline: clamp(16px, 3cqw, 54px) !important;
+  width: 100%;
+}
+
+.responsive-game-shell > .topbar > .back-button {
+  grid-column: 1;
+  justify-self: start !important;
+  left: auto !important;
+  margin: 0 !important;
+  min-width: max-content;
+  position: relative !important;
+  transform: none !important;
+}
+
+.responsive-game-shell > .topbar > .brand { grid-column: 2; justify-self: center !important; }
+.responsive-game-shell > .topbar > .topbar-actions { grid-column: 3; justify-self: end !important; min-width: 0; }
+
+.responsive-game-shell > .responsive-game-shell__content {
+  grid-row: 2;
+  min-height: 0 !important;
+  min-width: 0;
+  overflow: hidden !important;
+}
+
+.responsive-game-shell > .responsive-game-dock { grid-row: 3; min-height: 0; min-width: 0; }
+
+.responsive-game-stage {
+  container-name: game-stage;
+  container-type: size;
+  min-height: 0 !important;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Blackjack — five stable gameplay bands. */
+.responsive-game-shell--blackjack > .responsive-game-shell__content {
+  align-items: stretch;
+  display: grid !important;
+  gap: var(--shell-gap) !important;
+  grid-template-columns: minmax(0, 1fr) clamp(280px, 22cqw, 340px);
+  grid-template-rows: minmax(0, 1fr) !important;
+  height: 100%;
+  margin: 0 auto;
+  max-width: 1700px;
+  padding: var(--shell-pad-y) var(--shell-pad-x) !important;
+  width: 100%;
+}
+
+.responsive-blackjack-stage {
+  --bj-card-h: clamp(96px, 13cqmin, 150px);
+  --bj-card-w: calc(var(--bj-card-h) * .712);
+  align-content: space-between;
+  display: grid !important;
+  grid-template-areas: "host" "dealer" "mainbet" "sidebets" "player" "status";
+  grid-template-rows:
+    clamp(150px, 22cqmin, 238px)
+    clamp(104px, 15cqmin, 148px)
+    clamp(76px, 10cqmin, 104px)
+    clamp(82px, 11cqmin, 116px)
+    clamp(154px, 21cqmin, 218px)
+    28px;
+  height: 100% !important;
+  min-height: 0 !important;
+  padding: clamp(10px, 1.4cqmin, 22px) !important;
+  row-gap: clamp(3px, .6cqmin, 10px);
+}
+
+.responsive-blackjack-stage .table-label {
+  left: clamp(20px, 3cqw, 48px);
+  position: absolute !important;
+  right: clamp(20px, 3cqw, 48px);
+  top: clamp(13px, 1.5cqh, 23px);
+}
+
+.responsive-blackjack-stage .dealer-figure {
+  align-self: center;
+  grid-area: host;
+  height: clamp(210px, 28cqmin, 350px) !important;
+  justify-self: center;
+  left: auto !important;
+  position: relative !important;
+  top: auto !important;
+  transform: none !important;
+  width: clamp(235px, 31cqmin, 390px) !important;
+}
+
+.responsive-blackjack-stage .dealer-figure.motion-shuffle { animation: responsiveDealerShuffle 1s ease-in-out infinite; }
+.responsive-blackjack-stage .dealer-figure.motion-deal { animation: responsiveDealerDeal .62s cubic-bezier(.2, .8, .2, 1); }
+.responsive-blackjack-stage .dealer-figure.motion-speak { transform: scale(1.012) !important; }
+
+@keyframes responsiveDealerShuffle {
+  0%, 100% { transform: rotate(0); }
+  45% { transform: rotate(-1.2deg) translateY(2px); }
+  70% { transform: rotate(1deg); }
+}
+
+@keyframes responsiveDealerDeal {
+  0%, 100% { transform: scale(1); }
+  48% { transform: translateY(10px) scale(1.035); }
+}
+
+.responsive-blackjack-stage .dealer-hand,
+.responsive-blackjack-stage .betting-spot,
+.responsive-blackjack-stage .side-bet-spots,
+.responsive-blackjack-stage .player-hands {
+  align-self: center;
+  bottom: auto !important;
+  left: auto !important;
+  margin: 0 auto;
+  position: relative !important;
+  right: auto !important;
+  top: auto !important;
+  transform: none !important;
+}
+
+.responsive-blackjack-stage .dealer-hand { grid-area: dealer; padding-top: 0; width: min(80%, 680px); }
+.responsive-blackjack-stage .betting-spot {
+  grid-area: mainbet;
+  justify-self: center;
+  transform: scale(1) !important;
+  transform-origin: 50% 50%;
+}
+
+.responsive-blackjack-stage .side-bet-spots {
+  align-items: center;
+  grid-area: sidebets;
+  justify-content: space-between;
+  pointer-events: none;
+  width: min(82%, 480px) !important;
+}
+
+.responsive-blackjack-stage .side-bet-spot { transform: scale(.82); }
+.responsive-blackjack-stage .player-hands { grid-area: player; width: min(90%, 860px); }
+.responsive-blackjack-stage .player-hand { bottom: auto !important; padding-top: 0; }
+.responsive-blackjack-stage .playing-card { height: var(--bj-card-h) !important; width: var(--bj-card-w) !important; }
+.responsive-blackjack-stage .cards { min-height: var(--bj-card-h) !important; }
+
+.responsive-blackjack-stage .dealer-hand .hand-meta,
+.responsive-blackjack-stage .player-hand .hand-meta {
+  left: calc(50% + var(--bj-card-w) * 1.3) !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+}
+
+.responsive-blackjack-stage .player-hands.count-2 {
+  display: grid !important;
+  gap: clamp(28px, 5cqw, 76px);
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  width: min(96%, 1040px) !important;
+}
+
+.responsive-blackjack-stage .player-hands.count-2 .player-hand {
+  display: block !important;
+  min-width: 0;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.responsive-blackjack-stage .player-hands.count-2 .player-hand {
+  padding-top: 54px !important;
+}
+
+.responsive-blackjack-stage .player-hands.count-2 .hand-meta {
+  height: 46px;
+  left: 50% !important;
+  max-width: 100%;
+  top: 1px !important;
+  transform: translateX(-50%) !important;
+  width: max-content;
+}
+
+.responsive-blackjack-stage .table-insignia {
+  display: none !important;
+}
+
+.responsive-game-shell--blackjack .responsive-blackjack-stage .table-status {
+  align-self: end;
+  bottom: auto !important;
+  grid-area: status;
+  justify-self: center;
+  left: auto !important;
+  margin: 0;
+  position: relative !important;
+  right: auto !important;
+  width: min(92%, 760px);
+}
+
+.responsive-blackjack-stage.phase-idle .dealer-hand { visibility: hidden; }
+.responsive-blackjack-stage.phase-idle .player-hands { align-self: end; min-height: 76px; }
+
+.responsive-blackjack-stage:not(.phase-idle) {
+  grid-template-areas: "host" "dealer" "mainbet" "sidebets" "player" "status";
+  grid-template-rows:
+    clamp(150px, 22cqmin, 238px)
+    clamp(104px, 15cqmin, 148px)
+    clamp(64px, 8cqmin, 88px)
+    clamp(68px, 8cqmin, 92px)
+    clamp(150px, 20cqmin, 205px)
+    28px;
+}
+
+.responsive-blackjack-stage:not(.phase-idle) .side-bet-spots {
+  display: flex !important;
+  opacity: .92;
+  pointer-events: none;
+}
+.responsive-blackjack-stage:not(.phase-idle) .side-bet-spot { transform: scale(.68); }
+.responsive-blackjack-stage:not(.phase-idle) .betting-spot { display: block !important; }
+.responsive-blackjack-stage:not(.phase-idle) .table-insignia { display: none !important; }
+
+/* Roulette — bounded theatre and a top-anchored ratio-safe betting board. */
+.responsive-game-shell--roulette > .responsive-game-shell__content {
+  align-items: stretch;
+  display: grid !important;
+  gap: var(--shell-gap) !important;
+  grid-template-columns: minmax(0, 1fr) clamp(280px, 22cqw, 340px);
+  grid-template-rows: minmax(0, 1fr) !important;
+  height: 100%;
+  margin: 0 auto;
+  max-width: 1900px;
+  padding: var(--shell-pad-y) var(--shell-pad-x) !important;
+  width: 100%;
+}
+
+.responsive-roulette-stage {
+  align-content: start;
+  display: grid !important;
+  grid-template-rows: clamp(230px, 44cqh, 590px) minmax(0, 1fr) !important;
+  height: 100%;
+}
+
+.responsive-roulette-stage .roulette-show-stage {
+  display: grid !important;
+  grid-template-columns: minmax(250px, 38%) minmax(320px, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+}
+
+.responsive-roulette-stage .armand-stage {
+  bottom: auto !important;
+  grid-column: 1;
+  grid-row: 1;
+  height: 100%;
+  left: auto !important;
+  min-width: 0;
+  position: relative !important;
+  top: auto !important;
+  width: 100% !important;
+}
+
+.responsive-roulette-stage .armand-stage img {
+  height: 136% !important;
+  left: 52% !important;
+  max-width: 100%;
+  object-position: 50% 10%;
+  top: -12% !important;
+}
+
+.responsive-roulette-stage .armand-line { display: none !important; }
+.responsive-roulette-stage .armand-name {
+  bottom: 8px !important;
+  left: 52% !important;
+  max-width: calc(100% - 26px);
+  white-space: nowrap;
+}
+
+.responsive-roulette-stage .roulette-wheel-scene {
+  --wheel-size: min(52cqh, 46cqw, 540px) !important;
+  bottom: auto !important;
+  box-sizing: border-box;
+  grid-column: 2;
+  grid-row: 1;
+  height: 100% !important;
+  left: auto !important;
+  padding: 4px 8px 31px;
+  position: relative !important;
+  right: auto !important;
+  top: auto !important;
+  width: 100% !important;
+}
+
+.responsive-roulette-stage .wheel-caption {
+  bottom: 5px !important;
+  line-height: 1.22;
+  max-width: 92%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.responsive-roulette-stage .roulette-history {
+  background: linear-gradient(90deg, rgba(10, 7, 7, .9), rgba(10, 7, 7, .52));
+  border-left: 2px solid rgba(226, 190, 110, .46);
+  bottom: auto !important;
+  gap: 4px;
+  left: 10px !important;
+  max-width: calc(38% - 20px);
+  padding: 7px 9px;
+  top: 9px !important;
+}
+
+.responsive-roulette-stage .roulette-history div { max-width: 210px; }
+.responsive-roulette-stage .roulette-history span { height: 23px; width: 23px; }
+
+.responsive-roulette-stage .roulette-table-wrap {
+  align-content: start !important;
+  display: grid !important;
+  grid-auto-rows: auto;
+  grid-template-rows: auto auto auto auto;
+  justify-content: stretch !important;
+  min-height: 0;
+  overflow: hidden !important;
+  padding: clamp(8px, 1cqmin, 14px) clamp(10px, 1.5cqw, 20px) !important;
+}
+
+.responsive-roulette-stage .roulette-table-heading,
+.responsive-roulette-stage .roulette-stats-strip,
+.responsive-roulette-stage .roulette-board,
+.responsive-roulette-stage .call-bet-rail { max-width: 1160px; width: 100%; }
+
+.responsive-roulette-stage .roulette-board {
+  flex: none !important;
+  grid-template-rows: minmax(180px, 1fr) clamp(44px, 4cqmin, 58px) clamp(44px, 4cqmin, 58px) !important;
+  height: clamp(300px, 34cqw, 420px);
+  min-height: 300px;
+}
+
+.responsive-roulette-stage .number-bet { font-size: clamp(18px, 2cqmin, 29px); }
+.responsive-roulette-stage .outside-bet,
+.responsive-roulette-stage .column-bet { font-size: clamp(12px, 1.1cqmin, 16px); }
+
+/* Tablet and compact desktop. */
+@container game-shell (max-width: 1180px) {
+  .responsive-game-shell__content { grid-template-columns: minmax(0, 1fr) !important; }
+  .responsive-game-shell--blackjack .dealer-panel,
+  .responsive-game-shell--roulette .roulette-chat { display: none !important; }
+  .responsive-game-shell--blackjack > .responsive-game-shell__content,
+  .responsive-game-shell--roulette > .responsive-game-shell__content { padding: clamp(4px, .8cqw, 10px) !important; }
+  .responsive-game-shell > .topbar > .topbar-actions { gap: 7px; }
+
+  .responsive-roulette-stage { grid-template-rows: clamp(186px, 30cqh, 320px) minmax(0, 1fr) !important; }
+  .responsive-roulette-stage .roulette-wheel-scene { --wheel-size: min(28cqh, 34cqw, 278px) !important; }
+  .responsive-roulette-stage .roulette-board {
+    grid-template-columns: 62px minmax(0, 1fr) 46px;
+    height: clamp(270px, min(42cqh, 40cqw), 410px);
+    min-height: 270px;
+  }
+
+  .responsive-game-shell--blackjack > .responsive-game-dock,
+  .responsive-game-shell--roulette > .responsive-game-dock {
+    box-sizing: border-box;
+    height: clamp(116px, 16cqh, 164px) !important;
+    max-height: 164px;
+    min-height: clamp(116px, 16cqh, 164px) !important;
+  }
+
+  .responsive-game-shell--blackjack > .responsive-game-dock {
+    align-items: center;
+    column-gap: 12px !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    grid-template-rows: minmax(64px, 1fr) 58px !important;
+    padding: 6px 14px !important;
+    row-gap: 4px !important;
+  }
+
+  .responsive-game-shell--blackjack > .responsive-game-dock .chip-rack {
+    display: grid !important;
+    gap: 8px !important;
+    grid-column: 1 / -1;
+    grid-row: 1;
+    grid-template-columns: max-content minmax(0, 1fr);
+    min-width: 0;
+    width: 100%;
+  }
+
+  .responsive-game-shell--blackjack > .responsive-game-dock .rack-heading { max-width: 118px; }
+  .responsive-game-shell--blackjack > .responsive-game-dock .rack-heading > span {
+    font-size: 9px;
+    line-height: 1.35;
+  }
+
+  .responsive-game-shell--blackjack > .responsive-game-dock .chip-selector {
+    flex-wrap: nowrap !important;
+    gap: 5px;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 4px 2px 8px;
+    scrollbar-color: rgba(226, 190, 110, .55) transparent;
+    scrollbar-width: thin;
+  }
+
+  .responsive-game-shell--blackjack > .responsive-game-dock .chip-selector > .casino-chip {
+    flex: 0 0 44px;
+    height: 44px;
+    width: 44px;
+  }
+
+  .responsive-game-shell--blackjack > .responsive-game-dock .chip-selector > .casino-chip .chip-center {
+    height: 29px;
+    width: 29px;
+  }
+
+  .responsive-game-shell--blackjack > .responsive-game-dock .custom-chip-entry {
+    flex: 0 0 224px;
+    min-width: 224px;
+  }
+
+  .responsive-game-shell--blackjack > .responsive-game-dock .game-actions {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: center;
+  }
+
+  .responsive-game-shell--blackjack > .responsive-game-dock .wallet-actions {
+    align-items: flex-end;
+    flex-direction: column;
+    grid-column: 2;
+    grid-row: 2;
+    justify-content: center;
+    min-width: 170px;
+  }
+
+  .responsive-game-shell--blackjack > .responsive-game-dock .game-actions > button { padding-block: 11px; }
+}
+
+/* Tablet and split-monitor chrome: keep the centered brand and right-side
+   controls in separate grid columns instead of letting their intrinsic widths
+   collide. Detailed AI state is already available inside the room. */
+@container game-shell (min-width: 701px) and (max-width: 920px) {
+  .responsive-game-shell > .topbar {
+    grid-template-columns: minmax(110px, 1fr) auto minmax(110px, 1fr) !important;
+    padding-inline: 12px !important;
+  }
+
+  .responsive-game-shell > .topbar .ai-pill { display: none !important; }
+  .responsive-game-shell > .topbar .game-music-control {
+    padding-right: 4px;
+    width: 38px;
+  }
+  .responsive-game-shell > .topbar .game-music-control > div { display: none !important; }
+}
+
+/* Portrait/mobile. The same DOM reflows without device-specific coordinates. */
+@container game-shell (max-width: 700px) {
+  .responsive-game-shell { --shell-pad-x: 4px; --shell-pad-y: 4px; }
+  .responsive-game-shell > .topbar {
+    grid-template-columns: auto 1fr auto !important;
+    height: clamp(50px, 7.5cqh, 60px) !important;
+    min-height: 50px;
+    padding-inline: 10px !important;
+  }
+
+  .responsive-game-shell > .topbar > .brand { justify-self: center !important; }
+  .responsive-game-shell > .topbar > .back-button span,
+  .responsive-game-shell > .topbar .brand > span:last-child,
+  .responsive-game-shell > .topbar .voice-toggle,
+  .responsive-game-shell > .topbar .ai-pill,
+  .responsive-game-shell > .topbar .game-music-control > div { display: none !important; }
+  .responsive-game-shell > .topbar .game-music-control { padding-right: 4px; width: 38px; }
+
+  .responsive-blackjack-stage {
+    --bj-card-h: clamp(74px, 16cqmin, 98px);
+    border-radius: clamp(32px, 12cqw, 68px) clamp(32px, 12cqw, 68px) 14px 14px !important;
+    grid-template-rows: minmax(92px, 1.05fr) minmax(70px, .68fr) minmax(66px, .62fr) minmax(76px, .68fr) minmax(92px, .82fr) 24px;
+    padding: 8px !important;
+  }
+
+  .responsive-blackjack-stage .table-label,
+  .responsive-blackjack-stage .speech-bubble,
+  .responsive-blackjack-stage .card-shoe { display: none !important; }
+  .responsive-blackjack-stage .dealer-figure { height: min(25cqh, 178px) !important; width: min(48cqw, 176px) !important; }
+  .responsive-blackjack-stage .dealer-nameplate { transform: translateX(-50%) scale(.68) !important; }
+  .responsive-blackjack-stage .dealer-hand .hand-meta,
+  .responsive-blackjack-stage .player-hand .hand-meta {
+    left: calc(50% + 57px) !important;
+    transform: translateY(-50%) scale(.82) !important;
+  }
+  .responsive-blackjack-stage .betting-spot { transform: scale(.66) !important; }
+  .responsive-blackjack-stage .side-bet-spots { width: min(96%, 360px) !important; }
+  .responsive-blackjack-stage .side-bet-spot { transform: scale(.69); }
+  .responsive-blackjack-stage .table-insignia { display: none !important; }
+  .responsive-blackjack-stage.phase-idle .player-hands { visibility: hidden; }
+  .responsive-blackjack-stage:not(.phase-idle) {
+    grid-template-rows: minmax(88px, 1fr) minmax(76px, .78fr) minmax(52px, .5fr) minmax(52px, .48fr) minmax(96px, .9fr) 24px;
+  }
+  .responsive-blackjack-stage:not(.phase-idle) .side-bet-spot { transform: scale(.56); }
+
+  .responsive-blackjack-stage .player-hands.count-2 {
+    gap: 10px;
+    width: min(98%, 430px) !important;
+  }
+
+  .responsive-blackjack-stage .player-hands.count-2 .player-hand { padding-top: 42px !important; }
+  .responsive-blackjack-stage .player-hands.count-2 .hand-meta {
+    height: 38px;
+    transform: translateX(-50%) scale(.76) !important;
+    transform-origin: 50% 0;
+  }
+
+  .responsive-game-shell--blackjack > .responsive-game-dock,
+  .responsive-game-shell--roulette > .responsive-game-dock {
+    height: calc(132px + env(safe-area-inset-bottom)) !important;
+    min-height: calc(132px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .responsive-game-shell--blackjack > .responsive-game-dock {
+    grid-template-rows: 56px 66px !important;
+    padding: 4px 6px calc(4px + env(safe-area-inset-bottom)) !important;
+  }
+  .responsive-game-shell--blackjack > .responsive-game-dock .chip-rack { display: block !important; }
+  .responsive-game-shell--blackjack > .responsive-game-dock .rack-heading { display: none; }
+  .responsive-game-shell--blackjack > .responsive-game-dock .chip-selector { padding-bottom: 6px; }
+  .responsive-game-shell--blackjack > .responsive-game-dock .game-actions { justify-self: start; }
+  .responsive-game-shell--blackjack > .responsive-game-dock .game-actions > button {
+    font-size: 11px;
+    min-width: 172px;
+    padding-inline: 12px;
+  }
+  .responsive-game-shell--blackjack > .responsive-game-dock .wallet-actions { min-width: 112px; }
+  .responsive-game-shell--blackjack > .responsive-game-dock .wallet-actions small,
+  .responsive-game-shell--blackjack > .responsive-game-dock .wallet-actions em { display: none; }
+
+  .responsive-roulette-stage { grid-template-rows: clamp(120px, 19cqh, 160px) minmax(0, 1fr) !important; }
+  .responsive-roulette-stage .roulette-show-stage { display: block !important; }
+  .responsive-roulette-stage .armand-stage,
+  .responsive-roulette-stage .roulette-history { display: none !important; }
+  .responsive-roulette-stage .roulette-wheel-scene {
+    --wheel-size: min(86cqh, 42cqw, 154px) !important;
+    display: flex !important;
+    padding-bottom: 25px;
+    width: 100% !important;
+  }
+  .responsive-roulette-stage .roulette-table-wrap { display: block !important; overflow: hidden !important; padding: 5px !important; }
+}
+
+/* Short landscape. */
+@container game-shell (max-height: 600px) and (min-aspect-ratio: 1.35) {
+  .responsive-game-shell > .topbar { height: clamp(40px, 10cqh, 50px) !important; min-height: 40px; }
+  .responsive-blackjack-stage {
+    --bj-card-h: clamp(66px, 24cqh, 86px);
+    align-content: center;
+    grid-template-areas: "host dealer mainbet sidebets player" "status status status status status";
+    grid-template-columns: .9fr 1fr .72fr 1.25fr 1.15fr;
+    grid-template-rows: minmax(88px, 1fr) 20px;
+  }
+  .responsive-blackjack-stage .dealer-figure { height: min(34cqh, 106px) !important; width: 116px !important; }
+  .responsive-blackjack-stage .betting-spot { transform: scale(.58) !important; }
+  .responsive-blackjack-stage .side-bet-spots { width: 100% !important; }
+  .responsive-blackjack-stage .side-bet-spot { transform: scale(.52); }
+  .responsive-blackjack-stage .table-insignia,
+  .responsive-blackjack-stage .table-label,
+  .responsive-blackjack-stage .card-shoe { display: none !important; }
+  .responsive-blackjack-stage:not(.phase-idle) {
+    grid-template-areas: "host dealer mainbet sidebets player" "status status status status status";
+    grid-template-columns: .82fr .92fr .62fr 1.05fr 1.05fr;
+    grid-template-rows: minmax(86px, 1fr) 20px;
+  }
+
+  .responsive-game-shell--blackjack > .responsive-game-dock,
+  .responsive-game-shell--roulette > .responsive-game-dock { height: 92px !important; min-height: 92px !important; }
+  .responsive-roulette-stage {
+    grid-template-columns: minmax(210px, .42fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) !important;
+  }
+  .responsive-roulette-stage .roulette-show-stage { grid-column: 1; }
+  .responsive-roulette-stage .roulette-table-wrap { grid-column: 2; }
+  .responsive-roulette-stage .armand-stage { display: none !important; }
+  .responsive-roulette-stage .roulette-wheel-scene { --wheel-size: min(66cqh, 24cqw, 174px) !important; grid-column: 1; }
+}
+
+@container game-shell (max-height: 400px) and (min-aspect-ratio: 1.35) {
+  .responsive-blackjack-stage .table-status { display: none !important; }
+}
+
+/* Tall windows keep the felt/full theatre, while only the playable objects
+   use a bounded composition. No exterior black letterbox is introduced. */
+@container game-shell (min-width: 701px) and (min-height: 1001px) {
+  .responsive-blackjack-stage {
+    align-content: center;
+    grid-template-rows:
+      clamp(170px, 18cqmin, 225px)
+      clamp(110px, 12cqmin, 145px)
+      clamp(68px, 7cqmin, 88px)
+      clamp(72px, 7.5cqmin, 94px)
+      clamp(165px, 18cqmin, 215px)
+      28px;
+    row-gap: clamp(10px, 1.2cqmin, 18px);
+  }
+
+  .responsive-blackjack-stage:not(.phase-idle) {
+    grid-template-rows:
+      clamp(170px, 18cqmin, 225px)
+      clamp(110px, 12cqmin, 145px)
+      clamp(64px, 7cqmin, 84px)
+      clamp(70px, 7cqmin, 90px)
+      clamp(165px, 18cqmin, 215px)
+      28px;
+  }
+
+  .responsive-roulette-stage {
+    grid-template-rows: clamp(350px, 40cqw, 560px) minmax(0, 1fr) !important;
+  }
+
+  .responsive-roulette-stage .roulette-table-wrap {
+    align-content: center !important;
+    padding-block: clamp(12px, 1.5cqh, 24px) !important;
+  }
+
+  .responsive-roulette-stage .roulette-board {
+    height: clamp(290px, 32cqw, 410px);
+    min-height: 290px;
+  }
+}
+
+/* Wide but short desktop/laptop windows. Width alone must not select the
+   tall-theatre geometry: the full betting board and call-bet rail remain
+   above the fixed control dock. */
+@container game-shell (min-width: 701px) and (max-height: 900px) {
+  .responsive-blackjack-stage {
+    --bj-card-h: clamp(84px, 13cqh, 104px);
+    grid-template-rows: minmax(112px, 1fr) 94px 58px 62px 118px 24px;
+    row-gap: 3px;
+  }
+
+  .responsive-blackjack-stage:not(.phase-idle) {
+    grid-template-rows: minmax(112px, 1fr) 94px 54px 58px 118px 24px;
+  }
+
+  .responsive-blackjack-stage .dealer-figure {
+    height: min(27cqh, 194px) !important;
+    width: min(30cqw, 224px) !important;
+  }
+
+  .responsive-blackjack-stage .side-bet-spot { transform: scale(.58); }
+  .responsive-blackjack-stage:not(.phase-idle) .side-bet-spot { transform: scale(.54); }
+}
+
+@container game-shell (min-width: 1181px) and (max-height: 1000px) {
+  .responsive-game-shell > .topbar {
+    height: 64px !important;
+    min-height: 64px;
+  }
+
+  .responsive-game-shell--roulette > .responsive-game-dock {
+    height: 92px !important;
+    min-height: 92px !important;
+  }
+
+  .responsive-roulette-stage {
+    grid-template-rows: clamp(260px, 39cqh, 330px) minmax(0, 1fr) !important;
+  }
+
+  .responsive-roulette-stage .roulette-wheel-scene {
+    --wheel-size: min(40cqh, 29cqw, 315px) !important;
+  }
+
+  .responsive-roulette-stage .roulette-table-wrap {
+    padding: 6px 12px 7px !important;
+  }
+
+  .responsive-roulette-stage .roulette-table-heading { margin-bottom: 5px; }
+  .responsive-roulette-stage .roulette-table-heading strong { font-size: 15px; }
+  .responsive-roulette-stage .roulette-stats-strip { margin-bottom: 5px; }
+  .responsive-roulette-stage .roulette-stats-strip > div {
+    min-height: 35px;
+    padding-block: 4px;
+  }
+
+  .responsive-roulette-stage .roulette-board {
+    grid-template-rows: minmax(132px, 1fr) 40px 40px !important;
+    height: clamp(220px, 31cqh, 250px);
+    min-height: 220px;
+  }
+
+  .responsive-roulette-stage .number-bet { font-size: clamp(17px, 1.55cqmin, 22px); }
+  .responsive-roulette-stage .call-bet-rail { margin-top: 6px; }
+  .responsive-roulette-stage .call-bet { height: 38px; }
+  .responsive-roulette-stage .call-heading small { display: none; }
+
+  .responsive-game-shell--roulette .roulette-controls .roulette-chip-selector {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 3px !important;
+  }
+  .responsive-game-shell--roulette .roulette-controls .roulette-chip-selector .casino-chip {
+    flex: 0 0 40px !important;
+    height: 40px !important;
+    width: 40px !important;
+  }
+  .responsive-game-shell--roulette .roulette-controls .roulette-chip-selector .chip-center {
+    height: 30px !important;
+    width: 30px !important;
+  }
+}
+
+/* Roulette composition v3: inspired by current premium live-roulette UIs.
+   The number layout and racetrack are alternative surfaces, never stacked.
+   This keeps the wheel, felt and dock readable at every desktop height. */
+.responsive-roulette-stage .roulette-table-wrap {
+  align-content: stretch !important;
+  grid-template-rows: auto auto minmax(0, 1fr) !important;
+}
+
+.responsive-roulette-stage .roulette-table-toolbar,
+.responsive-roulette-stage .roulette-call-console {
+  max-width: 1160px;
+  width: 100%;
+}
+
+.responsive-roulette-stage .surface-layout .roulette-board {
+  align-self: start;
+}
+
+.responsive-roulette-stage .surface-racetrack .roulette-call-console {
+  align-self: stretch;
+  height: 100%;
+}
+
+@container game-shell (min-width: 1181px) and (min-height: 901px) {
+  .responsive-roulette-stage {
+    grid-template-rows: clamp(290px, 35cqh, 390px) minmax(0, 1fr) !important;
+  }
+
+  .responsive-roulette-stage .roulette-wheel-scene {
+    --wheel-size: min(38cqh, 27cqw, 350px) !important;
+  }
+
+  .responsive-roulette-stage .surface-layout .roulette-board {
+    height: clamp(290px, 29cqw, 370px);
+    min-height: 0;
+  }
+}
+
+@container game-shell (min-width: 1181px) and (max-height: 900px) {
+  .responsive-roulette-stage {
+    grid-template-rows: clamp(210px, 36cqh, 275px) minmax(0, 1fr) !important;
+  }
+
+  .responsive-roulette-stage .roulette-wheel-scene {
+    --wheel-size: min(42cqh, 27cqw, 250px) !important;
+  }
+
+  .responsive-roulette-stage .surface-layout .roulette-board {
+    height: clamp(226px, 31cqh, 250px);
+    min-height: 0;
+  }
+
+  .responsive-roulette-stage .roulette-table-toolbar { margin-bottom: 4px; }
+  .responsive-roulette-stage .roulette-surface-tabs button { min-height: 27px; padding: 3px 9px; }
+  .responsive-roulette-stage .roulette-stats-strip { margin-bottom: 4px; }
+  .responsive-roulette-stage .roulette-call-console { gap: 4px; }
+  .responsive-roulette-stage .roulette-racetrack {
+    grid-template-columns: 118px minmax(0, 1fr) 96px;
+    min-height: 142px;
+    padding: 5px 10px;
+  }
+  .responsive-roulette-stage .racetrack-numbers { height: 122px; min-height: 122px; }
+  .responsive-roulette-stage .racetrack-numbers button { height: 20px; width: 20px; }
+  .responsive-roulette-stage .racetrack-core strong { font-size: 28px; }
+  .responsive-roulette-stage .racetrack-core span { display: none; }
+  .responsive-roulette-stage .roulette-call-console .call-bet-rail { margin-top: 0; }
+  .responsive-roulette-stage .roulette-call-console .call-bet { height: 34px; }
+  .responsive-roulette-stage .call-bet-receipt { min-height: 28px; padding-block: 3px; }
+}
+
+@container game-shell (min-width: 701px) and (max-width: 1180px) {
+  .responsive-roulette-stage .roulette-table-toolbar { margin-bottom: 4px; }
+  .responsive-roulette-stage .roulette-surface-tabs button { font-size: 9px; min-height: 27px; padding: 3px 7px; }
+  .responsive-roulette-stage .roulette-wheel-scene { --wheel-size: min(35cqh, 38cqw, 212px) !important; }
+  .responsive-roulette-stage .surface-layout .roulette-board {
+    grid-template-rows: minmax(0, 1fr) 38px 38px !important;
+    height: clamp(218px, 39cqh, 300px);
+    min-height: 0;
+  }
+  .responsive-roulette-stage .roulette-call-console { gap: 4px; }
+  .responsive-roulette-stage .roulette-racetrack { grid-template-columns: 100px minmax(0,1fr) 88px; min-height: 144px; padding: 5px 9px; }
+  .responsive-roulette-stage .racetrack-numbers { height: 122px; min-height: 122px; }
+  .responsive-roulette-stage .racetrack-core strong { font-size: 28px; }
+  .responsive-roulette-stage .racetrack-core span { display: none; }
+  .responsive-roulette-stage .roulette-call-console .call-bet-rail { margin-top: 0; }
+  .responsive-roulette-stage .roulette-call-console .call-bet { height: 34px; }
+  .responsive-roulette-stage .call-bet-receipt { min-height: 28px; padding-block: 3px; }
+}
+
+@container game-shell (min-width: 701px) and (max-width: 1180px) and (min-height: 1001px) {
+  .responsive-roulette-stage {
+    grid-template-rows: clamp(400px, 38cqh, 470px) minmax(0, 1fr) !important;
+  }
+
+  .responsive-roulette-stage .roulette-wheel-scene {
+    --wheel-size: min(31cqh, 42cqw, 330px) !important;
+  }
+
+  .responsive-roulette-stage .surface-layout .roulette-board {
+    align-self: center;
+    height: clamp(340px, 48cqw, 410px);
+  }
+}
+
+@container game-shell (max-width: 700px) {
+  .responsive-roulette-stage .roulette-table-toolbar { display: block; margin-bottom: 4px; }
+  .responsive-roulette-stage .roulette-surface-tabs { display: none; }
+  .responsive-roulette-stage .roulette-table-wrap { grid-template-rows: auto auto minmax(0, 1fr) !important; }
+}
+
+@container game-shell (min-width: 1181px) and (min-height: 1200px) {
+  .responsive-roulette-stage {
+    grid-template-rows: clamp(520px, 44cqh, 780px) minmax(0, 1fr) !important;
+  }
+
+  .responsive-roulette-stage .roulette-wheel-scene {
+    --wheel-size: min(37cqh, 28cqw, 480px) !important;
+  }
+
+  .responsive-roulette-stage .roulette-table-wrap {
+    align-content: center !important;
+  }
+
+  .responsive-roulette-stage .surface-layout .roulette-board {
+    height: clamp(350px, 29cqw, 430px);
+  }
+}

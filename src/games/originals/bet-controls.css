@@ -1,0 +1,30 @@
+.obc-bet{margin-bottom:13px}
+.obc-bet-entry{display:grid;grid-template-columns:minmax(72px,.75fr) minmax(110px,1.5fr) minmax(72px,.75fr);gap:7px}
+.obc-bet-entry input,.obc-bet-tools input{width:100%;min-width:0;border:1px solid rgba(255,255,255,.13);border-radius:10px;background:#070914;color:var(--originals-copy);font-weight:900;text-align:center}
+.obc-bet-entry input{min-height:48px;padding:0 10px;font-size:18px}
+.obc-bet-entry button,.obc-bet-tools button,.obc-tabs button,.obc-auto-status button{border:1px solid rgba(255,255,255,.1);border-radius:9px;background:rgba(255,255,255,.045);color:var(--originals-muted);font-weight:850;cursor:pointer}
+.obc-bet-entry button{min-height:48px;color:var(--originals-copy);font-size:11px}
+.obc-bet-entry button b{font-size:12px}
+.obc-bet-entry button.decrease{border-color:rgba(255,145,130,.18)}
+.obc-bet-entry button.increase{border-color:rgba(112,242,199,.25);background:rgba(68,210,164,.07)}
+.obc-bet-tools{display:grid;grid-template-columns:1fr 56px 56px;gap:6px;margin-top:7px}
+.obc-bet-tools label{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:7px;padding-left:9px;border:1px solid rgba(255,255,255,.08);border-radius:9px;background:rgba(255,255,255,.025)}
+.obc-bet-tools label span{color:var(--originals-muted);font-size:7px;letter-spacing:.08em}
+.obc-bet-tools input{min-height:32px;border:0;background:transparent;font-size:11px}
+.obc-bet-tools button{min-height:34px;font-size:8px}
+.obc-bet button:hover:not(:disabled){color:var(--originals-copy);border-color:var(--originals-line)}
+.obc-bet button:disabled{opacity:.35;cursor:default}
+.obc-auto{margin:5px 0 13px;padding:9px;border:1px solid rgba(255,255,255,.075);border-radius:12px;background:rgba(255,255,255,.018)}
+.obc-tabs{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.obc-tabs button{min-height:34px;font-size:9px}
+.obc-tabs button.active{color:#0b100d;background:var(--originals-gold);border-color:transparent}
+.obc-auto-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px}
+.obc-auto-grid label{display:grid;gap:5px}
+.obc-auto-grid span{color:var(--originals-muted);font-size:7px;letter-spacing:.08em}
+.obc-auto-grid input{width:100%;min-width:0;min-height:38px;padding:0 8px;border:1px solid rgba(255,255,255,.1);border-radius:8px;background:#070914;color:var(--originals-copy);font-weight:800}
+.obc-auto-status{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:9px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06);color:var(--originals-muted);font-size:8px}
+.obc-auto-status b{display:block;margin-top:3px;color:var(--originals-copy);font-size:10px}
+.obc-auto-status b.positive{color:#7ff8d2}
+.obc-auto-status b.negative{color:#ff8e8e}
+.obc-auto-status button{min-height:34px;padding:0 9px;color:#ffaaa3;border-color:rgba(255,100,90,.3)}
+@media(max-width:420px){.obc-auto-grid{grid-template-columns:1fr}.obc-bet-entry{grid-template-columns:68px 1fr 68px}.obc-bet-entry button b{display:block;margin-top:2px}}

@@ -1,0 +1,390 @@
+.phase7-notice {
+  background: #102a23;
+  border: 1px solid #4e9a74;
+  border-radius: 10px;
+  color: #d7ffe9;
+  margin: 16px 0;
+  padding: 12px 16px;
+}
+.club-event-banner,
+.poker-rating-hero {
+  align-items: center;
+  background: linear-gradient(125deg, #20130e, #12231f);
+  border: 1px solid #a77b42;
+  border-radius: 20px;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 22px;
+  overflow: hidden;
+  padding: 24px 28px;
+  position: relative;
+}
+.club-event-banner::after,
+.poker-rating-hero::after {
+  background: radial-gradient(circle, #e7b95c33, transparent 66%);
+  content: "";
+  height: 220px;
+  position: absolute;
+  right: -40px;
+  top: -90px;
+  width: 220px;
+}
+.club-event-banner h2,
+.poker-rating-hero h2 {
+  color: #f9dda2;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 34px;
+  margin: 4px 0;
+}
+.club-event-banner p,
+.poker-rating-hero p {
+  color: #adaba2;
+  margin: 0;
+}
+.club-event-banner > strong {
+  color: #f5ca72;
+  display: flex;
+  flex-direction: column;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 46px;
+  line-height: 0.9;
+  text-align: center;
+  z-index: 1;
+}
+.club-event-banner > strong small {
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin-top: 8px;
+}
+.club-create-card {
+  align-items: end;
+  background: #130e0c;
+  border: 1px solid #513c2c;
+  border-radius: 16px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1.4fr 0.8fr 0.45fr auto;
+  margin-bottom: 22px;
+  padding: 20px;
+}
+.club-create-card h2,
+.my-club-card h2 {
+  color: #f1d29a;
+  margin: 4px 0;
+}
+.club-create-card p {
+  color: #89857d;
+  margin: 0;
+}
+.club-create-card label {
+  color: #b8a485;
+  display: grid;
+  font-size: 11px;
+  gap: 6px;
+  letter-spacing: 1px;
+}
+.club-create-card input {
+  background: #080706;
+  border: 1px solid #5a4631;
+  border-radius: 8px;
+  color: #fff;
+  min-width: 0;
+  padding: 12px;
+}
+.club-create-card button,
+.club-directory button,
+.my-club-card header button,
+.tournament-card button {
+  background: #d5a44d;
+  border: 0;
+  border-radius: 8px;
+  color: #160e08;
+  cursor: pointer;
+  font-weight: 900;
+  padding: 12px 17px;
+}
+.my-club-card {
+  background: linear-gradient(135deg, #13100d, #0d1917);
+  border: 1px solid #705637;
+  border-radius: 18px;
+  margin-bottom: 22px;
+  padding: 22px;
+}
+.my-club-card > header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+.my-club-card h2 em {
+  color: #7ed9ad;
+  font-style: normal;
+}
+.my-club-card header button {
+  background: transparent;
+  border: 1px solid #76483c;
+  color: #d09a86;
+}
+.club-score-ribbon {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 18px 0;
+}
+.club-score-ribbon span {
+  background: #080d0c;
+  border: 1px solid #283b34;
+  border-radius: 10px;
+  display: grid;
+  padding: 12px;
+}
+.club-score-ribbon small {
+  color: #6d9f8c;
+}
+.club-score-ribbon b {
+  color: #e8d099;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 25px;
+}
+.club-roster {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+.club-roster article {
+  align-items: center;
+  background: #0b0c0b;
+  border: 1px solid #292620;
+  border-radius: 10px;
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+}
+.club-roster .casino-avatar {
+  font-size: 14px;
+  width: 38px;
+}
+.club-roster span {
+  display: grid;
+  flex: 1;
+}
+.club-roster small {
+  color: #907d61;
+}
+.club-roster strong {
+  color: #70d4a6;
+}
+.phase7-columns {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.phase7-columns > section {
+  background: #100d0b;
+  border: 1px solid #3f3428;
+  border-radius: 16px;
+  padding: 20px;
+}
+.phase7-columns > section > header {
+  border-bottom: 1px solid #332a21;
+  margin-bottom: 10px;
+  padding-bottom: 12px;
+}
+.phase7-columns h2 {
+  color: #ead09f;
+  margin: 4px 0;
+}
+.club-standings article,
+.club-directory article,
+.poker-rating-board article {
+  align-items: center;
+  border-bottom: 1px solid #28231e;
+  display: flex;
+  gap: 12px;
+  min-height: 58px;
+  padding: 9px 4px;
+}
+.club-standings article.self,
+.poker-rating-board article.self {
+  background: #1d2c24;
+  border-radius: 8px;
+  padding-inline: 10px;
+}
+.club-standings em,
+.poker-rating-board em {
+  color: #8c7450;
+  font-style: normal;
+  font-weight: 900;
+  width: 30px;
+}
+.club-standings span,
+.club-directory span,
+.poker-rating-board span {
+  display: grid;
+  flex: 1;
+}
+.club-standings small,
+.club-directory small,
+.poker-rating-board small {
+  color: #817d74;
+}
+.club-standings strong,
+.poker-rating-board strong {
+  color: #e7c477;
+}
+.poker-rating-hero {
+  justify-content: flex-start;
+  gap: 20px;
+}
+.poker-rating-hero > .casino-avatar {
+  font-size: 26px;
+  width: 76px;
+}
+.poker-rating-hero > div:nth-child(2) {
+  flex: 1;
+}
+.poker-rating-hero h2 {
+  font-size: 52px;
+  line-height: 0.85;
+}
+.poker-career-trophies {
+  display: flex;
+  gap: 8px;
+  z-index: 1;
+}
+.poker-career-trophies span {
+  background: #090c0b;
+  border: 1px solid #394139;
+  border-radius: 10px;
+  display: grid;
+  min-width: 100px;
+  padding: 10px;
+  text-align: center;
+}
+.poker-career-trophies b {
+  color: #f1d18e;
+}
+.poker-career-trophies small {
+  color: #75877e;
+  font-size: 9px;
+}
+.poker-rating-board .casino-avatar {
+  font-size: 12px;
+  width: 34px;
+}
+.tournament-card {
+  background: #0a0b0a;
+  border: 1px solid #2f332e;
+  border-radius: 12px;
+  margin: 10px 0;
+  padding: 15px;
+}
+.tournament-card > div small {
+  color: #65c699;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+}
+.tournament-card h3 {
+  color: #ecd19c;
+  margin: 4px 0;
+}
+.tournament-card p {
+  color: #777d76;
+  font-size: 12px;
+  margin: 0 0 12px;
+}
+.tournament-card > strong {
+  color: #6fd5a6;
+}
+.tournament-card ol {
+  margin: 10px 0 0;
+  padding-left: 22px;
+}
+.tournament-card li {
+  color: #bdb7aa;
+  padding: 4px;
+}
+.tournament-card li span {
+  color: #76cfa7;
+  float: right;
+}
+.avatar-picker-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+.avatar-picker-grid button {
+  align-items: center;
+  background: #0c0b0a;
+  border: 1px solid #342c22;
+  border-radius: 12px;
+  color: #ddd;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  text-align: left;
+}
+.avatar-file-input {
+  display: none;
+}
+.avatar-upload-card {
+  background: linear-gradient(125deg, #183129, #0d1512) !important;
+  border-color: #4a916f !important;
+}
+.avatar-picker-grid button.active {
+  background: #272014;
+  border-color: #c69a4c;
+  box-shadow: inset 0 0 25px #c99b2915;
+}
+.avatar-picker-grid .casino-avatar {
+  font-size: 16px;
+  width: 46px;
+}
+.avatar-picker-grid span {
+  display: grid;
+}
+.avatar-picker-grid small {
+  color: #8e7c5e;
+  font-size: 9px;
+  margin-top: 3px;
+}
+@media (max-width: 900px) {
+  .phase7-columns {
+    grid-template-columns: 1fr;
+  }
+  .club-create-card {
+    grid-template-columns: 1fr 1fr;
+  }
+  .club-create-card > div {
+    grid-column: 1/-1;
+  }
+  .poker-rating-hero {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .poker-career-trophies {
+    width: 100%;
+  }
+}
+@media (max-width: 560px) {
+  .club-event-banner {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .club-score-ribbon {
+    grid-template-columns: 1fr;
+  }
+  .club-create-card {
+    grid-template-columns: 1fr;
+  }
+  .poker-career-trophies {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+  .avatar-picker-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

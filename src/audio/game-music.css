@@ -1,0 +1,19 @@
+.game-music-control { align-items:center; background:rgba(5,13,12,.76); border:1px solid rgba(212,181,105,.26); border-radius:999px; display:flex; flex:0 0 auto; gap:7px; min-height:38px; padding:4px 10px 4px 4px; transition:width .22s ease,border-color .22s ease; width:158px; }
+.game-music-control>button { align-items:center; background:rgba(214,183,104,.08); border:1px solid rgba(214,183,104,.22); border-radius:50%; color:#a69369; display:flex; flex:0 0 30px; font-size:17px; height:30px; justify-content:center; padding:0; width:30px; }
+.game-music-control.playing>button { color:#f1d57f; box-shadow:0 0 15px rgba(224,190,93,.17); }
+.game-music-control>div { display:flex; flex:1; flex-direction:column; gap:3px; min-width:0; }
+.game-music-control small { color:#b8aa86; display:block; font-family:'DM Mono',monospace; font-size:12px; line-height:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.game-music-control input[type='range'] { accent-color:#d7b65e; cursor:pointer; height:5px; margin:0; min-height:0; padding:0; width:100%; }
+.game-music-control.admin-muted { filter:saturate(.35); opacity:.62; }
+.game-music-control button:disabled,.game-music-control input:disabled { cursor:not-allowed; }
+.game-music-control{width:224px}.game-sfx-control{align-items:center;display:grid;flex:0 0 57px;gap:3px;grid-template-columns:24px 30px;margin-left:1px;padding-left:6px;border-left:1px solid rgba(212,181,105,.16)}.game-sfx-control button{align-items:center;background:rgba(214,183,104,.06);border:1px solid rgba(214,183,104,.18);border-radius:6px;color:#7e745e;display:flex;font:800 8px/1 'DM Mono',monospace;height:25px;justify-content:center;padding:0;width:24px}.game-sfx-control.on button{color:#f1d57f;border-color:rgba(214,183,104,.35)}.game-sfx-control input[type='range']{accent-color:#d7b65e;height:5px;margin:0;min-height:0;padding:0;width:30px}
+.kiraz-topbar-actions,.neon-topbar-actions { align-items:center; display:flex; gap:10px; justify-self:end; }
+.kiraz-topbar-actions .game-music-control { background:rgba(83,37,34,.09); border-color:rgba(139,49,53,.25); }
+.kiraz-topbar-actions .game-music-control small { color:#7b4745; }
+.kiraz-topbar-actions .game-music-control>button { border-color:rgba(142,43,50,.28); color:#a02e37; }
+.neon-topbar-actions .game-music-control { background:rgba(2,12,25,.75); border-color:rgba(56,220,255,.25); }
+.neon-topbar-actions .game-music-control small { color:#6db5c8; }
+.neon-topbar-actions .game-music-control>button { border-color:rgba(58,220,255,.28); color:#7beaff; }
+.roulette-topbar .game-music-control { background:rgba(21,5,7,.72); }
+@media (max-width:1180px) { .game-music-control { width:194px; }.game-music-control small { max-width:70px; } }
+@media (max-width:760px) { .game-music-control { padding-right:8px; width:min(224px,calc(100vw - 24px)); }.game-music-control>div { display:flex; }.game-sfx-control{border-left:1px solid rgba(212,181,105,.16);flex-basis:57px;grid-template-columns:24px 30px;margin-left:1px;padding-left:6px}.game-sfx-control input{display:block}.kiraz-topbar-actions,.neon-topbar-actions { gap:5px; } }

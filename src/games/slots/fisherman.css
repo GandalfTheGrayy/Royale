@@ -1,0 +1,2387 @@
+.fisher-game .fisher-spin.is-stop {
+  background: radial-gradient(circle at 34% 28%, #ff9f83, #d8384d 58%, #6e1425);
+  border-color: #ffe0cf;
+  box-shadow:
+    0 0 0 3px #6c1b2d,
+    0 8px 0 #4e1020,
+    0 12px 22px rgba(0, 0, 0, 0.35);
+}
+
+@font-face {
+  font-family: Manrope;
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("/assets/fonts/Manrope-Variable.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Barlow Condensed";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/assets/fonts/BarlowCondensed-Medium.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Barlow Condensed";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/assets/fonts/BarlowCondensed-SemiBold.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Barlow Condensed";
+  font-style: normal;
+  font-weight: 700 900;
+  font-display: swap;
+  src: url("/assets/fonts/BarlowCondensed-Bold.ttf") format("truetype");
+}
+
+.fisher-game {
+  --deep: #03141b;
+  --sea: #073c4c;
+  --sea2: #0a6170;
+  --foam: #a8f1e6;
+  --coral: #ff744f;
+  --gold: #ffd477;
+  --ink: #eafdf8;
+  min-height: 100vh;
+  background: radial-gradient(
+    circle at 48% 22%,
+    #0e6470 0,
+    #052b38 26%,
+    #020d14 68%
+  );
+  color: var(--ink);
+  font-family: Manrope, system-ui, sans-serif;
+  overflow-x: hidden;
+}
+.fisher-game * {
+  box-sizing: border-box;
+}
+.fisher-game button,
+.fisher-game input,
+.fisher-game select {
+  font: inherit;
+}
+.fisher-game button {
+  color: inherit;
+}
+.fisher-topbar {
+  height: 76px;
+  padding: 0 28px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  border-bottom: 1px solid #8de9dc27;
+  background: #020b10e8;
+  position: relative;
+  z-index: 30;
+  backdrop-filter: blur(18px);
+}
+.fisher-topbar > button {
+  justify-self: start;
+  border: 0;
+  background: none;
+  color: #c7e8e2b8;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.fisher-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  letter-spacing: 0.14em;
+}
+.fisher-brand img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 8px #0008);
+}
+.fisher-brand span {
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+}
+.fisher-brand small {
+  display: block;
+  font:
+    700 10px/1.2 Manrope,
+    sans-serif;
+  color: #d5a95d;
+  letter-spacing: 0.18em;
+  margin-top: 2px;
+}
+.fisher-top-actions {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.fisher-wallet {
+  border: 1px solid #d4a85961;
+  border-radius: 999px;
+  background: #0b2629;
+  padding: 10px 16px;
+  color: #fff0b4;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.fisher-wallet small {
+  font-size: 10px;
+  color: #89cfc7;
+}
+
+.fisher-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 260px) minmax(700px, 1fr) minmax(
+      300px,
+      340px
+    );
+  gap: 14px;
+  max-width: 1740px;
+  margin: auto;
+  padding: 14px;
+  min-height: calc(100vh - 76px);
+}
+.fisher-captain-panel,
+.fisher-machine,
+.fisher-side > section {
+  border: 1px solid #8ee4d82b;
+  background: linear-gradient(160deg, #061c26f2, #020e15f2);
+  box-shadow: 0 26px 70px #0006;
+}
+.fisher-captain-panel {
+  position: relative;
+  min-height: 760px;
+  border-radius: 22px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #0d5261 0, #062b3a 38%, #020e16 76%);
+}
+.fisher-captain-panel:after {
+  content: "";
+  position: absolute;
+  inset: 48% 0 0;
+  background: repeating-radial-gradient(
+    ellipse at 50% 0,
+    transparent 0 18px,
+    #d4a4550b 19px 21px
+  );
+}
+.moon {
+  position: absolute;
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  background: #ffe6a3;
+  box-shadow: 0 0 55px #ffe19c73;
+  top: 52px;
+  right: -35px;
+}
+.captain-scene {
+  height: 385px;
+  position: relative;
+  background:
+    linear-gradient(180deg, #01111b42, #031017c7),
+    url("/assets/fisherman/ottoman-ai/ottoman-harbor-night-v1.png") 57%
+      center/cover no-repeat;
+  overflow: hidden;
+  border-bottom: 1px solid #d6a85847;
+}
+.captain-scene:after {
+  content: "";
+  position: absolute;
+  inset: 56% -20% 0;
+  background: repeating-radial-gradient(
+    ellipse at 50% 0,
+    #ffffff15 0 2px,
+    transparent 3px 34px
+  );
+  animation: seaDrift 7s linear infinite;
+}
+.captain-avatar {
+  position: absolute;
+  width: 275px;
+  height: 405px;
+  object-fit: contain;
+  object-position: center top;
+  top: 0;
+  left: 50%;
+  z-index: 3;
+  filter: drop-shadow(0 15px 13px #000d);
+  animation: captainIdle 4.2s ease-in-out infinite;
+  transform-origin: 50% 80%;
+}
+@keyframes captainIdle {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0) rotate(-0.4deg);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-4px) rotate(0.4deg);
+  }
+}
+@keyframes seaDrift {
+  to {
+    transform: translateX(70px);
+  }
+}
+.captain-copy {
+  padding: 24px;
+  position: relative;
+  z-index: 2;
+}
+.captain-copy > small {
+  font: 800 11px "Barlow Condensed";
+  letter-spacing: 0.23em;
+  color: #76dfd1;
+}
+.captain-copy h2 {
+  font: 800 clamp(40px, 3vw, 58px)/0.82 "Barlow Condensed";
+  letter-spacing: 0.03em;
+  margin: 9px 0 18px;
+  color: #fff3c6;
+  text-shadow: 0 4px 0 #113d44;
+}
+.captain-copy p {
+  font-size: 13px;
+  line-height: 1.65;
+  color: #d4eee9;
+  min-height: 105px;
+}
+.captain-stats {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  z-index: 2;
+  border-top: 1px solid #8ce4d02e;
+  background: #020d14d9;
+}
+.captain-stats span {
+  padding: 16px;
+  border-right: 1px solid #8ce4d01c;
+}
+.captain-stats small {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: #70afa9;
+}
+.captain-stats b {
+  display: block;
+  font: 700 21px "Barlow Condensed";
+  margin-top: 4px;
+}
+.captain-stats b.positive {
+  color: #83f3c8;
+}
+
+.fisher-machine {
+  border-radius: 22px;
+  overflow: hidden;
+  position: relative;
+  background: linear-gradient(160deg, #093849, #03151e 80%);
+}
+.fisher-machine:before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, #a7fff507, transparent);
+  transform: translateX(-100%);
+  animation: sonar 9s ease-in-out infinite;
+}
+@keyframes sonar {
+  60%,
+  100% {
+    transform: translateX(100%);
+  }
+}
+.fisher-machine-title {
+  min-height: 104px;
+  padding: 18px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #a5efe526;
+  position: relative;
+  z-index: 2;
+}
+.fisher-machine-title small {
+  font: 800 10px "Barlow Condensed";
+  letter-spacing: 0.2em;
+  color: #74d8ce;
+}
+.fisher-machine-title h1 {
+  font: 800 38px/0.95 "Barlow Condensed";
+  margin: 4px 0;
+  color: #f6fff9;
+  letter-spacing: 0.03em;
+}
+.fisher-machine-title h1 em {
+  color: var(--coral);
+  font-style: normal;
+}
+.fisher-machine-title p {
+  font-size: 10px;
+  letter-spacing: 0.13em;
+  color: #87bab7;
+  margin: 0;
+}
+.fener-chance {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 7px;
+}
+.fener-chance button {
+  border: 1px solid #8fd8cd35;
+  background: #041319;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.fener-chance button.active {
+  background: #ff744f;
+  color: #1d0a04;
+  border-color: #ffb18e;
+  box-shadow: 0 0 25px #ff744f40;
+}
+.bonus-hud {
+  display: flex;
+  gap: 8px;
+}
+.bonus-hud span {
+  min-width: 92px;
+  padding: 10px;
+  border-radius: 12px;
+  background: #021219cc;
+  border: 1px solid #7cddcf35;
+  text-align: center;
+}
+.bonus-hud small {
+  display: block;
+  font-size: 9px;
+}
+.bonus-hud b {
+  display: block;
+  font: 800 19px "Barlow Condensed";
+  color: #ffe6a0;
+  margin-top: 3px;
+}
+.bonus-hud .queued-batch {
+  background: linear-gradient(145deg, #3b2910e8, #101914e8);
+  border-color: #e7bb65a6;
+  box-shadow: inset 0 0 18px #e9bb4f17;
+}
+.bonus-hud .queued-batch em {
+  color: #93d8ce;
+  display: block;
+  font: 800 8px Manrope;
+  font-style: normal;
+  margin-top: 2px;
+}
+.captain-progress {
+  padding: 10px 18px;
+  background: #031119;
+  border-bottom: 1px solid #80dfd22e;
+}
+.captain-progress > div {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.captain-progress > div > span {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  grid-template-rows: auto auto;
+  padding: 7px;
+  border: 1px solid #69bfb52e;
+  border-radius: 9px;
+  color: #6d9997;
+}
+.captain-progress i {
+  grid-row: 1/3;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1px solid currentColor;
+  font-style: normal;
+  font-weight: 800;
+}
+.captain-progress b {
+  font: 700 11px "Barlow Condensed";
+  letter-spacing: 0.08em;
+}
+.captain-progress small {
+  font-size: 9px;
+}
+.captain-progress > div > span.current {
+  color: #ffd477;
+  border-color: #ffd47770;
+}
+.captain-progress > div > span.complete {
+  color: #72e8bc;
+  background: #09392d;
+}
+.captain-progress p {
+  text-align: right;
+  font-size: 10px;
+  color: #8cbeb9;
+  margin: 6px 0 0;
+}
+.fisher-reel-window {
+  position: relative;
+  margin: 16px 18px 0;
+  border: 2px solid #d7bf7880;
+  border-radius: 18px;
+  padding: 13px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, #062f3ce6, #02131bec),
+    url("/assets/fisherman/ottoman-ai/ottoman-harbor-night-v1.png") center/cover
+      no-repeat;
+  box-shadow:
+    inset 0 0 70px #000b,
+    0 10px 30px #0005;
+  min-height: 500px;
+}
+.water-caustics {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 15%,
+    #d1ffff0b 18%,
+    transparent 23%,
+    transparent 52%,
+    #d1ffff0c 57%,
+    transparent 64%
+  );
+  background-size: 160px 220px;
+  animation: caustics 7s linear infinite;
+  pointer-events: none;
+}
+@keyframes caustics {
+  to {
+    background-position: 320px 110px;
+  }
+}
+.fisher-reels {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  height: 470px;
+  position: relative;
+  z-index: 2;
+  overflow: hidden;
+}
+.fisher-reel {
+  display: grid;
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.fisher-symbol {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid #e8c47836;
+  border-radius: 13px;
+  background: radial-gradient(circle at 48% 35%, #f2ffff14, #020b10de 75%);
+  box-shadow:
+    inset 0 1px #fff1c624,
+    0 5px 12px #0007;
+  overflow: hidden;
+}
+.fisher-symbol img {
+  display: block;
+  width: 91%;
+  height: 88%;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  image-rendering: auto;
+  filter: drop-shadow(0 8px 6px #000d);
+  transition: 0.25s;
+}
+.fisher-symbol b {
+  position: absolute;
+  inset: auto 7px 7px;
+  background: #071c18ed;
+  border: 2px solid #ffe08a;
+  border-radius: 999px;
+  color: #fff3b5;
+  font: 800 clamp(15px, 1.3vw, 24px) "Barlow Condensed";
+  text-align: center;
+  padding: 2px 5px;
+  box-shadow: 0 4px 8px #0007;
+}
+.fisher-symbol span {
+  position: absolute;
+  bottom: 5px;
+  background: #041016eb;
+  border: 1px solid #d3ad64;
+  color: #fff0c6;
+  border-radius: 4px;
+  padding: 2px 5px;
+  font: 800 8px Manrope;
+  letter-spacing: 0.08em;
+}
+.fisher-symbol.symbol-scatter {
+  background: radial-gradient(circle, #ffd6733d, #03131bd9 72%);
+  border-color: #ffe19591;
+}
+.fisher-symbol.symbol-captain {
+  background: radial-gradient(circle, #b328273e, #03131bd9 72%);
+  border-color: #e7b96599;
+}
+.fisher-symbol.symbol-captain img,
+.fisher-symbol.symbol-scatter img {
+  width: 96%;
+  height: 96%;
+}
+.fisher-symbol.winner {
+  animation: winnerPulse 0.72s ease-in-out infinite alternate;
+  border-color: #fff0a5;
+  box-shadow:
+    inset 0 0 24px #ffd86752,
+    0 0 18px #ffdf7070;
+}
+.fisher-symbol.collected {
+  animation: fishCollect 0.48s both;
+}
+.fisher-symbol.collected img {
+  transform: translate(-40px, -60px) scale(0.2);
+  opacity: 0;
+}
+.fisher-symbol.collected b {
+  transform: translate(20px, -90px) scale(1.4);
+  opacity: 0;
+}
+@keyframes winnerPulse {
+  to {
+    transform: translateY(-2px);
+    filter: brightness(1.2);
+  }
+}
+@keyframes fishCollect {
+  55% {
+    background: #ffe89042;
+  }
+  to {
+    filter: brightness(1.25);
+  }
+}
+.fisher-reel.rolling .fisher-symbol {
+  animation: reelRoll 0.15s linear infinite;
+  filter: blur(2px);
+  opacity: 0.72;
+}
+.fisher-reel.rolling:nth-child(even) .fisher-symbol {
+  animation-direction: reverse;
+}
+@keyframes reelRoll {
+  from {
+    transform: translateY(-12px);
+  }
+  to {
+    transform: translateY(12px);
+  }
+}
+.hook-rescue {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  background: #021319d9;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  backdrop-filter: blur(5px);
+}
+.hook-rescue i {
+  font-style: normal;
+  font-size: 65px;
+  animation: hookDrop 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.hook-rescue strong {
+  font: 800 28px "Barlow Condensed";
+  color: #ffd477;
+  letter-spacing: 0.08em;
+}
+.hook-rescue span {
+  font-size: 12px;
+  color: #a5d3cf;
+  margin-top: 5px;
+}
+@keyframes hookDrop {
+  from {
+    transform: translateY(-180px);
+  }
+  65% {
+    transform: translateY(15px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.collection-theatre {
+  position: absolute;
+  z-index: 11;
+  inset: 15% 16%;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  background: #021511ee;
+  border: 2px solid #ffe491;
+  border-radius: 18px;
+  box-shadow: 0 0 70px #72e8bd52;
+  backdrop-filter: blur(7px);
+}
+.collection-theatre small {
+  font: 800 11px "Barlow Condensed";
+  letter-spacing: 0.2em;
+  color: #74e3ce;
+}
+.collection-theatre > div {
+  display: flex;
+  gap: 7px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 12px;
+}
+.collection-theatre > div span {
+  background: #124936;
+  border: 1px solid #fff0a0;
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: #fff3aa;
+  font: 800 16px "Barlow Condensed";
+  animation: valueDrop 0.35s both;
+}
+.collection-theatre strong {
+  font: 800 46px "Barlow Condensed";
+  color: #fff0a8;
+}
+.collection-theatre strong i {
+  font-style: normal;
+  color: #75ecc7;
+}
+.collection-theatre p {
+  font: 800 22px "Barlow Condensed";
+  margin: 3px;
+  color: #fff;
+}
+@keyframes valueDrop {
+  from {
+    transform: translateY(-30px) scale(0.4);
+    opacity: 0;
+  }
+}
+
+.fisher-result {
+  margin: 10px 18px;
+  min-height: 64px;
+  border: 1px solid #73cfc42c;
+  border-radius: 13px;
+  background: #021018c4;
+  padding: 11px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.fisher-result small {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: #79bbb6;
+}
+.fisher-result strong {
+  display: block;
+  font-size: 13px;
+  margin-top: 4px;
+}
+.fisher-result > b {
+  font: 800 28px "Barlow Condensed";
+  color: #89cabf;
+}
+.fisher-result > b em {
+  font-size: 12px;
+  font-style: normal;
+}
+.fisher-result.has-win > b {
+  color: #ffe19a;
+  text-shadow: 0 0 20px #ffd36f75;
+}
+.fisher-controls {
+  display: grid;
+  grid-template-columns: 68px 118px minmax(280px, 1fr) 94px minmax(220px, auto);
+  gap: 9px;
+  align-items: stretch;
+  padding: 12px 14px 15px;
+  background: #020d14;
+  border-top: 1px solid #78d4c62e;
+  position: relative;
+  z-index: 4;
+}
+.fisher-controls button {
+  cursor: pointer;
+}
+.fisher-controls button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.fisher-info,
+.bonus-buy,
+.fisher-toggles > button,
+.fisher-toggles label {
+  border: 1px solid #6bbeb442;
+  background: #082732;
+  border-radius: 10px;
+}
+.fisher-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+.fisher-info span {
+  font-size: 8px;
+  margin-top: 4px;
+}
+.bonus-buy {
+  color: #ffe9a5;
+  background: linear-gradient(180deg, #3b2d16, #171205);
+  padding: 7px;
+}
+.bonus-buy small,
+.bonus-buy span {
+  display: block;
+  font-size: 8px;
+}
+.bonus-buy b {
+  display: block;
+  font: 800 16px "Barlow Condensed";
+  margin: 3px 0;
+}
+.fisher-bet {
+  border: 1px solid #66b5aa3a;
+  border-radius: 10px;
+  padding: 7px 10px;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 6px;
+  align-items: end;
+  background: #061c25;
+}
+.fisher-bet > small {
+  grid-column: 1/4;
+  font-size: 8px;
+  color: #72aaa5;
+  letter-spacing: 0.08em;
+}
+.fisher-bet > div {
+  display: grid;
+  grid-template-columns: 34px minmax(90px, 1fr) 34px;
+}
+.fisher-bet button,
+.fisher-bet input,
+.fisher-bet select {
+  height: 34px;
+  border: 1px solid #65b8ad48;
+  background: #031219;
+  color: #fff;
+}
+.fisher-bet button {
+  border-radius: 7px;
+  font-weight: 800;
+}
+.fisher-bet label {
+  position: relative;
+  font-size: 8px;
+  color: #70aaa5;
+}
+.fisher-bet label input {
+  width: 100%;
+  text-align: center;
+  font: 800 19px "Barlow Condensed";
+  padding-right: 25px;
+}
+.fisher-bet label i {
+  position: absolute;
+  right: 7px;
+  bottom: 10px;
+  font-style: normal;
+  font-size: 8px;
+}
+.fisher-bet > label select {
+  width: 64px;
+  display: block;
+  margin-top: 3px;
+  border-radius: 6px;
+  font-size: 11px;
+}
+.fisher-spin {
+  border: 2px solid #f7dda1;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ff805e 0, #b63b2a 58%, #47130e 60%);
+  box-shadow:
+    0 0 0 5px #193c42,
+    0 0 25px #ff704c52;
+  display: grid;
+  place-content: center;
+}
+.fisher-spin i {
+  font-style: normal;
+  font-size: 28px;
+  line-height: 0.8;
+}
+.fisher-spin span {
+  font: 800 10px "Barlow Condensed";
+  letter-spacing: 0.08em;
+}
+.fisher-toggles {
+  display: grid;
+  grid-template-columns: repeat(3, 56px) minmax(70px, 1fr);
+  gap: 5px;
+}
+.fisher-toggles > button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+.fisher-toggles span {
+  font-size: 8px;
+  margin-top: 4px;
+}
+.fisher-toggles button.active {
+  border-color: #7cf2dc;
+  background: #0d514d;
+  color: #fff4b1;
+}
+.fisher-toggles label {
+  display: grid;
+  grid-template-rows: 25px 1fr;
+  padding: 4px;
+}
+.fisher-toggles select {
+  min-width: 0;
+  background: #02131a;
+  color: #dff;
+  border: 0;
+  font-size: 10px;
+}
+.fisher-toggles label button {
+  border: 0;
+  background: transparent;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.fisher-side {
+  display: grid;
+  grid-template-rows: minmax(310px, 0.9fr) minmax(400px, 1.1fr);
+  gap: 12px;
+  min-height: 760px;
+}
+.fisher-side > section {
+  border-radius: 18px;
+  overflow: hidden;
+}
+.fisher-log {
+  display: flex;
+  flex-direction: column;
+}
+.fisher-log header,
+.mercan-chat header {
+  min-height: 52px;
+  padding: 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #74cdc224;
+}
+.fisher-log header span,
+.mercan-chat header span {
+  font: 800 12px "Barlow Condensed";
+  letter-spacing: 0.1em;
+}
+.fisher-log header small,
+.mercan-chat header small {
+  font-size: 8px;
+  color: #65a9a3;
+  letter-spacing: 0.08em;
+}
+.fisher-log > article {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 9px 12px;
+  border-bottom: 1px solid #75c8bc13;
+}
+.fisher-log > article i {
+  font-style: normal;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #24333a;
+  color: #9bb;
+}
+.fisher-log > article i.up {
+  background: #124c3a;
+  color: #74efbc;
+}
+.fisher-log > article i.down {
+  background: #422122;
+  color: #ff8d7f;
+}
+.fisher-log > article strong {
+  display: block;
+  font-size: 10px;
+}
+.fisher-log > article small {
+  display: block;
+  font-size: 8px;
+  color: #729b99;
+  margin-top: 2px;
+}
+.fisher-log > article b {
+  font: 700 12px "Barlow Condensed";
+}
+.fisher-log > p {
+  padding: 20px;
+  font-size: 12px;
+  color: #7ba6a2;
+}
+.fisher-log footer {
+  margin-top: auto;
+  padding: 14px;
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid #7ad2c52a;
+  background: #041820;
+}
+.fisher-log footer span {
+  font-size: 9px;
+  color: #7fa9a6;
+}
+.fisher-log footer b {
+  font: 800 17px "Barlow Condensed";
+}
+.fisher-log .positive {
+  color: #74e8b9;
+}
+.mercan-chat {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+.mercan-chat header > div {
+  display: flex;
+  flex-direction: column;
+}
+.mercan-chat header i {
+  font-style: normal;
+  color: #5a6d6c;
+}
+.mercan-chat header i.online {
+  color: #72f3c5;
+  text-shadow: 0 0 10px #6df1c8;
+}
+.mercan-chat > div {
+  overflow-y: auto;
+  min-height: 0;
+  padding: 10px;
+}
+.mercan-chat article {
+  margin-bottom: 10px;
+}
+.mercan-chat article > span {
+  font-size: 9px;
+  font-weight: 800;
+  color: #70d9ce;
+}
+.mercan-chat article p {
+  font-size: 11px;
+  line-height: 1.48;
+  padding: 9px 10px;
+  margin: 4px 0;
+  background: #092731;
+  border: 1px solid #78c7bd1b;
+  border-radius: 10px;
+}
+.mercan-chat article > small {
+  font-size: 8px;
+  color: #557875;
+}
+.mercan-chat article.player {
+  text-align: right;
+}
+.mercan-chat article.player p {
+  background: #2b2a1b;
+  border-color: #e1c46d36;
+}
+.mercan-chat form {
+  display: grid;
+  grid-template-columns: 1fr 40px;
+  gap: 6px;
+  padding: 10px;
+  border-top: 1px solid #73cfc329;
+}
+.mercan-chat input {
+  min-width: 0;
+  background: #03131b;
+  border: 1px solid #73bfb638;
+  color: #fff;
+  border-radius: 9px;
+  padding: 10px;
+  font-size: 11px;
+}
+.mercan-chat form button {
+  border: 0;
+  border-radius: 9px;
+  background: #ff7655;
+  color: #1b0905;
+  font-weight: 900;
+}
+
+.fisher-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: #01090cdb;
+  backdrop-filter: blur(12px);
+  padding: 20px;
+}
+.bonus-ready,
+.bonus-summary {
+  width: min(520px, 92vw);
+  padding: 38px;
+  text-align: center;
+  border: 2px solid #ffd67d;
+  background: radial-gradient(
+    circle at 50% 5%,
+    #166a70,
+    #052934 42%,
+    #020e14 90%
+  );
+  border-radius: 28px;
+  box-shadow: 0 0 90px #40e2cd47;
+  position: relative;
+  overflow: hidden;
+}
+.bonus-ready:before,
+.bonus-summary:before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-radial-gradient(
+    ellipse at 50% 0,
+    transparent 0 30px,
+    #fff1b30a 32px 34px
+  );
+  pointer-events: none;
+}
+.bonus-ready img {
+  width: 150px;
+  height: 120px;
+  object-fit: contain;
+  filter: drop-shadow(0 15px 10px #0007);
+  animation: boatFloat 2.2s ease-in-out infinite;
+}
+@keyframes boatFloat {
+  50% {
+    transform: translateY(-7px) rotate(2deg);
+  }
+}
+.bonus-ready > small,
+.bonus-summary > small {
+  display: block;
+  font: 800 11px "Barlow Condensed";
+  letter-spacing: 0.22em;
+  color: #79e5d6;
+}
+.bonus-ready h2 {
+  font: 800 54px/0.9 "Barlow Condensed";
+  margin: 12px;
+  color: #fff0b2;
+}
+.bonus-ready h2 em {
+  color: #ff7655;
+  font-style: normal;
+}
+.bonus-ready p,
+.bonus-summary p {
+  font-size: 13px;
+  line-height: 1.65;
+  color: #c5e5e1;
+}
+.bonus-ready button,
+.bonus-summary button {
+  border: 0;
+  border-radius: 12px;
+  background: #ffd477;
+  color: #241508;
+  padding: 14px 22px;
+  font-weight: 900;
+  margin-top: 12px;
+  cursor: pointer;
+}
+.bonus-ready button span,
+.bonus-summary button span {
+  margin-left: 20px;
+}
+.bonus-summary h2 {
+  font: 800 68px "Barlow Condensed";
+  margin: 14px;
+  color: #ffe39a;
+}
+.bonus-summary h2 em {
+  font-size: 18px;
+  font-style: normal;
+}
+.stage-flash {
+  position: fixed;
+  z-index: 110;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  width: 330px;
+  padding: 28px;
+  text-align: center;
+  border: 2px solid #ffe08d;
+  border-radius: 50%;
+  background: #06262df5;
+  box-shadow: 0 0 110px #5af5d684;
+  animation: stageIn 0.5s cubic-bezier(0.2, 1.4, 0.3, 1);
+}
+.stage-flash small,
+.stage-flash span {
+  display: block;
+  font: 800 10px "Barlow Condensed";
+  letter-spacing: 0.2em;
+  color: #7ee8da;
+}
+.stage-flash strong {
+  display: block;
+  font: 800 90px/0.9 "Barlow Condensed";
+  color: #fff0a8;
+}
+.stage-flash b {
+  display: block;
+  color: #ff8462;
+  margin-top: 8px;
+}
+.stage-flash.retrigger-flash {
+  border-radius: 28px;
+  background: radial-gradient(circle at 50% 20%, #1b777c, #06262df5 62%);
+  box-shadow: 0 0 130px #ffd76673, inset 0 0 45px #68ffef24;
+}
+.stage-flash.retrigger-flash strong {
+  color: #fff2a5;
+  font-size: 76px;
+  margin: 8px 0;
+}
+@keyframes stageIn {
+  from {
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 0;
+  }
+}
+.fisher-bonus-result-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: clamp(16px, 3vw, 40px);
+  background: #01090cdb;
+  backdrop-filter: blur(14px);
+}
+.fisher-bonus-result {
+  position: relative;
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: clamp(36px, 5vw, 58px);
+  text-align: center;
+  border: 2px solid #ffd67d;
+  background: radial-gradient(
+    circle at 50% 5%,
+    #166a70,
+    #052934 42%,
+    #020e14 90%
+  );
+  border-radius: 28px;
+  box-shadow: 0 0 90px #40e2cd47;
+}
+.fisher-bonus-result:before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-radial-gradient(
+    ellipse at 50% 0,
+    transparent 0 30px,
+    #fff1b30a 32px 34px
+  );
+  pointer-events: none;
+}
+.fisher-bonus-result > small {
+  display: block;
+  font: 800 12px "Barlow Condensed";
+  letter-spacing: 0.22em;
+  color: #79e5d6;
+}
+.fisher-bonus-result h2 {
+  font: 800 clamp(58px, 8vw, 82px)/0.95 "Barlow Condensed";
+  margin: 16px;
+  color: #ffe39a;
+}
+.fisher-bonus-result h2 em {
+  font-size: 18px;
+  font-style: normal;
+}
+.fisher-bonus-result p {
+  font-size: 15px;
+  line-height: 1.65;
+  color: #c5e5e1;
+}
+.fisher-bonus-result > button:not(.close) {
+  position: relative;
+  border: 0;
+  border-radius: 12px;
+  background: #ffd477;
+  color: #241508;
+  padding: 14px 22px;
+  font-weight: 900;
+  margin-top: 14px;
+  cursor: pointer;
+}
+.fisher-bonus-result > button span {
+  margin-left: 20px;
+}
+.fisher-bonus-result > .close {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  z-index: 2;
+  width: 42px;
+  height: 42px;
+  border: 1px solid #ffd67d;
+  border-radius: 50%;
+  background: #041b22;
+  color: #ffe7a4;
+  font-size: 24px;
+  cursor: pointer;
+}
+.fisher-win-theatre-backdrop {
+  align-items: center;
+  backdrop-filter: blur(7px);
+  background: radial-gradient(circle at 50% 48%, #0c6a7566, #01090dcc 58%);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 20px;
+  position: fixed;
+  z-index: 1000;
+}
+.fisher-win-theatre {
+  animation: fisherWinTheatreIn 0.42s cubic-bezier(0.18, 0.82, 0.24, 1) both;
+  position: relative;
+  width: min(470px, 90vw);
+  padding: 35px;
+  text-align: center;
+  border: 2px solid #ffd978;
+  border-radius: 24px;
+  background: #03181af2;
+  box-shadow: 0 0 100px #ffd45b55;
+}
+@keyframes fisherWinTheatreIn {
+  from {
+    opacity: 0;
+    transform: translateY(22px) scale(0.88);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.fisher-win-theatre button {
+  position: absolute;
+  right: 10px;
+  top: 8px;
+  border: 0;
+  background: transparent;
+  font-size: 24px;
+  cursor: pointer;
+}
+.fisher-win-theatre small,
+.fisher-win-theatre span {
+  display: block;
+  color: #7fe6d9;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+}
+.fisher-win-theatre strong {
+  display: block;
+  font: 800 62px "Barlow Condensed";
+  color: #ffe39d;
+  margin: 9px;
+}
+.fisher-win-theatre strong em {
+  font-size: 18px;
+  font-style: normal;
+}
+.fisher-win-theatre > i {
+  color: #8dbab6;
+  display: block;
+  font-size: 11px;
+  font-style: normal;
+  margin-top: 13px;
+}
+.fisher-rules {
+  width: min(900px, 94vw);
+  max-height: 90vh;
+  overflow: auto;
+  border: 1px solid #80dace61;
+  border-radius: 22px;
+  background: #041820;
+  padding: 30px;
+  position: relative;
+}
+.fisher-rules > .close {
+  position: absolute;
+  right: 16px;
+  top: 12px;
+  border: 0;
+  background: none;
+  font-size: 28px;
+  cursor: pointer;
+}
+.fisher-rules > small {
+  color: #70dcd0;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+}
+.fisher-rules h2 {
+  font: 800 40px "Barlow Condensed";
+  margin: 6px 0 18px;
+}
+.rule-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+.rule-grid article {
+  padding: 14px;
+  border: 1px solid #71c7bb30;
+  border-radius: 12px;
+  background: #07252e;
+}
+.rule-grid b {
+  font: 800 13px "Barlow Condensed";
+  color: #ffe39c;
+}
+.rule-grid p {
+  font-size: 11px;
+  line-height: 1.55;
+  color: #b6d4d0;
+}
+.paytable {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 7px;
+  margin-top: 14px;
+}
+.paytable article {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  align-items: center;
+  padding: 8px;
+  border-bottom: 1px solid #6cb9b026;
+}
+.paytable img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+.paytable span b,
+.paytable span small {
+  display: block;
+}
+.paytable span b {
+  font-size: 11px;
+}
+.paytable span small {
+  font-size: 9px;
+  color: #6faaa5;
+}
+.paytable strong {
+  font: 800 14px "Barlow Condensed";
+  color: #ffe19a;
+}
+.fisher-rules footer {
+  font-size: 11px;
+  line-height: 1.6;
+  color: #93bbb7;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #75c6bb2b;
+}
+.fisher-rules footer small {
+  font-size: 10px;
+}
+
+.fisher-game.bonus-mode {
+  background: radial-gradient(
+    circle at 50% 15%,
+    #175d78,
+    #061a35 42%,
+    #010917 80%
+  );
+}
+.fisher-game.bonus-mode .fisher-machine {
+  box-shadow: 0 0 50px #42d9ee35;
+}
+.fisher-game.bonus-mode .fisher-reel-window {
+  border-color: #83e7e1;
+  box-shadow:
+    inset 0 0 60px #00172d,
+    0 0 32px #54d9e544;
+}
+
+@media (max-width: 1500px) {
+  .fisher-layout {
+    grid-template-columns: 210px minmax(620px, 1fr) 285px;
+  }
+  .fisher-controls {
+    grid-template-columns: 55px 102px 1fr 82px;
+  }
+  .fisher-toggles {
+    grid-column: 1/5;
+    grid-template-columns: repeat(4, 1fr);
+    min-height: 58px;
+  }
+  .fisher-reel-window {
+    min-height: 430px;
+  }
+  .fisher-reels {
+    height: 400px;
+  }
+  .captain-avatar {
+    width: 235px;
+  }
+  .captain-ship {
+    left: -8px;
+  }
+}
+@media (max-width: 1050px) {
+  .fisher-topbar {
+    grid-template-columns: auto 1fr auto;
+  }
+  .fisher-brand {
+    justify-self: center;
+  }
+  .fisher-layout {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 10px;
+  }
+  .fisher-captain-panel {
+    min-height: 240px;
+    display: grid;
+    grid-template-columns: 250px 1fr;
+  }
+  .captain-scene {
+    height: 240px;
+  }
+  .captain-ship {
+    width: 210px;
+    height: 210px;
+    top: 55px;
+  }
+  .captain-avatar {
+    width: 205px;
+    height: 295px;
+    top: -10px;
+  }
+  .moon {
+    top: 18px;
+  }
+  .captain-copy {
+    padding: 25px 25px 55px;
+  }
+  .captain-copy h2 {
+    font-size: 44px;
+  }
+  .captain-copy p {
+    min-height: 0;
+  }
+  .captain-stats {
+    left: 250px;
+  }
+  .fisher-side {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 440px;
+    min-height: 440px;
+  }
+  .fisher-reel-window {
+    min-height: 500px;
+  }
+  .fisher-reels {
+    height: 470px;
+  }
+}
+@media (max-width: 760px) {
+  .fisher-topbar {
+    height: auto;
+    min-height: 68px;
+    padding: 10px 12px;
+    grid-template-columns: auto 1fr;
+  }
+  .fisher-topbar > button span {
+    display: none;
+  }
+  .fisher-brand {
+    justify-self: start;
+  }
+  .fisher-brand span {
+    font-size: 18px;
+  }
+  .fisher-brand img {
+    width: 38px;
+    height: 38px;
+  }
+  .fisher-top-actions {
+    grid-column: 1/3;
+    width: 100%;
+    justify-content: space-between;
+    margin-top: 8px;
+  }
+  .fisher-layout {
+    padding: 7px;
+  }
+  .fisher-captain-panel {
+    grid-template-columns: 135px 1fr;
+    min-height: 245px;
+  }
+  .captain-scene {
+    height: 245px;
+  }
+  .captain-ship {
+    width: 155px;
+    left: -14px;
+    top: 74px;
+  }
+  .captain-avatar {
+    width: 160px;
+    height: 255px;
+    top: -3px;
+  }
+  .captain-copy {
+    padding: 18px 14px 58px;
+  }
+  .captain-copy h2 {
+    font-size: 34px;
+  }
+  .captain-copy p {
+    font-size: 11px;
+    line-height: 1.45;
+  }
+  .captain-stats {
+    left: 135px;
+  }
+  .fisher-machine-title {
+    padding: 14px;
+    display: block;
+  }
+  .fisher-machine-title h1 {
+    font-size: 31px;
+  }
+  .fener-chance,
+  .bonus-hud {
+    margin-top: 12px;
+    align-items: stretch;
+  }
+  .bonus-hud span {
+    min-width: 0;
+    flex: 1;
+  }
+  .captain-progress > div {
+    grid-template-columns: 1fr;
+  }
+  .fisher-reel-window {
+    margin: 9px 7px 0;
+    padding: 6px;
+    min-height: 405px;
+  }
+  .fisher-reels {
+    height: 390px;
+    gap: 4px;
+  }
+  .fisher-reel {
+    gap: 4px;
+  }
+  .fisher-symbol {
+    border-radius: 8px;
+  }
+  .fisher-symbol img {
+    width: 93%;
+    height: 87%;
+  }
+  .fisher-result {
+    margin: 7px;
+    min-height: 70px;
+  }
+  .fisher-controls {
+    grid-template-columns: 52px 1fr 76px;
+    padding: 8px;
+    gap: 6px;
+  }
+  .fisher-info {
+    grid-row: 1;
+  }
+  .bonus-buy {
+    grid-column: 2;
+  }
+  .fisher-bet {
+    grid-column: 1/4;
+    grid-row: 2;
+  }
+  .fisher-spin {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .fisher-toggles {
+    grid-column: 1/4;
+    grid-row: 3;
+  }
+  .fisher-side {
+    grid-template-columns: 1fr;
+    grid-template-rows: 380px 470px;
+    min-height: 850px;
+  }
+  .rule-grid,
+  .paytable {
+    grid-template-columns: 1fr;
+  }
+  .collection-theatre {
+    inset: 18% 7%;
+  }
+  .fisher-top-actions .game-music-control {
+    max-width: 210px;
+  }
+}
+@media (min-width: 1450px) and (min-height: 1100px) {
+  .fisher-layout {
+    min-height: calc(100vh - 76px);
+    grid-template-columns: 270px minmax(760px, 1fr) 350px;
+  }
+  .fisher-captain-panel,
+  .fisher-side {
+    min-height: calc(100vh - 105px);
+  }
+  .fisher-reel-window {
+    min-height: min(58vh, 720px);
+  }
+  .fisher-reels {
+    height: min(56vh, 690px);
+  }
+  .fisher-symbol img {
+    max-width: 112px;
+    max-height: 112px;
+  }
+  .fisher-controls {
+    min-height: 100px;
+  }
+  .fisher-side {
+    grid-template-rows: 42% 58%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fisher-game *,
+  .fisher-game *:before,
+  .fisher-game *:after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+  .fisher-symbol img {
+    transition: none;
+  }
+}
+.fisher-anticipation {
+  align-items: center;
+  animation: fisherAnticipationIn 0.28s ease both;
+  background: linear-gradient(
+    90deg,
+    rgba(7, 18, 25, 0.94),
+    rgba(45, 29, 9, 0.94)
+  );
+  border: 1px solid rgba(229, 186, 88, 0.42);
+  border-radius: 10px;
+  box-shadow: 0 0 34px rgba(214, 159, 51, 0.18);
+  display: flex;
+  gap: 9px;
+  left: 50%;
+  padding: 10px 15px;
+  position: absolute;
+  top: 84px;
+  transform: translateX(-50%);
+  z-index: 90;
+}
+
+/* Big Bass inspired collection trail: twelve readable captain portraits in
+   three groups. Each portrait lights independently as the collection scene
+   plays, so multi-captain spins do not jump straight to the final stage. */
+.captain-progress {
+  padding: 10px 16px 9px;
+}
+.captain-progress > header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.captain-progress > header span,
+.captain-progress > header b {
+  color: #a8d7d1;
+  font: 800 10px "Barlow Condensed";
+  letter-spacing: 0.13em;
+}
+.captain-progress > header b {
+  color: #ffe099;
+}
+.captain-progress .captain-stage-track {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.captain-progress .captain-stage-track > section {
+  align-items: center;
+  background: linear-gradient(145deg, #04151dcf, #020b10e8);
+  border: 1px solid #609b963c;
+  border-radius: 11px;
+  display: grid;
+  gap: 7px;
+  grid-template-columns: 1fr auto;
+  min-width: 0;
+  padding: 7px;
+}
+.captain-progress .captain-stage-track > section.current {
+  border-color: #dbb6668f;
+  box-shadow: inset 0 0 18px #d5a84e12;
+}
+.captain-progress .captain-stage-track > section.complete {
+  background: linear-gradient(145deg, #07362e, #031c1a);
+  border-color: #70e0bd87;
+}
+.captain-medallions {
+  display: grid;
+  gap: 3px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.captain-medallions i {
+  aspect-ratio: 1;
+  background: #02080c;
+  border: 1px solid #4b6868;
+  border-radius: 50%;
+  display: grid;
+  height: auto;
+  overflow: hidden;
+  place-items: center;
+  position: relative;
+  width: 100%;
+}
+.captain-medallions img {
+  filter: grayscale(1) brightness(0.38);
+  height: 100%;
+  object-fit: contain;
+  opacity: 0.54;
+  transition: 0.28s ease;
+  width: 100%;
+}
+.captain-medallions i small {
+  bottom: -1px;
+  color: #abc0be;
+  font: 800 7px Manrope;
+  position: absolute;
+  right: 1px;
+}
+.captain-medallions i.lit {
+  animation: captainMedallionLight 0.5s cubic-bezier(0.2, 1.4, 0.32, 1);
+  border-color: #ffe39a;
+  box-shadow: 0 0 13px #f2c76682;
+}
+.captain-medallions i.lit img {
+  filter: none;
+  opacity: 1;
+}
+@keyframes captainMedallionLight {
+  from {
+    filter: brightness(2.4);
+    transform: scale(1.7) rotate(-8deg);
+  }
+}
+.captain-progress .stage-reward {
+  min-width: 50px;
+  text-align: center;
+}
+.captain-progress .stage-reward span {
+  color: #ffe092;
+  display: block;
+  font: 900 clamp(20px, 1.5vw, 30px)/0.9 "Barlow Condensed";
+}
+.captain-progress .stage-reward small {
+  color: #7bd6ca;
+  display: block;
+  font-size: 8px;
+  margin-top: 4px;
+}
+.captain-progress > p {
+  margin-top: 7px;
+}
+
+.fisher-symbol > b small {
+  color: #8ee0d2;
+  font: 800 0.48em Manrope;
+  margin-left: 3px;
+}
+.fisher-symbol.collecting-current {
+  animation: currentCatch 0.55s ease-in-out infinite alternate;
+  border-color: #fff4b6;
+  box-shadow: 0 0 30px #ffdf7a;
+  z-index: 4;
+}
+.fisher-symbol.captain-collecting {
+  animation: captainCast 0.72s ease-in-out infinite alternate;
+  border-color: #ffcb73;
+  box-shadow:
+    inset 0 0 28px #ff9b4260,
+    0 0 24px #ffe09170;
+  z-index: 5;
+}
+@keyframes currentCatch {
+  to {
+    transform: translateY(-7px) scale(1.07);
+  }
+}
+@keyframes captainCast {
+  to {
+    transform: scale(1.06) rotate(1deg);
+  }
+}
+
+.collection-theatre {
+  inset: 18% 20%;
+  min-height: 230px;
+  padding: 22px;
+}
+.collection-theatre .collection-ledger {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin: 16px 0 8px;
+}
+.collection-theatre .collection-ledger span {
+  background: #103d31;
+  border: 1px solid #ffe79e;
+  border-radius: 10px;
+  color: #9cd7ce;
+  display: grid;
+  font: 800 9px Manrope;
+  letter-spacing: 0.12em;
+  padding: 7px 13px;
+}
+.collection-theatre .collection-ledger span b {
+  color: #fff1ae;
+  font: 900 23px "Barlow Condensed";
+  letter-spacing: 0;
+}
+.collection-theatre .collection-ledger > i {
+  color: #7ee8cc;
+  font: 800 13px "Barlow Condensed";
+}
+.collection-theatre > strong {
+  animation: collectedBankPulse 0.34s ease both;
+  font-size: clamp(44px, 5vw, 72px);
+}
+.collection-theatre > strong > i {
+  font-size: 0.38em;
+}
+.collection-theatre > p {
+  color: #8bc7bf;
+  font: 800 10px Manrope;
+  letter-spacing: 0.14em;
+}
+.collection-theatre .empty-catch {
+  font-size: 34px;
+  margin-top: 18px;
+}
+@keyframes collectedBankPulse {
+  from {
+    filter: brightness(2);
+    transform: scale(1.13);
+  }
+}
+
+.fisher-feature-cue {
+  align-content: center;
+  animation: fisherFeatureIn 0.4s cubic-bezier(0.18, 1.2, 0.3, 1);
+  background: radial-gradient(circle, #245a50ec, #010a0fef 68%);
+  display: grid;
+  inset: 0;
+  justify-items: center;
+  position: absolute;
+  text-align: center;
+  z-index: 16;
+}
+.fisher-feature-cue i {
+  color: #ffe18c;
+  font-size: 70px;
+  font-style: normal;
+  text-shadow: 0 0 28px #ff9e49;
+}
+.fisher-feature-cue strong {
+  color: #fff1b1;
+  font: 900 clamp(28px, 4vw, 54px) "Barlow Condensed";
+  letter-spacing: 0.07em;
+}
+.fisher-feature-cue span {
+  color: #91d7cf;
+  font-size: 12px;
+  margin-top: 6px;
+}
+.fisher-feature-cue.feature-dynamite {
+  animation-name: fisherDynamiteIn;
+}
+.fisher-feature-cue.feature-bazooka {
+  animation-name: fisherBazookaIn;
+}
+@keyframes fisherFeatureIn {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+}
+@keyframes fisherDynamiteIn {
+  0% {
+    filter: brightness(3);
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  65% {
+    transform: scale(1.05);
+  }
+}
+@keyframes fisherBazookaIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-30%) skewX(-8deg);
+  }
+}
+
+.bonus-ready.bonus-pick-game {
+  max-height: calc(100vh - 34px);
+  overflow: auto;
+  padding: clamp(18px, 2.3vw, 30px);
+  text-align: left;
+  width: min(980px, calc(100vw - 34px));
+}
+.bonus-pick-game > header {
+  align-items: center;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: 118px 1fr;
+  position: relative;
+  z-index: 1;
+}
+.bonus-pick-game > header img {
+  height: 100px;
+  width: 118px;
+}
+.bonus-pick-game > header small {
+  color: #7be5d5;
+  font: 800 10px Manrope;
+  letter-spacing: 0.18em;
+}
+.bonus-pick-game > header h2 {
+  font-size: clamp(36px, 4vw, 58px);
+  margin: 3px 0;
+}
+.bonus-pick-game > header p {
+  margin: 0;
+  max-width: 680px;
+}
+.bonus-pick-grid {
+  display: grid;
+  gap: 11px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin-top: 20px;
+  perspective: 1200px;
+  position: relative;
+  z-index: 2;
+}
+.bonus-ready .bonus-pick-grid > button {
+  aspect-ratio: 0.74;
+  background: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.bonus-ready .bonus-pick-grid > button:not(:disabled):hover {
+  filter: brightness(1.15);
+  transform: translateY(-6px) rotate(-1deg);
+}
+.bonus-ready .bonus-pick-grid > button.revealed {
+  transform: rotateY(180deg);
+}
+.pick-card-back,
+.pick-card-face {
+  align-content: center;
+  backface-visibility: hidden;
+  border: 1px solid #e1bd70;
+  border-radius: 12px;
+  box-shadow:
+    0 9px 18px #0008,
+    inset 0 0 30px #b38b2c18;
+  display: grid;
+  inset: 0;
+  justify-items: center;
+  overflow: hidden;
+  padding: 10px;
+  position: absolute;
+  text-align: center;
+}
+.pick-card-back {
+  background: repeating-linear-gradient(45deg, #062730 0 8px, #0e3e42 8px 10px);
+}
+.pick-card-back i {
+  border: 1px solid #e5c477;
+  color: #ffe09a;
+  display: grid;
+  font: 900 25px "Barlow Condensed";
+  height: 54px;
+  place-items: center;
+  transform: rotate(45deg);
+  width: 54px;
+}
+.pick-card-back i::first-letter {
+  transform: rotate(-45deg);
+}
+.pick-card-back small {
+  color: #bcd9d5;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  margin-top: 13px;
+}
+.pick-card-face {
+  background: radial-gradient(circle at 50% 15%, #216862, #061b22 65%);
+  transform: rotateY(180deg);
+}
+.pick-card-face img {
+  animation: none;
+  filter: drop-shadow(0 8px 7px #0008);
+  height: 62px;
+  width: 76px;
+}
+.pick-card-face > b {
+  color: #ffe09a;
+  font: 900 14px/1 "Barlow Condensed";
+  margin-top: 8px;
+}
+.pick-card-face > small {
+  color: #a8d1cc;
+  font-size: 8px;
+  line-height: 1.35;
+  margin-top: 5px;
+}
+.bonus-pick-grid .boot .pick-card-face {
+  background: radial-gradient(circle at 50% 15%, #6d2c25, #1b0b0a 68%);
+}
+.boot-icon {
+  color: #d5b46d;
+  font-size: 58px;
+  font-style: normal;
+}
+.picked-modifiers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 15px;
+  min-height: 30px;
+  position: relative;
+  z-index: 2;
+}
+.picked-modifiers span {
+  background: #0c433a;
+  border: 1px solid #62cbb6;
+  border-radius: 999px;
+  color: #bff8e8;
+  font: 800 9px Manrope;
+  letter-spacing: 0.06em;
+  padding: 7px 10px;
+}
+.picked-modifiers small {
+  color: #8ca9a6;
+}
+.bonus-pick-game > footer {
+  align-items: center;
+  border-top: 1px solid #80c9bd2e;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 14px;
+  position: relative;
+  z-index: 2;
+}
+.bonus-pick-game > footer > span {
+  color: #b1d8d2;
+  font-size: 11px;
+}
+.bonus-ready.bonus-pick-game > footer button {
+  margin: 0;
+}
+.bonus-ready.bonus-pick-game > footer button:disabled {
+  cursor: not-allowed;
+  filter: grayscale(1);
+  opacity: 0.46;
+}
+
+@media (max-width: 900px) {
+  .captain-progress .captain-stage-track {
+    grid-template-columns: 1fr;
+  }
+  .bonus-pick-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .bonus-ready .bonus-pick-grid > button {
+    aspect-ratio: 0.92;
+  }
+  .collection-theatre {
+    inset: 17% 6%;
+  }
+}
+@media (max-width: 560px) {
+  .bonus-pick-game > header {
+    grid-template-columns: 72px 1fr;
+  }
+  .bonus-pick-game > header img {
+    height: 70px;
+    width: 72px;
+  }
+  .bonus-pick-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .bonus-pick-game > footer {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+.fisher-anticipation i {
+  animation: fisherAnticipationPulse 0.7s ease-in-out infinite alternate;
+  color: #f1cb70;
+  filter: drop-shadow(0 0 7px #dda93d);
+  font-style: normal;
+}
+.fisher-anticipation strong {
+  color: #f4deb0;
+  font-family: "DM Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+@keyframes fisherAnticipationIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px) scale(0.96);
+  }
+}
+@keyframes fisherAnticipationPulse {
+  to {
+    opacity: 0.4;
+    transform: scale(1.35);
+  }
+}
+
+/* Short laptop contract: Kaptan, 5x4 reels, result and every control remain visible
+   together at 1366x768 while the tall-display layout stays untouched. */
+@media (min-width: 1051px) and (max-height: 900px) {
+  .fisher-game {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .fisher-topbar {
+    flex: 0 0 64px;
+    height: 64px;
+    padding-inline: 18px;
+  }
+  .fisher-brand img {
+    height: 40px;
+    width: 40px;
+  }
+  .fisher-layout {
+    flex: 1 1 auto;
+    gap: 10px;
+    grid-template-columns: minmax(180px, 220px) minmax(620px, 1fr) minmax(
+        250px,
+        285px
+      );
+    height: calc(100dvh - 64px);
+    min-height: 0;
+    overflow: hidden;
+    padding: 8px;
+  }
+  .fisher-captain-panel,
+  .fisher-machine,
+  .fisher-side {
+    height: 100%;
+    min-height: 0;
+  }
+  .fisher-captain-panel {
+    border-radius: 16px;
+  }
+  .captain-scene {
+    height: 54%;
+  }
+  .captain-copy {
+    padding: 10px 14px;
+  }
+  .captain-copy h2 {
+    font-size: 31px;
+  }
+  .captain-copy p {
+    font-size: 10px;
+    line-height: 1.4;
+  }
+  .captain-stats {
+    padding: 6px;
+  }
+  .captain-stats span {
+    padding: 4px 2px;
+  }
+  .captain-stats b {
+    font-size: 17px;
+  }
+  .fisher-machine {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+  }
+  .fisher-machine-title {
+    min-height: 76px;
+    padding: 9px 14px;
+  }
+  .fisher-machine-title h1 {
+    font-size: 31px;
+  }
+  .fisher-machine-title p {
+    font-size: 8px;
+  }
+  .fener-chance button {
+    padding: 7px 10px;
+  }
+  .fisher-reel-window {
+    height: auto;
+    margin: 8px 10px 0;
+    min-height: 0;
+    padding: 8px;
+  }
+  .fisher-reels {
+    gap: 6px;
+    height: 100%;
+  }
+  .fisher-reel {
+    gap: 6px;
+  }
+  .fisher-symbol {
+    border-radius: 9px;
+  }
+  .fisher-result {
+    margin: 6px 10px;
+    min-height: 48px;
+    padding: 6px 10px;
+  }
+  .fisher-result strong {
+    font-size: 11px;
+    margin-top: 2px;
+  }
+  .fisher-result > b {
+    font-size: 23px;
+  }
+  .fisher-controls {
+    gap: 5px;
+    grid-template-columns: 52px 94px minmax(170px, 1fr) 72px minmax(170px, auto);
+    min-height: 78px;
+    padding: 6px 8px 8px;
+  }
+  .fisher-info {
+    font-size: 17px;
+  }
+  .bonus-buy {
+    padding: 5px;
+  }
+  .fisher-bet {
+    padding: 5px 7px;
+  }
+  .fisher-bet button,
+  .fisher-bet input,
+  .fisher-bet select {
+    height: 30px;
+  }
+  .fisher-spin i {
+    font-size: 23px;
+  }
+  .fisher-toggles {
+    grid-column: auto;
+    grid-template-columns: repeat(3, 42px) minmax(52px, 1fr);
+    min-height: 0;
+  }
+  .fisher-toggles > button,
+  .fisher-toggles label {
+    min-height: 58px;
+  }
+  .fisher-side {
+    gap: 8px;
+    grid-template-rows: minmax(190px, 0.8fr) minmax(260px, 1.2fr);
+  }
+  .fisher-log header,
+  .mercan-chat header {
+    min-height: 42px;
+    padding: 8px 10px;
+  }
+  .fisher-log article {
+    min-height: 34px;
+    padding-block: 5px;
+  }
+  .mercan-chat article p {
+    font-size: 10px;
+    line-height: 1.4;
+    padding: 7px;
+  }
+}

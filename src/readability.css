@@ -1,0 +1,452 @@
+/* Site-wide legibility pass for large, split and portrait desktop windows. */
+:root {
+  --readable-body: 13px;
+  --readable-meta: 12px;
+}
+
+button,
+input,
+select,
+textarea {
+  text-rendering: geometricPrecision;
+}
+
+.lobby-view p,
+.table-view p,
+.roulette-room p,
+.slot-world p,
+.kiraz-slot p,
+.neon-vault p,
+.admin-shell p {
+  line-height: 1.55;
+}
+
+.chat-form input,
+.roulette-chat input,
+.rocco-chat input,
+.mira-chat input,
+.admin-shell input,
+.admin-shell select {
+  font-size: 13px;
+  min-height: 40px;
+}
+
+/* Blackjack: the information printed on betting spots must read like table print. */
+.betting-caption,
+.betting-ring > strong,
+.betting-ring > small,
+.side-bet-spot > small,
+.side-bet-spot > em,
+.side-bet-spot > b,
+.side-bet-result,
+.table-history small,
+.table-history em,
+.finance-breakdown,
+.round-money > small {
+  font-size: var(--readable-meta);
+  line-height: 1.25;
+}
+
+.side-bet-spot > small { top: 8px; }
+.side-bet-spot > strong { font-size: 19px; line-height: 1; top: 26px; }
+.side-bet-spot > em { top: 51px; }
+.side-bet-spot > b { bottom: 10px; font-size: 13px; }
+.side-bet-spot { height: 138px; width: 154px; }
+.side-bet-spots { bottom: 184px; width: 520px; }
+.mini-chip-stack { top: 68px; }
+.mini-chip-stack .casino-chip { height: 42px; width: 42px; }
+.mini-chip-stack .chip-center { height: 28px; width: 28px; }
+.mini-chip-stack .chip-center small { font-size: 12px; }
+.mini-chip-stack .chip-center strong { font-size:12px; }
+
+.seat-title { font-size: 14px; letter-spacing: .12em; line-height: 1.05; }
+.seat-title em { font-size: 12px; letter-spacing: .07em; }
+.dealer-hand,
+.player-hands .player-hand { padding-top: 64px; }
+.dealer-hand .hand-meta,
+.player-hand .hand-meta {
+  align-items: center;
+  flex-direction: row;
+  gap: 10px;
+  height: 58px;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  width: max-content;
+}
+.score-orb { flex: 0 0 52px; height: 52px; margin-left: 0; width: 52px; }
+.score-orb small { font-size: 12px; font-weight: 600; letter-spacing: .01em; }
+.score-orb b { font-size: 22px; }
+
+.betting-caption { display: block; font-size: 14px; font-weight: 600; letter-spacing: .12em; margin-bottom: 8px; }
+.betting-ring { height: 110px; padding-bottom: 12px; width: 172px; }
+.betting-ring > strong { font-size: 14px; letter-spacing: .03em; }
+.betting-ring > small { font-size: 12px; letter-spacing: .07em; }
+.table-chip-stack { top: 20px; }
+.stacked-chip { top: calc(var(--stack-index) * -4px); }
+
+.chip-stack-count {
+  align-items: center;
+  background: #071b17;
+  border: 1px solid rgba(239, 207, 129, .62);
+  border-radius: 99px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .42);
+  color: #f0d58d;
+  display: flex;
+  font-family: var(--font-table);
+  font-size: 12px;
+  font-weight: 700;
+  height: 24px;
+  justify-content: center;
+  min-width: 30px;
+  padding: 0 6px;
+  position: absolute;
+  right: -25px;
+  top: 12px;
+  z-index: 20;
+}
+.mini-chip-stack .chip-stack-count { right: -24px; top: 8px; }
+.side-bet-result { bottom: -22px; font-size: 12px; font-weight: 600; letter-spacing: .04em; }
+
+.table-insignia { font-size: 14px; font-weight: 600; letter-spacing: .07em; }
+.table-insignia strong { font-size: 15px; }
+.table-status { font-family: var(--font-body); font-size: 13px; font-weight: 600; }
+.message p { font-size: 14px; line-height: 1.55; }
+
+/* Roulette: selector chips and the chips placed on the felt remain identifiable. */
+.roulette-chip-selector { gap: 10px; }
+.roulette-chip-selector .casino-chip { height: 58px; width: 58px; }
+.roulette-chip-selector .chip-center { height: 38px; width: 38px; }
+.roulette-chip-selector .chip-center small { font-size:12px; }
+.roulette-chip-selector .chip-center strong { font-size: 13px; }
+.roulette-controls { flex-basis: 142px; }
+.roulette-bet-stack {
+  height: 38px;
+  transform: translate(-50%, -50%) scale(1);
+  width: 46px;
+}
+.roulette-bet-stack > span { transform: translate(-50%, calc(-50% - var(--chip-index) * 4px)) scale(.58); }
+.roulette-bet-stack > b { bottom: -15px; font-size:12px; padding: 3px 6px; }
+.micro-bet .roulette-bet-stack { transform: translate(-50%, -50%) scale(.62); }
+.outside-bet .roulette-bet-stack,
+.column-bet .roulette-bet-stack { transform: translate(-50%, -50%) scale(.78); }
+.call-bet .roulette-bet-stack { transform: translateY(-50%) scale(.7); }
+.roulette-remove-chip { font-size: 14px; height: 22px; right: -11px; top: -10px; width: 22px; }
+.roulette-history span { font-size:12px; height: 32px; width: 32px; }
+.roulette-history { gap: 6px; }
+.call-bet { min-height: 48px; }
+.roulette-audio-toggles button,
+.roulette-edit-actions button { min-height: 34px; }
+
+/* Neon: dense operation and chat rails use real body copy instead of microcopy. */
+.neon-history > div { grid-template-columns: 24px 1fr auto; min-height: 48px; padding: 7px 10px; }
+.neon-history > div span,
+.neon-history > div b { font-size: 12px; }
+.neon-history > div span small { font-size:12px; margin-top: 3px; }
+.mira-chat article > span,
+.mira-chat article > small { font-size:12px; }
+.mira-chat article p { font-size: 13px; padding: 10px 11px; }
+.mira-chat > header > div,
+.rocco-chat > header > div { display: flex; flex-direction: column; gap: 3px; }
+.neon-machine-head > div:first-child > small,
+.neon-machine-head p,
+.neon-live-stats small,
+.mira-stats small,
+.neon-result > small,
+.neon-result > p,
+.neon-wager > small,
+.neon-wager > span,
+.neon-buy-button small,
+.neon-rules-button span,
+.neon-toggles span {
+  font-size: var(--readable-meta);
+  line-height: 1.3;
+}
+.neon-live-stats span { min-width: 88px; padding: 8px 10px; }
+.neon-controls { min-height: 108px; padding: 10px; }
+.neon-rules-button,
+.neon-toggles button,
+.neon-auto select { min-height: 58px; }
+.neon-spin-button { height: 88px; width: 88px; }
+.neon-buy-button { min-height: 58px; min-width: 104px; }
+.neon-wager button { height: 34px; width: 34px; }
+.neon-wager button.neon-max { height: 32px; width: 44px; }
+
+/* Kaptan Mercan: decorative condensed labels stay compact, but no operational
+   or conversational text drops into unreadable microcopy. */
+.fisher-game p,
+.fisher-game input,
+.fisher-game select,
+.fisher-game button { font-size: 13px; line-height: 1.35; }
+.captain-copy p,
+.mercan-chat article p { font-size: 13px; line-height: 1.55; }
+.fisher-machine-title > div > small,
+.fisher-machine-title p,
+.fener-chance small,
+.bonus-hud small,
+.captain-progress small,
+.captain-progress p,
+.fisher-result small,
+.fisher-info span,
+.bonus-buy small,
+.bonus-buy span,
+.fisher-bet > small,
+.fisher-bet > label,
+.fisher-toggles span,
+.fisher-log header small,
+.fisher-log article small,
+.fisher-log footer span,
+.mercan-chat header small,
+.mercan-chat article > span,
+.mercan-chat article > small,
+.fisher-rules small { font-size: 12px; line-height: 1.3; }
+.fisher-controls { min-height: 112px; }
+.fisher-info,
+.bonus-buy,
+.fisher-toggles > button,
+.fisher-toggles label { min-height: 58px; }
+.fisher-symbol span { font-size: 11px; }
+.fisher-log > article { min-height: 54px; }
+.fisher-log > article strong { font-size: 12px; }
+.fisher-log > article b { font-size: 13px; }
+.mercan-chat input { font-size: 13px; min-height: 42px; }
+
+/* Admin tables are intentionally scrollable, so readable text wins over compression. */
+.admin-shell small,
+.admin-shell time,
+.admin-shell em,
+.admin-shell article,
+.admin-shell button,
+.admin-shell label {
+  line-height: 1.35;
+}
+.admin-user-table > article,
+.admin-ledger > article,
+.admin-round-table > article,
+.admin-ai-table > article { min-height: 48px; }
+.admin-round-table > header,
+.admin-round-table > article,
+.admin-ledger > header,
+.admin-ledger > article,
+.admin-ai-table > header,
+.admin-ai-table > article { padding-block: 12px; }
+
+@media (min-width: 1181px) and (min-height: 1050px) {
+  .kiraz-layout { align-items: center; }
+  .kiraz-host,
+  .slot-cabinet,
+  .slot-side-panel {
+    height: min(1050px, calc(100dvh - 130px));
+    max-height: 1050px;
+  }
+  .reel-window { flex-basis: 560px; }
+}
+
+@media (max-width: 1180px) {
+  .roulette-chip-selector .casino-chip { height: 52px; width: 52px; }
+  .roulette-chip-selector .chip-center { height: 34px; width: 34px; }
+  .roulette-controls { flex-basis: auto; min-height: 150px; }
+  .neon-controls { min-height: 100px; }
+}
+
+@media (max-width: 720px) {
+  :root { --readable-body: 12px; --readable-meta: 12px; }
+  .side-bet-spot { height: 112px; width: 128px; }
+  .side-bet-spots { width: min(94%, 430px); }
+  .roulette-chip-selector .casino-chip { height: 48px; width: 48px; }
+  .roulette-chip-selector .chip-center { height: 31px; width: 31px; }
+}
+
+/* Half-width portrait desktop: four independent vertical zones, no shared coordinates. */
+@media (min-width: 720px) and (max-width: 1100px) and (min-height: 1000px) {
+  .game-layout { grid-template-rows: minmax(1120px, 1.68fr) minmax(430px, .72fr); }
+  .blackjack-stage { min-height: 1120px; }
+  .dealer-figure { height: 340px; top: 24px; width: 390px; }
+  .dealer-hand { top: 375px; }
+  .table-insignia { top: 55%; }
+  .betting-spot { bottom: 325px; }
+  .side-bet-spots { bottom: 315px; width: min(72%, 540px); }
+  .player-hands { bottom: 62px; width: min(88%, 790px); }
+  .player-hands .player-hand { padding-top: 64px; }
+  .flying-chip { --flight-y: -394px; }
+  .flying-chip.target-perfectPairs { --flight-x: -190px; }
+  .flying-chip.target-twentyOneThree { --flight-x: 190px; }
+  .table-history { top: 280px; }
+}
+
+@media (min-width: 720px) and (max-width: 1100px) and (min-height: 1500px) {
+  .game-layout { grid-template-rows: minmax(1220px, 1.72fr) minmax(500px, .74fr); }
+  .blackjack-stage { min-height: 1220px; }
+  .dealer-figure { height: 390px; width: 440px; }
+  .dealer-hand { top: 410px; }
+  .table-insignia { top: 52%; }
+  .betting-spot { bottom: 380px; }
+  .side-bet-spots { bottom: 368px; }
+  .player-hands { bottom: 72px; }
+}
+
+@media (max-width: 719px) {
+  .side-bet-spot { height: 104px; width: 122px; }
+  .side-bet-spots { width: min(96%, 390px); }
+  .side-bet-spot > strong { font-size: 17px; top: 23px; }
+  .side-bet-spot > em { display: none; }
+  .mini-chip-stack { top: 45px; }
+  .side-bet-spot > b { bottom: 7px; }
+  .betting-ring { height: 92px; width: 148px; }
+  .dealer-hand .hand-meta,
+  .player-hand .hand-meta { transform: translateX(-50%) scale(.9); }
+}
+
+/* Wide desktop: keep the physical table tall enough for five readable layers. */
+@media (min-width: 1101px) {
+  .blackjack-stage,
+  .dealer-panel {
+    height: max(920px, calc(100dvh - 224px));
+    max-height: none;
+    min-height: 920px;
+  }
+  .dealer-figure {
+    height: clamp(260px, 26vh, 360px);
+    top: 16px;
+    width: clamp(300px, 23vw, 440px);
+  }
+  .dealer-hand { top: clamp(285px, 28vh, 390px); }
+  .table-insignia { top: clamp(495px, 45vh, 620px); }
+  .betting-spot { bottom: 27.25%; }
+  .side-bet-spots { bottom: 26.95%; width: min(52%, 560px); }
+  .player-hands { bottom: 5.5%; }
+  .dealer-panel .chat-log { max-height: none; }
+}
+
+/* Short laptop contract (1366x768 and similar): keep the entire blackjack room playable
+   without turning the premium table into a vertically clipped desktop canvas. */
+@media (min-width: 1101px) and (max-height: 900px) {
+  .table-view {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .table-view .topbar {
+    flex: 0 0 64px;
+    height: 64px;
+    min-height: 64px;
+  }
+  .table-view .game-layout {
+    align-items: stretch;
+    flex: 1 1 auto;
+    gap: 12px;
+    grid-template-columns: minmax(690px, 1fr) 292px;
+    min-height: 0;
+    padding: 8px 12px;
+    width: 100%;
+  }
+  .table-view .blackjack-stage,
+  .table-view .dealer-panel {
+    height: 100%;
+    max-height: none;
+    min-height: 0;
+  }
+  .table-view .blackjack-stage {
+    border-width: 7px;
+    padding: 14px 28px;
+  }
+  .table-view .blackjack-stage::before { inset: 10px; }
+  .table-view .dealer-figure {
+    height: 194px;
+    top: 4px;
+    width: 250px;
+  }
+  .table-view .dealer-nameplate {
+    bottom: -2px;
+    padding: 4px 18px;
+  }
+  .table-view .dealer-nameplate strong { font-size: 14px; }
+  .table-view .dealer-hand {
+    padding-top: 32px;
+    top: 165px;
+  }
+  .table-view .player-hands,
+  .table-view .player-hand { bottom: 20px; }
+  .table-view .player-hands .player-hand { bottom: auto; padding-top: 32px; }
+  .table-view .cards { min-height: 92px; }
+  .table-view .playing-card {
+    border-radius: 6px;
+    height: 88px;
+    width: 63px;
+  }
+  .table-view .cards .playing-card + .playing-card { margin-left: -20px; }
+  .table-view .dealer-hand .hand-meta,
+  .table-view .player-hand .hand-meta {
+    left: calc(50% + 61px);
+    top: 35px;
+    transform: scale(.86);
+  }
+  .table-view .table-insignia {
+    gap: 18px;
+    top: 51%;
+    transform: translate(-50%, -50%) scale(.9);
+  }
+  .table-view .betting-spot { bottom: 111px; }
+  .table-view .betting-ring {
+    height: 68px;
+    width: 124px;
+  }
+  .table-view .side-bet-spots {
+    bottom: 105px;
+    width: min(43%, 420px);
+  }
+  .table-view .side-bet-spot {
+    height: 82px;
+    width: 98px;
+  }
+  .table-view .side-bet-spot > small { font-size: 9px; top: 6px; }
+  .table-view .side-bet-spot > strong { font-size: 15px; top: 19px; }
+  .table-view .side-bet-spot > em { display: none; }
+  .table-view .side-bet-spot > b { bottom: 6px; font-size: 11px; }
+  .table-view .table-chip-stack { transform: translateX(-50%) scale(.78); }
+  .table-view .speech-bubble {
+    left: 22px;
+    max-width: 220px;
+    padding: 10px 12px;
+    top: 62px;
+  }
+  .table-view .speech-bubble p { font-size: 12px; line-height: 1.35; }
+  .table-view .card-shoe { top: 13%; transform: scale(.82); transform-origin: top right; }
+  .table-view .table-history { top: 24%; transform: scale(.86); transform-origin: top right; }
+  .table-view .table-status { bottom: 5px; padding-block: 4px; }
+  .table-view .dealer-panel { padding: 14px; }
+  .table-view .panel-heading { padding-bottom: 9px; }
+  .table-view .panel-heading > div > span { font-size: 18px; }
+  .table-view .message p { font-size: 12px; line-height: 1.4; padding: 8px 10px; }
+  .table-view > .control-deck {
+    flex: 0 0 148px;
+    gap: 14px;
+    grid-template-columns: minmax(660px, 2fr) minmax(260px, 1fr) minmax(150px, .5fr);
+    min-height: 148px;
+    padding: 9px 18px;
+  }
+  .table-view .chip-rack { gap: 10px; min-width: 0; }
+  .table-view .rack-heading { flex: 0 0 140px; }
+  .table-view .chip-selector {
+    display: grid;
+    flex: 1 1 auto;
+    gap: 4px;
+    grid-template-columns: repeat(10, 40px);
+    justify-content: start;
+    padding: 0;
+  }
+  .table-view .chip-selector .casino-chip { height: 40px; width: 40px; }
+  .table-view .chip-selector .chip-edge { inset: 4px; }
+  .table-view .chip-selector .chip-center { height: 26px; width: 26px; }
+  .table-view .chip-selector .chip-center small { font-size: 8px; }
+  .table-view .chip-selector .chip-center strong { font-size: 8px; }
+  .table-view .custom-chip-entry { grid-template-columns: minmax(100px, 1fr) auto auto; min-width: 230px; }
+  .table-view .game-actions { gap: 6px; }
+  .table-view .game-actions > button {
+    font-size: 10px;
+    min-width: 102px;
+    padding: 10px 12px;
+  }
+}

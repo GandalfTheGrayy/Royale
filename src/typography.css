@@ -1,0 +1,182 @@
+@font-face {
+  font-family: 'Manrope Local';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('/assets/fonts/Manrope-Variable.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Barlow Condensed Local';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/assets/fonts/BarlowCondensed-Medium.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Barlow Condensed Local';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/assets/fonts/BarlowCondensed-SemiBold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Barlow Condensed Local';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/assets/fonts/BarlowCondensed-Bold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Playfair Display Local';
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url('/assets/fonts/PlayfairDisplay-Variable.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'DM Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/assets/fonts/DMMono-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'DM Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/assets/fonts/DMMono-Medium.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Bebas Neue';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/assets/fonts/BebasNeue-Regular.ttf') format('truetype');
+}
+
+:root {
+  --font-body: 'Manrope Local', Manrope, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-table: 'Barlow Condensed Local', 'Arial Narrow', sans-serif;
+  --font-display: 'Playfair Display Local', Georgia, serif;
+  --font-data: 'DM Mono', ui-monospace, 'Cascadia Mono', monospace;
+  font-family: var(--font-body);
+}
+
+body,
+button,
+input,
+select,
+textarea { font-family: var(--font-body); }
+
+/* Luxury display is reserved for names and large editorial moments. */
+.lobby-hero h1,
+.salon-card strong,
+.dealer-nameplate strong,
+.panel-heading > div > span,
+.round-money > strong,
+.bonus-celebration > strong,
+.rules-card h2,
+.rules-grid strong { font-family: var(--font-display); }
+
+/* Compact, sturdy table lettering. Never use thin monospace for felt print. */
+.table-label,
+.table-label button,
+.dealer-nameplate small,
+.speech-bubble span,
+.card-shoe > span,
+.hand-meta,
+.seat-title,
+.score-orb small,
+.table-insignia,
+.betting-caption,
+.betting-ring > strong,
+.betting-ring > small,
+.side-bet-spot > small,
+.side-bet-spot > strong,
+.side-bet-spot > em,
+.side-bet-spot > b,
+.side-bet-result,
+.table-history small,
+.table-history strong,
+.table-history em,
+.insurance-marker strong,
+.insurance-marker small,
+.insurance-offer small,
+.result-ribbon small,
+.rack-heading > span,
+.rack-heading button,
+.wallet-actions strong,
+.wallet-actions small,
+.wallet-actions em,
+.last-result-pill,
+.round-money > small,
+.round-money > strong em,
+.finance-breakdown span,
+.chip-center strong { font-family: var(--font-table); }
+
+.table-label,
+.table-label button,
+.dealer-nameplate small,
+.hand-meta,
+.table-insignia,
+.betting-caption,
+.side-bet-spot > small,
+.side-bet-spot > em,
+.table-history small,
+.rack-heading > span,
+.wallet-actions small { font-weight: 600; }
+
+.betting-ring > strong,
+.side-bet-spot > strong,
+.side-bet-spot > b,
+.score-orb b,
+.wallet-actions strong,
+.last-result-pill strong { font-variant-numeric: tabular-nums; font-weight: 700; }
+
+/* Conversation must read like conversation, not like a luxury headline. */
+.speech-bubble p,
+.message p,
+.round-money > p,
+.rules-grid p,
+.roulette-chat p,
+.rocco-chat p,
+.mira-chat p { font-family: var(--font-body); font-weight: 500; }
+
+/* Game-specific identities: roulette is a physical table; Neon keeps its tech display. */
+.roulette-room button,
+.roulette-room small,
+.roulette-room label,
+.roulette-room .outside-bet,
+.roulette-room .column-bet,
+.roulette-room .call-bet { font-family: var(--font-body); }
+
+.roulette-room .number-bet,
+.roulette-room .wheel-number,
+.roulette-room .chip-center strong { font-family: var(--font-table); }
+
+.roulette-room p,
+.roulette-chat input,
+.slot-world p,
+.rocco-chat input,
+.mira-chat input,
+.admin-shell p,
+.admin-shell input,
+.admin-shell select { font-family: var(--font-body); }
+
+.admin-shell button,
+.admin-shell label,
+.admin-shell small { font-family: var(--font-body); }
+
+.admin-ledger time,
+.admin-round-table time,
+.admin-ai-table time { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+
+.research-panel > header h2 { font-family: var(--font-display); }

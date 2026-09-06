@@ -1,0 +1,111 @@
+.casino-avatar {
+  align-items: center;
+  aspect-ratio: 1;
+  background: radial-gradient(
+    circle at 32% 24%,
+    #fff1b7 0 5%,
+    #b97924 24%,
+    #24140d 72%
+  );
+  border: 2px solid #e5bd66;
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 3px #1a0f0a,
+    0 7px 20px #0008;
+  color: #fff1bd;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 1em;
+  font-style: normal;
+  font-weight: 900;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+.casino-avatar::after {
+  border: 1px solid #fff3;
+  border-radius: inherit;
+  content: "";
+  inset: 5px;
+  position: absolute;
+}
+.casino-avatar span {
+  filter: drop-shadow(0 2px 2px #000);
+  position: relative;
+  z-index: 1;
+}
+.casino-avatar img {
+  height: 100%;
+  inset: 0;
+  object-fit: cover;
+  position: absolute;
+  width: 100%;
+  z-index: 2;
+}
+.casino-avatar-custom {
+  background: #211b15;
+}
+.casino-avatar-kasa-baronu {
+  background: radial-gradient(
+    circle at 32% 24%,
+    #fff5b7,
+    #ad6b10 34%,
+    #2f1003 75%
+  );
+  color: #fff0a0;
+}
+.casino-avatar-gece-kurdu {
+  background: radial-gradient(
+    circle at 32% 24%,
+    #b9d7e8,
+    #315064 35%,
+    #071019 76%
+  );
+  color: #e0f2ff;
+}
+.casino-avatar-kartal {
+  background: radial-gradient(
+    circle at 32% 24%,
+    #fff8da,
+    #7f6336 35%,
+    #17120d 76%
+  );
+  color: #fff5cc;
+}
+.casino-avatar-kara-as {
+  background: radial-gradient(
+    circle at 32% 24%,
+    #ddd,
+    #3c3c42 32%,
+    #08080b 76%
+  );
+  color: #fff;
+}
+.casino-avatar-mercan-reisi {
+  background: radial-gradient(
+    circle at 32% 24%,
+    #7ef6ee,
+    #087b83 34%,
+    #021b25 76%
+  );
+  color: #d7fffb;
+}
+.casino-avatar-neon-patronu {
+  background: radial-gradient(
+    circle at 32% 24%,
+    #f4b5ff,
+    #8b24c9 34%,
+    #1b062c 76%
+  );
+  color: #fff;
+}
+.casino-avatar-seker-babasi {
+  background: radial-gradient(
+    circle at 32% 24%,
+    #fff2b5,
+    #ed558f 36%,
+    #48102a 76%
+  );
+  color: #fff8b8;
+}

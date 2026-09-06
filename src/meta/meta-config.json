@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "currency": {
+    "code": "PR",
+    "displayName": "PR"
+  },
+  "identity": {
+    "ownerDisplayName": "Muharrem Pehlevan"
+  },
+  "games": {
+    "blackjack": { "family": "table", "label": "Blackjack" },
+    "roulette": { "family": "table", "label": "Rulet" },
+    "poker": { "family": "poker", "label": "Poker" },
+    "kiraz-77": { "family": "slots", "label": "Kiraz Kulübü 77" },
+    "neon-kasasi": { "family": "slots", "label": "Neon Kasası" },
+    "kaptan-mercan": { "family": "slots", "label": "Kaptan Mercan" },
+    "sekerhane-1024": { "family": "slots", "label": "Şekerhane 1024" },
+    "altin-rota": { "family": "instant", "label": "Altın Rota" },
+    "obsidyen-damari": { "family": "mines", "label": "Obsidyen Damarı" },
+    "son-on": { "family": "instant", "label": "Son On" },
+    "plinko": { "family": "plinko", "label": "Plinko" },
+    "hilo": { "family": "instant", "label": "Hilo" },
+    "yedi-cevher": { "family": "instant", "label": "Yedi Cevher" }
+  },
+  "titles": [
+    { "id": "kasa-ciragi", "name": "Kasa Çırağı", "rarity": "common" },
+    { "id": "kasa-adami", "name": "Kasa Adamı", "rarity": "common" },
+    { "id": "mahalle-patronu", "name": "Mahalle Patronu", "rarity": "rare" },
+    { "id": "masa-reisi", "name": "Masa Reisi", "rarity": "rare" },
+    { "id": "seker-baronu", "name": "Şeker Baronu", "rarity": "epic" },
+    { "id": "mercan-babasi", "name": "Mercan Babası", "rarity": "epic" },
+    { "id": "neon-patronu", "name": "Neon Patronu", "rarity": "epic" },
+    { "id": "kasa-baronu", "name": "Kasa Baronu", "rarity": "legendary" },
+    { "id": "divan-babasi", "name": "Divan Babası", "rarity": "legendary" },
+    { "id": "buyuk-patron", "name": "Büyük Patron", "rarity": "legendary" },
+    { "id": "konsey-babasi", "name": "Konsey Babası", "rarity": "mythic" },
+    { "id": "son-patron", "name": "Son Patron", "rarity": "mythic" }
+  ]
+}

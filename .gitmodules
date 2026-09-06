@@ -1,0 +1,3 @@
+[submodule "assets/third-party/cards/OpenDecks"]
+	path = assets/third-party/cards/OpenDecks
+	url = https://github.com/AustinGabriel/OpenDecks-Public-Domain-and-CC0-Playing-Cards.git

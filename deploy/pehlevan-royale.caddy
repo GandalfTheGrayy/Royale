@@ -1,0 +1,10 @@
+royale.141-98-51-125.sslip.io {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:4173
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}

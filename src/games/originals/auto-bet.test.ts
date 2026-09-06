@@ -1,0 +1,3 @@
+import{describe,expect,it}from'vitest'
+import{normalizeAutoRounds,shouldStopAutoBet}from'./auto-bet'
+describe('Auto Bet limitleri',()=>{it('tur sayısını güvenli aralıkta tutar',()=>{expect(normalizeAutoRounds(0)).toBe(1);expect(normalizeAutoRounds(5000)).toBe(1000)});it('tur, kâr ve zarar limitlerinde durur',()=>{expect(shouldStopAutoBet(10,0,{rounds:10,stopProfit:0,stopLoss:0})).toBe('rounds');expect(shouldStopAutoBet(2,50,{rounds:10,stopProfit:50,stopLoss:0})).toBe('profit');expect(shouldStopAutoBet(2,-25,{rounds:10,stopProfit:0,stopLoss:25})).toBe('loss')});it('limit yoksa devam eder',()=>{expect(shouldStopAutoBet(2,-5,{rounds:10,stopProfit:0,stopLoss:0})).toBe(false)})})

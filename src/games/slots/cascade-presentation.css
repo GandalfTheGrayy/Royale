@@ -1,0 +1,29 @@
+.cascade-cell.cascade-falling {
+  animation: cascadePhysicalDrop var(--cascade-duration, .54s) var(--cascade-easing, cubic-bezier(.16,.82,.2,1.02)) both;
+  animation-delay: var(--cascade-delay, 0ms);
+  transform-origin: 50% 50%;
+  will-change: transform;
+  z-index: 5;
+}
+
+.cascade-cell.cascade-falling.cascade-entering {
+  animation-name: cascadeFeedDrop;
+  z-index: 6;
+}
+
+@keyframes cascadePhysicalDrop {
+  0% { transform: translateY(var(--cascade-distance)); }
+  100% { transform: none; }
+}
+
+@keyframes cascadeFeedDrop {
+  0% { transform: translateY(var(--cascade-distance)); }
+  100% { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cascade-cell.cascade-falling {
+    animation-duration: .01ms !important;
+    animation-delay: 0ms !important;
+  }
+}
