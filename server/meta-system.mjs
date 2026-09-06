@@ -374,6 +374,8 @@ export function initializeMetaSystem(database) {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_meta_settlement_source ON meta_round_settlements(user_id, source_record_id);
     CREATE INDEX IF NOT EXISTS idx_meta_settlement_user_time ON meta_round_settlements(user_id, settled_at DESC);
     CREATE INDEX IF NOT EXISTS idx_meta_settlement_game_time ON meta_round_settlements(game_id, settled_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_meta_settlement_time ON meta_round_settlements(settled_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_meta_settlement_valid_game_time ON meta_round_settlements(game_id, settled_at DESC) WHERE invalidated_at IS NULL;
     CREATE INDEX IF NOT EXISTS idx_meta_settlement_competitive ON meta_round_settlements(competitive_eligible, settled_at DESC);
     CREATE TABLE IF NOT EXISTS meta_settlement_invalidations (
       event_id TEXT PRIMARY KEY,invalidated_at TEXT NOT NULL,invalidated_by TEXT NOT NULL REFERENCES users(id),

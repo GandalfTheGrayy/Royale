@@ -1,6 +1,38 @@
 royale.141-98-51-125.sslip.io {
 	encode zstd gzip
-	reverse_proxy 127.0.0.1:4173
+	root * /opt/pehlevan-royale/dist
+
+	handle /api/* {
+		header Cache-Control "no-store"
+		reverse_proxy 127.0.0.1:4173
+	}
+
+	# Deliver assets independently of SQLite work on the Node event loop.
+	handle /assets/* {
+		@versioned query v=*
+		@hashed path_regexp hashed ^/assets/[^/]+-[A-Za-z0-9_-]{8,}\.(css|js|map)$
+		@png path *.png
+		@webp {
+			method GET HEAD
+			path *.png
+			header Accept *image/webp*
+			file {path}.webp
+		}
+		route {
+			header Cache-Control "public, max-age=0, must-revalidate"
+			header @versioned Cache-Control "public, max-age=31536000, immutable"
+			header @hashed Cache-Control "public, max-age=31536000, immutable"
+			header @png +Vary Accept
+			rewrite @webp {path}.webp
+			file_server
+		}
+	}
+
+	handle {
+		header Cache-Control "no-store"
+		try_files {path} /index.html
+		file_server
+	}
 
 	header {
 		X-Content-Type-Options nosniff

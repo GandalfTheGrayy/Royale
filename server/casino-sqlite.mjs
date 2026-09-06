@@ -14,6 +14,7 @@ import {
 import {
   backfillCompetitionSystem,
   getCompetitionAdminState,
+  getCompetitionConfig,
   getCompetitionDashboard,
   getPublicProfile,
   initializeCompetitionSystem,
@@ -766,6 +767,10 @@ export function casinoSqlitePlugin(options = {}) {
             sendJson(response, 403, {
               error: "Rekabet yönetimi yetkiniz yok.",
             });
+            return;
+          }
+          if (request.method === "GET" && parts.length === 3 && parts[2] === "config") {
+            sendJson(response, 200, { config: getCompetitionConfig(database) });
             return;
           }
           if (request.method === "GET" && parts.length === 2) {

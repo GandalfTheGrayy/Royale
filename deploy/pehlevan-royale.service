@@ -17,6 +17,11 @@ RestartSec=3
 TimeoutStopSec=20
 KillSignal=SIGINT
 
+# Prefer interactive requests when background services compete for resources.
+CPUWeight=500
+IOWeight=500
+MemoryLow=256M
+
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectHome=true

@@ -33,13 +33,14 @@ export default function AccountAdmin() {
   const [defaultStartingPiar, setDefaultStartingPiar] = useState(5000)
 
   const load = useCallback(async () => {
-    const [result, profileResult, auditResult, competitionResult] = await Promise.all([
-      accountRequest<{ users: ManagedUser[] }>('/api/admin/accounts/users'),
-      accountRequest<{ profiles: ManagedProfile[]; assignments: ProfileAssignment[] }>('/api/admin/accounts/profiles'),
-      accountRequest<{ records: AuditRecord[] }>('/api/admin/accounts/audit'),
-      accountRequest<{ config: { economy: { startingPiar: number } } }>('/api/casino-data/competition/admin'),
+    const results = await Promise.allSettled([
+      accountRequest<{ users: ManagedUser[] }>('/api/admin/accounts/users').then((result) => setUsers(result.users)),
+      accountRequest<{ profiles: ManagedProfile[]; assignments: ProfileAssignment[] }>('/api/admin/accounts/profiles').then((result) => { setProfiles(result.profiles); setAssignments(result.assignments) }),
+      accountRequest<{ records: AuditRecord[] }>('/api/admin/accounts/audit').then((result) => setAudit(result.records)),
+      accountRequest<{ config: { economy: { startingPiar: number } } }>('/api/casino-data/competition/admin/config').then((result) => setDefaultStartingPiar(result.config.economy.startingPiar)),
     ])
-    setUsers(result.users); setProfiles(profileResult.profiles); setAssignments(profileResult.assignments); setAudit(auditResult.records); setDefaultStartingPiar(competitionResult.config.economy.startingPiar)
+    const failed = results.find((result) => result.status === 'rejected')
+    if (failed?.status === 'rejected') throw failed.reason
   }, [])
 
   useEffect(() => { void load().catch((error) => setNotice(error.message)) }, [load])
@@ -52,7 +53,7 @@ export default function AccountAdmin() {
       const payload = name === 'approve' ? { initialBalance: Math.max(0, amount), reason } : name === 'wallet' ? { amount, reason } : { reason }
       await accountRequest(`/api/admin/accounts/users/${encodeURIComponent(user.id)}/${name}`, { method: 'POST', body: JSON.stringify(payload) })
       setNotice(`${user.displayName}: işlem tamamlandı.`)
-      await load()
+      await load().catch(() => setNotice(`${user.displayName}: işlem tamamlandı; listenin bir bölümü yenilenemedi. YENİLE ile tekrar yükleyebilirsiniz.`))
     } catch (error) { setNotice(error instanceof Error ? error.message : 'İşlem tamamlanamadı.') }
     finally { setBusy('') }
   }
@@ -93,7 +94,7 @@ export default function AccountAdmin() {
   return <div className="account-admin">
     <div className="admin-section-intro">
       <div><small>GERÇEK HESAP DİZİNİ</small><h2>Üyelik, onay ve cüzdanlar</h2><p>Her hesap bağımsız bakiye, oturum ve oyun geçmişi taşır. Bütün cüzdan işlemleri denetim kaydına yazılır.</p></div>
-      <button className="account-refresh" onClick={() => void load()}>YENİLE</button>
+      <button className="account-refresh" onClick={() => void load().catch((error) => setNotice(error.message))}>YENİLE</button>
     </div>
     {notice && <div className="account-notice">{notice}</div>}
     {currentUser.role === 'owner' && <details className="profile-creator"><summary>YENİ KULLANICI OYUN PROFİLİ OLUŞTUR</summary><div><label>Oyun<select value={newProfile.gameId} onChange={(event) => setNewProfile((current) => ({ ...current, gameId: event.target.value }))}>{Object.entries(gameNames).map(([id, name]) => <option value={id} key={id}>{name}</option>)}</select></label><label>Profil adı<input value={newProfile.name} placeholder="Örn. Festival Demo" onChange={(event) => setNewProfile((current) => ({ ...current, name: event.target.value }))}/></label><label>Hedef RTP<input inputMode="decimal" value={newProfile.targetRtp} onChange={(event) => setNewProfile((current) => ({ ...current, targetRtp: event.target.value }))}/></label><label>Volatilite<select value={newProfile.volatility} onChange={(event) => setNewProfile((current) => ({ ...current, volatility: event.target.value }))}><option>düşük</option><option>orta</option><option>yüksek</option><option>çok yüksek</option></select></label><label>Hit ağırlığı<input inputMode="decimal" value={newProfile.hitBias} onChange={(event) => setNewProfile((current) => ({ ...current, hitBias: event.target.value }))}/></label><label>Bonus ağırlığı<input inputMode="decimal" value={newProfile.bonusBias} onChange={(event) => setNewProfile((current) => ({ ...current, bonusBias: event.target.value }))}/></label><label>Kutlama ritmi<select value={newProfile.celebration} onChange={(event) => setNewProfile((current) => ({ ...current, celebration: event.target.value }))}><option value="sakin">Sakin</option><option value="dengeli">Dengeli</option><option value="festival">Festival</option></select></label><button disabled={Boolean(busy)} onClick={() => void createProfile()}>SÜRÜMLÜ PROFİLİ KAYDET</button></div><p>Profil değişikliği yalnız sonraki turlara uygulanır ve Muharrem Pehlevan denetim kaydına yazılır.</p></details>}

@@ -2657,17 +2657,14 @@ export function getCompetitionAdminState(database) {
       "SELECT * FROM competition_admin_audit ORDER BY occurred_at DESC LIMIT 100",
     )
     .all();
-  const telemetryRows = database
-    .prepare(
-      `SELECT game_id gameId,metadata_json metadataJson FROM (
-    SELECT game_id,metadata_json,ROW_NUMBER() OVER(PARTITION BY game_id ORDER BY settled_at DESC) recentRank
-    FROM meta_round_settlements WHERE invalidated_at IS NULL
-  ) WHERE recentRank<=20`,
-    )
-    .all();
+  // Seek into each game's time index instead of ranking the entire history.
+  const recentTelemetry = database.prepare(
+    `SELECT metadata_json metadataJson FROM meta_round_settlements
+     WHERE game_id=? AND invalidated_at IS NULL ORDER BY settled_at DESC LIMIT 20`,
+  );
   const telemetry = Object.entries(META_SYSTEM_CONFIG.games).map(
     ([gameId, game]) => {
-      const rows = telemetryRows.filter((row) => row.gameId === gameId);
+      const rows = recentTelemetry.all(gameId);
       const audits = rows
         .map((row) => {
           try {

@@ -82,6 +82,19 @@ describe("social competition domain", () => {
     database = fixture();
   });
 
+  it("telemetry keeps the latest 20 valid rounds per game and excludes older and invalidated audits", () => {
+    for (let i = 0; i < 25; i++) {
+      const event = settlement(database, { id: `round:telemetry-${i}`, roundId: `telemetry-${i}`,
+        settledAt: new Date(Date.UTC(2026, 0, 1, 0, i)).toISOString() });
+      database.prepare("UPDATE meta_round_settlements SET metadata_json=?,invalidated_at=? WHERE event_id=?")
+        .run(JSON.stringify({ telemetryAudit: { complete: i >= 4, missing: i < 4 ? ['old-field'] : [] } }),
+          i === 24 ? '2026-01-02' : null, event.eventId);
+    }
+    const telemetry = getCompetitionAdminState(database).telemetry;
+    expect(telemetry.find((entry) => entry.gameId === 'kaptan-mercan')).toMatchObject({ rounds: 20, audited: 20, complete: 20, missing: [], status: 'healthy' });
+    expect(telemetry.find((entry) => entry.gameId === 'blackjack')).toMatchObject({ rounds: 0, status: 'no-data' });
+  });
+
   it("settlementı bir kez işleyip sezon, mastery, passport ve records üretir", () => {
     const event = settlement(database);
     const processed = processCompetitionSettlement(database, event);

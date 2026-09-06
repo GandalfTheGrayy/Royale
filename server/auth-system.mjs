@@ -539,18 +539,19 @@ export function createAccountSystem(database) {
     if (!token) return null;
     const session = database
       .prepare(
-        `SELECT s.*,u.username_display,u.display_name,u.role,u.status,u.avatar_id,u.created_at,u.approved_at,u.last_seen_at,CAST(w.balance_micro AS TEXT) balance_micro,w.version wallet_version,w.updated_at wallet_updated_at
+        `SELECT s.*,s.last_seen_at session_last_seen_at,u.username_display,u.display_name,u.role,u.status,u.avatar_id,u.created_at,u.approved_at,u.last_seen_at,CAST(w.balance_micro AS TEXT) balance_micro,w.version wallet_version,w.updated_at wallet_updated_at
       FROM sessions s JOIN users u ON u.id=s.user_id JOIN wallets w ON w.user_id=u.id
       WHERE s.token_hash=? AND s.revoked_at IS NULL AND s.expires_at>?`,
       )
       .get(sha256(token), now());
     if (!session || session.status !== "active") return null;
-    database
-      .prepare("UPDATE sessions SET last_seen_at=? WHERE id=?")
-      .run(now(), session.id);
-    database
-      .prepare("UPDATE users SET last_seen_at=? WHERE id=?")
-      .run(now(), session.user_id);
+    // Authentication/revocation is still checked on every request. Presence only
+    // needs minute precision; polling must not force two disk writes per request.
+    const seenAt = now();
+    if (Date.parse(seenAt) - Date.parse(session.session_last_seen_at) >= 60_000) {
+      database.prepare("UPDATE sessions SET last_seen_at=? WHERE id=?").run(seenAt, session.id);
+      database.prepare("UPDATE users SET last_seen_at=? WHERE id=?").run(seenAt, session.user_id);
+    }
     return {
       session,
       user: { id: session.user_id, role: session.role, status: session.status },
@@ -1314,6 +1315,10 @@ export function createAccountSystem(database) {
           return true;
         }
         if (action === "approve") {
+          if (database.prepare("SELECT status FROM users WHERE id=?").get(targetId)?.status !== "pending") {
+            json(response, 409, { error: "Bu başvuru artık onay beklemiyor. Kullanıcı listesini yenileyin." });
+            return true;
+          }
           const requestedInitialMicro = toMicro(payload.initialBalance ?? 0);
           const initialMicro =
             requestedInitialMicro > 0n ? requestedInitialMicro : 0n;
