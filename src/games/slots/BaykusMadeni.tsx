@@ -53,6 +53,14 @@ type Actor = {
   phase: "drop" | "bounce" | "hit";
 };
 type Burst = { id: number; column: number; row: number; valueX: number; kind: "block" | "chest" };
+type ChestMath = {
+  id: number;
+  blockWinX: number;
+  chestMultiplierX: number;
+  totalWinX: number;
+  payout: number;
+  credited: boolean;
+};
 type PendingBuy = { kind: MineBonusTier | "mystery"; label: string; costX: number };
 
 const money = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 });
@@ -112,6 +120,7 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
   const [actors, setActors] = useState<Actor[]>([]);
   const [impacts, setImpacts] = useState<Array<{ id: number; column: number; row: number; kind: "hit" | "blast" }>>([]);
   const [bursts, setBursts] = useState<Burst[]>([]);
+  const [chestMath, setChestMath] = useState<ChestMath>();
   const [roundWinX, setRoundWinX] = useState(0);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [buyOpen, setBuyOpen] = useState(false);
@@ -172,6 +181,7 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
     setActors([]);
     setImpacts([]);
     setBursts([]);
+    setChestMath(undefined);
     setDisplayMine(cloneMine(spinResult.initialMine));
     setReel(spinResult.reel.map((row) => row.map((symbol) => ({ ...symbol }))));
     setPhase("reel");
@@ -246,7 +256,18 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
         addBurst(event, "chest");
         audioRef.current?.play("multiplierImpact", event.column ?? 0);
       }
-      if (chests.length) setNotice(`${chests.length} sandık açıldı · ${money.format(displayedBlockWin)}× blok kazancı ${money.format(displayedChestMultiplier)}× ile çarpılıyor.`);
+      if (chests.length) {
+        const totalWinX = displayedBlockWin * displayedChestMultiplier;
+        setChestMath({
+          id: ++eventId.current,
+          blockWinX: displayedBlockWin,
+          chestMultiplierX: displayedChestMultiplier,
+          totalWinX,
+          payout: Math.round(wager * totalWinX * 100) / 100,
+          credited: false,
+        });
+        setNotice(`${chests.length} sandık açıldı · ${money.format(displayedBlockWin)}× blok kazancı ${money.format(displayedChestMultiplier)}× ile çarpılıyor.`);
+      }
       setRoundWinX(displayedBlockWin * displayedChestMultiplier);
       const waveWait = Math.max(
         hits.length ? tuning.animation.hitMs : 0,
@@ -264,6 +285,17 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
     setResult(spinResult);
     await wait(tuning.animation.countUpMs);
     setPhase("idle");
+  };
+
+  const showBalanceCredit = (payout: number, totalWinX: number) => {
+    setChestMath((current) => {
+      if (!current) return current;
+      const id = current.id;
+      window.setTimeout(() => {
+        setChestMath((latest) => latest?.id === id ? undefined : latest);
+      }, 1_050);
+      return { ...current, totalWinX, payout, credited: true };
+    });
   };
 
   const recordSpin = (
@@ -308,6 +340,7 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
     if (!mountedRef.current) return;
     const payout = Math.round(wager * spinResult.totalWinX * 100) / 100;
     changeBalance(payout);
+    showBalanceCredit(payout, spinResult.totalWinX);
     setMine(spinResult.mine);
     recordSpin(spinResult, roundId, startedAt, balanceBefore, cost, payout, activeMode);
     if (spinResult.totalWinX > 0) audioRef.current?.play(spinResult.totalWinX >= 25 ? "bigWin" : "win");
@@ -336,6 +369,7 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
       const settledResult = { ...spinResult, totalWinX };
       const payout = Math.round(wager * totalWinX * 100) / 100;
       changeBalance(payout);
+      showBalanceCredit(payout, totalWinX);
       recordSpin(settledResult, roundId, startedAt, balanceBefore, 0, payout, "base", session);
       session = {
         ...session, mine: spinResult.mine, remaining: session.remaining - 1,
@@ -415,7 +449,7 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
   } as CSSProperties);
 
   return (
-    <main className={`owl-mine phase-${phase} ${bonus ? `bonus-${bonus.tier}` : ""}`}>
+    <main className={`owl-mine phase-${phase} ${bonus ? `bonus-${bonus.tier}` : ""} ${chestMath?.credited ? "chest-crediting" : ""}`}>
       <header className="owl-mine-topbar">
         <button onClick={onBack}>← Slot katı</button>
         <div className="owl-mine-title"><img src="/assets/slots/baykus-madeni/owl-mine-emblem-v1.png" alt="" /><span><small>PEHLEVAN ROYALE</small>BAYKUŞ MADENİ</span></div>
@@ -430,6 +464,17 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
         </div>
 
         <div className="owl-mine-machine">
+          {chestMath && <div key={chestMath.id} className={`owl-chest-math ${chestMath.credited ? "credited" : ""}`} role="status" aria-live="polite">
+            <small>SANDIK ÇARPANI UYGULANIYOR</small>
+            <div>
+              <span><b>{money.format(chestMath.blockWinX)}×</b><em>BLOK</em></span>
+              <i>×</i>
+              <span className="chest-factor"><b>{money.format(chestMath.chestMultiplierX)}×</b><em>SANDIK</em></span>
+              <i>=</i>
+              <span className="chest-total"><b>{money.format(chestMath.totalWinX)}×</b><em>TUR ÇARPANI</em></span>
+            </div>
+            <p>{money.format(wager)} PR bahis × {money.format(chestMath.totalWinX)}× = <strong>{money.format(chestMath.payout)} PR</strong> <b>{chestMath.credited ? "BAKİYEYE EKLENDİ" : "BAKİYEYE EKLENECEK"}</b></p>
+          </div>}
           <div className="owl-playfield">
             <div className="owl-depth-rail"><span>YÜZEY</span><i /><span>DERİN GALERİ</span></div>
             <section className="owl-reels" aria-label="5 çarpı 3 düşüş paneli">

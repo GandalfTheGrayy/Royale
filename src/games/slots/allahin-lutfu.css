@@ -462,8 +462,8 @@
 .event-redrop-clear .allah-cell.event-target { animation: allahClear .5s ease-in forwards; }
 .event-redrop-fall .allah-cell.event-target { animation: allahDrop .68s cubic-bezier(.17,.75,.2,1.15) both; animation-delay:calc(var(--column) * 28ms); }
 .event-collector-wake .allah-cell.event-target { animation: allahCollectorWake .55s ease-out; }
-.event-coin-flight .allah-cell.event-target { animation: allahCoinLift .78s ease-in-out; }
-.event-collector-merge .allah-cell.event-target { animation: allahCollectorMerge .6s ease-out; }
+.event-coin-flight .allah-cell.event-target { animation: allahCoinLift .2s ease-in-out; }
+.event-collector-merge .allah-cell.event-target { animation: allahCollectorMerge .1s ease-out; }
 .event-super-collector-reset .allah-grid { animation: allahSuperReset .45s ease-out; }
 .event-scatter-lock .allah-cell.event-target { animation: allahScatterLock .76s ease-out; }
 .event-bonus-portal .allah-machine,.event-bonus-upgrade .allah-machine { animation: allahBonusPortal 1.1s ease-out; }
