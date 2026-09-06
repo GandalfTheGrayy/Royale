@@ -40,34 +40,34 @@ try {
 
     if (-not (Test-Path -LiteralPath (Join-Path $projectDirectory ".git"))) {
         Write-Step "Yerel Git deposu hazirlaniyor"
-        Invoke-Checked git init
-        Invoke-Checked git branch -M $branch
-        Invoke-Checked git remote add origin $repositoryUrl
+        Invoke-Checked -Program "git" -Arguments @("init")
+        Invoke-Checked -Program "git" -Arguments @("branch", "-M", $branch)
+        Invoke-Checked -Program "git" -Arguments @("remote", "add", "origin", $repositoryUrl)
     }
 
     $origin = (& git remote get-url origin 2>$null)
     if ($LASTEXITCODE -ne 0) {
-        Invoke-Checked git remote add origin $repositoryUrl
+        Invoke-Checked -Program "git" -Arguments @("remote", "add", "origin", $repositoryUrl)
     } elseif ($origin.Trim() -ne $repositoryUrl) {
-        Invoke-Checked git remote set-url origin $repositoryUrl
+        Invoke-Checked -Program "git" -Arguments @("remote", "set-url", "origin", $repositoryUrl)
     }
 
     Write-Step "Bagimliliklar kilit dosyasina gore guncelleniyor"
-    Invoke-Checked npm install --no-audit --no-fund
+    Invoke-Checked -Program "npm" -Arguments @("install", "--no-audit", "--no-fund")
 
     Write-Step "Testler calistiriliyor"
-    Invoke-Checked npm test
+    Invoke-Checked -Program "npm" -Arguments @("test")
 
     Write-Step "Uretim paketi yerelde dogrulaniyor"
-    Invoke-Checked npm run build
+    Invoke-Checked -Program "npm" -Arguments @("run", "build")
 
     Write-Step "Degisiklikler GitHub icin hazirlaniyor"
-    Invoke-Checked git add --all
+    Invoke-Checked -Program "git" -Arguments @("add", "--all")
     & git diff --cached --quiet
     $diffExit = $LASTEXITCODE
     if ($diffExit -eq 1) {
         $commitMessage = "deploy: " + (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
-        Invoke-Checked git commit -m $commitMessage
+        Invoke-Checked -Program "git" -Arguments @("commit", "-m", $commitMessage)
     } elseif ($diffExit -ne 0) {
         throw "Git degisiklik kontrolu basarisiz oldu ($diffExit)."
     } else {
@@ -75,11 +75,11 @@ try {
     }
 
     Write-Step "GitHub'a gonderiliyor"
-    Invoke-Checked git push --set-upstream origin $branch
+    Invoke-Checked -Program "git" -Arguments @("push", "--set-upstream", "origin", $branch)
 
     Write-Step "Sunucu guncelleniyor ve canliya aliniyor"
     $remoteCommand = "set -e; if [ ! -d '$serverDirectory/.git' ]; then git clone --branch '$branch' '$repositoryUrl' '$serverDirectory'; else git -C '$serverDirectory' pull --ff-only origin '$branch'; fi; bash '$serverDirectory/deploy/server-deploy.sh'"
-    Invoke-Checked ssh -o BatchMode=yes -o ConnectTimeout=15 $server $remoteCommand
+    Invoke-Checked -Program "ssh" -Arguments @("-o", "BatchMode=yes", "-o", "ConnectTimeout=15", $server, $remoteCommand)
 
     Write-Step "Disaridan HTTPS kontrolu yapiliyor"
     $status = Invoke-RestMethod -Uri "$liveUrl/api/auth/status" -TimeoutSec 30
