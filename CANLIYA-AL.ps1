@@ -78,7 +78,7 @@ try {
     Invoke-Checked git push --set-upstream origin $branch
 
     Write-Step "Sunucu guncelleniyor ve canliya aliniyor"
-    $remoteCommand = "set -e; if [ ! -d '$serverDirectory/.git' ]; then git clone --branch '$branch' '$repositoryUrl' '$serverDirectory'; fi; bash '$serverDirectory/deploy/server-deploy.sh'"
+    $remoteCommand = "set -e; if [ ! -d '$serverDirectory/.git' ]; then git clone --branch '$branch' '$repositoryUrl' '$serverDirectory'; else git -C '$serverDirectory' pull --ff-only origin '$branch'; fi; bash '$serverDirectory/deploy/server-deploy.sh'"
     Invoke-Checked ssh -o BatchMode=yes -o ConnectTimeout=15 $server $remoteCommand
 
     Write-Step "Disaridan HTTPS kontrolu yapiliyor"

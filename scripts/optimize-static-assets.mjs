@@ -13,8 +13,14 @@ import { basename, dirname, resolve } from "node:path";
 import sharp from "sharp";
 
 const targetRoot = resolve(process.argv[2] ?? "dist/assets");
-const cacheRoot = resolve("node_modules/.cache/pehlevan-lossless-webp-v1");
-const concurrency = Math.max(2, Math.min(4, cpus().length));
+const cacheRoot = resolve(
+  process.env.PEHLEVAN_ASSET_CACHE ??
+    "node_modules/.cache/pehlevan-lossless-webp-v1",
+);
+const requestedConcurrency = Number(process.env.PEHLEVAN_ASSET_CONCURRENCY);
+const concurrency = Number.isFinite(requestedConcurrency)
+  ? Math.max(1, Math.min(4, Math.floor(requestedConcurrency)))
+  : Math.max(2, Math.min(4, cpus().length));
 
 async function findPngs(directory) {
   const result = [];
