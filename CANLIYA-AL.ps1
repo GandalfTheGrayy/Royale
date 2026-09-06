@@ -52,6 +52,9 @@ try {
         Invoke-Checked git remote set-url origin $repositoryUrl
     }
 
+    Write-Step "Bagimliliklar kilit dosyasina gore guncelleniyor"
+    Invoke-Checked npm install --no-audit --no-fund
+
     Write-Step "Testler calistiriliyor"
     Invoke-Checked npm test
 

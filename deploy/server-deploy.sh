@@ -48,7 +48,7 @@ npm ci --no-audit --no-fund
 
 echo "==> Yeni surum ayri dizinde derleniyor"
 rm -rf "$APP_DIR/dist-next"
-npm exec tsc -- -b
+npm exec tsc -- -b --force
 npm exec vite build -- --outDir dist-next
 node scripts/optimize-static-assets.mjs dist-next/assets
 
