@@ -33,6 +33,7 @@ export async function accountRequest<T>(path: string, init: RequestInit = {}): P
     return payload
   } catch (error) {
     if (controller.signal.aborted) {
+      if (path === '/api/auth/login') throw new Error('Giriş yanıtı gecikti. Lütfen tekrar giriş yapın.')
       throw new Error(['GET', 'HEAD', 'OPTIONS'].includes(method)
         ? 'Sunucu yanıtı gecikti. Lütfen yeniden deneyin.'
         : 'Sunucu yanıtı gecikti. İşlem gerçekleşmiş olabilir; tekrar işlem yapmadan önce listeyi yenileyip kontrol edin.')

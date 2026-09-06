@@ -1,0 +1,27 @@
+[Unit]
+Description=Pehlevan Royale Login and Account Service
+After=pehlevan-royale.service
+
+[Service]
+Type=simple
+User=royale
+Group=royale
+WorkingDirectory=/opt/pehlevan-royale
+Environment=NODE_ENV=production
+Environment=PEHLEVAN_DB_DIRECTORY=/var/lib/pehlevan-royale
+ExecStart=/opt/node-v22.15.0-linux-x64/bin/node server/account-server.mjs
+Restart=always
+RestartSec=2
+TimeoutStopSec=15
+CPUWeight=1000
+IOWeight=500
+MemoryLow=96M
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+ReadWritePaths=/var/lib/pehlevan-royale
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

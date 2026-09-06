@@ -557,6 +557,15 @@ export function casinoSqlitePlugin(options = {}) {
       database.close();
     });
     server.middlewares.use(async (request, response, next) => {
+      const startedAt = performance.now();
+      response.once("finish", () => {
+        const durationMs = Math.round(performance.now() - startedAt);
+        if (durationMs >= 1000 && request.url?.startsWith("/api/")) {
+          console.warn(JSON.stringify({ event: "slow-api", method: request.method,
+            route: request.url.split("?")[0].replace(/\/users\/[^/]+/g, "/users/:id"),
+            durationMs, status: response.statusCode }));
+        }
+      });
       if (
         process.env.PEHLEVAN_EMERGENCY_GATE === "1" &&
         !requestAuthorized(request.headers.authorization)

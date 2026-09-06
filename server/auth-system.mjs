@@ -285,10 +285,11 @@ function cookie(request, token, remember = false) {
   return `${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict${secure ? "; Secure" : ""}${remember ? "; Max-Age=2592000" : ""}`;
 }
 
-export function createAccountSystem(database) {
+export function createAccountSystem(database, { initialize = true } = {}) {
   const testAutoLoginUserId = String(
     process.env.PEHLEVAN_TEST_AUTO_LOGIN_USER_ID ?? "",
   ).trim();
+  if (initialize) {
   database.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
@@ -504,6 +505,8 @@ export function createAccountSystem(database) {
       "INSERT INTO schema_info(key,value) VALUES('schema_version','5') ON CONFLICT(key) DO UPDATE SET value='5'",
     )
     .run();
+
+  }
 
   const audit = (
     actor,

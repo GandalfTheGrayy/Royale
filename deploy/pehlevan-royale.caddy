@@ -2,7 +2,21 @@ royale.141-98-51-125.sslip.io {
 	encode zstd gzip
 	root * /opt/pehlevan-royale/dist
 
-	handle /api/* {
+	@accounts path /api/auth/* /api/me/* /api/admin/accounts/* /api/avatars/*
+	handle @accounts {
+		header Cache-Control "no-store"
+		reverse_proxy 127.0.0.1:4175
+	}
+	@accountConfig {
+		method GET
+		path /api/casino-data/competition/admin/config
+	}
+	handle @accountConfig {
+		header Cache-Control "no-store"
+		reverse_proxy 127.0.0.1:4175
+	}
+	@api path /api/*
+	handle @api {
 		header Cache-Control "no-store"
 		reverse_proxy 127.0.0.1:4173
 	}

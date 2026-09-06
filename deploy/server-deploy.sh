@@ -79,6 +79,7 @@ install -d -o royale -g royale -m 0750 "$APP_DIR/node_modules/.vite-temp"
 
 echo "==> systemd servisi kuruluyor"
 install -o root -g root -m 0644 deploy/pehlevan-royale.service /etc/systemd/system/pehlevan-royale.service
+install -o root -g root -m 0644 deploy/pehlevan-accounts.service /etc/systemd/system/pehlevan-accounts.service
 systemctl daemon-reload
 
 echo "==> Caddy sitesi kuruluyor"
@@ -99,10 +100,12 @@ mv "$APP_DIR/dist-next" "$APP_DIR/dist"
 
 systemctl enable "$SERVICE" >/dev/null
 systemctl restart "$SERVICE"
+systemctl enable pehlevan-accounts.service >/dev/null
+systemctl restart pehlevan-accounts.service
 
 healthy=0
 for attempt in {1..30}; do
-  if curl --fail --silent --show-error "$HEALTH_URL" >/dev/null; then
+  if curl --fail --silent --show-error --max-time 2 "$HEALTH_URL" >/dev/null && curl --fail --silent --max-time 2 http://127.0.0.1:4175/api/auth/status >/dev/null; then
     healthy=1
     break
   fi
