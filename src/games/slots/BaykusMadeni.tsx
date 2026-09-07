@@ -16,6 +16,7 @@ import {
 import { createRecordId, recordGameEvent, recordGameRound, recordWalletEntry } from "../../data/casino-database";
 import GameMusicControls from "../../audio/GameMusicControls";
 import { SlotAudio } from "./slot-audio";
+import { mineActorKey, minePresentationDuration, planMineActorLanes } from "./baykus-presentation";
 import {
   cloneMine,
   createMine,
@@ -56,6 +57,9 @@ type Actor = {
   tool?: MineTool;
   special?: "tnt";
   phase: "drop" | "bounce" | "hit";
+  laneOffsetPx: number;
+  staggerMs: number;
+  laneIndex: number;
 };
 type Burst = { id: number; column: number; row: number; valueX: number; kind: "block" | "chest" };
 type ChestMath = {
@@ -139,6 +143,7 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
   const mountedRef = useRef(true);
   const balanceRef = useRef(balance);
   const eventId = useRef(0);
+  const roundWinXRef = useRef(0);
   audioRef.current ??= new SlotAudio("baykus-madeni");
 
   useEffect(() => { balanceRef.current = balance; }, [balance]);
@@ -154,8 +159,29 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
   const canPlay = !busy && !bonus && balance >= currentCost;
   const brokenCount = useMemo(() => displayMine.columns.flat().filter((cell) => cell.hp <= 0).length, [displayMine]);
   const bonusDisplayedTotal = bonus ? bonus.totalWin + roundWinX * wager : 0;
-  const animationScale = turbo ? tuning.animation.turboScale : 1;
-  const wait = (milliseconds: number) => sleep(Math.max(24, Math.round(milliseconds * animationScale)));
+  const presentationDuration = (milliseconds: number, turboFloor = 24) => minePresentationDuration(milliseconds, turbo, tuning.animation.turboScale, turboFloor);
+  const wait = (milliseconds: number, turboFloor = 24) => sleep(presentationDuration(milliseconds, turboFloor));
+
+  const showRoundWinX = (value: number) => {
+    const next = Math.round(value * 100) / 100;
+    roundWinXRef.current = next;
+    setRoundWinX(next);
+  };
+
+  const countRoundWinX = (target: number, milliseconds: number) => new Promise<void>((resolve) => {
+    const start = roundWinXRef.current;
+    const final = Math.round(target * 100) / 100;
+    if (start === final || milliseconds <= 0) { showRoundWinX(final); resolve(); return; }
+    const startedAt = performance.now();
+    const frame = (now: number) => {
+      if (!mountedRef.current) { resolve(); return; }
+      const progress = Math.min(1, (now - startedAt) / milliseconds);
+      const eased = 1 - (1 - progress) ** 3;
+      showRoundWinX(start + (final - start) * eased);
+      if (progress < 1) window.requestAnimationFrame(frame); else resolve();
+    };
+    window.requestAnimationFrame(frame);
+  });
 
   const changeBalance = (delta: number) => {
     balanceRef.current = Math.round((balanceRef.current + delta) * 100) / 100;
@@ -183,7 +209,7 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
 
   const playPresentation = async (spinResult: MineSpinResult, activeBonus?: BonusSession, activeMode: MinePaidMode = mode) => {
     setResult(undefined);
-    setRoundWinX(0);
+    showRoundWinX(0);
     setActors([]);
     setImpacts([]);
     setBursts([]);
@@ -193,10 +219,10 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
     setPhase("reel");
     setNotice("Maden işaretleri hazırlanıyor…");
     audioRef.current?.play("spin");
-    await wait(tuning.animation.reelMs);
+    await wait(tuning.animation.reelMs, 380);
     if (!mountedRef.current) return;
     audioRef.current?.play("stop", 4);
-    await wait(tuning.animation.bounceMs);
+    await wait(tuning.animation.bounceMs, 120);
     setPhase("dig");
     let displayedBlockWin = 0;
     let displayedChestMultiplier = 1;
@@ -212,11 +238,32 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
       if (!mountedRef.current) return;
       if (event.kind === "upgrade") {
         setNotice(event.label);
-        audioRef.current?.play("mystery");
+        audioRef.current?.play("bookUpgrade");
         setImpacts([{ id: ++eventId.current, column: 2, row: 0, kind: "blast" }]);
-        await wait(tuning.animation.blastMs);
+        await wait(tuning.animation.blastMs, 320);
+        setImpacts([]);
       }
     }
+
+    const actorLanes = planMineActorLanes(spinResult.events
+      .filter((event) => event.kind === "drop" && event.column !== undefined)
+      .map((event) => ({
+        column: event.column!, sourceColumn: event.sourceColumn, sourceRow: event.sourceRow,
+        tool: event.tool, special: event.special,
+      })));
+    const laneFor = (event: MineSpinEvent) => actorLanes.get(mineActorKey({
+      column: event.column ?? 0, sourceColumn: event.sourceColumn, sourceRow: event.sourceRow,
+      tool: event.tool, special: event.special,
+    })) ?? { laneIndex: 0, laneCount: 1, offsetPx: 0, staggerMs: 0 };
+    const actorFrom = (event: MineSpinEvent, phase: Actor["phase"]): Actor => {
+      const lane = laneFor(event);
+      return {
+        id: ++eventId.current, column: event.column!, sourceRow: event.sourceRow ?? 0,
+        targetRow: Math.max(0, event.row ?? event.targetRow ?? 0), tool: event.tool,
+        special: event.special === "tnt" ? "tnt" : undefined, phase,
+        laneOffsetPx: lane.offsetPx, staggerMs: lane.staggerMs, laneIndex: lane.laneIndex,
+      };
+    };
 
     const waves = [...new Set(spinResult.events.filter((event) => event.kind !== "upgrade").map((event) => event.wave ?? 0))].sort((a, b) => a - b);
     for (const wave of waves) {
@@ -229,46 +276,60 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
       const chests = waveEvents.filter((event) => event.kind === "chest");
 
       if (drops.length) {
-        const dropActors = drops.map((event) => ({
-          id: ++eventId.current,
-          column: event.column!, sourceRow: event.sourceRow ?? 0, targetRow: Math.max(0, event.targetRow ?? 0),
-          tool: event.tool, special: event.special === "tnt" ? "tnt" as const : undefined, phase: "drop" as const,
-        }));
-        setNotice(drops.some((event) => event.special === "tnt") ? `${drops.length} TNT birlikte düşüyor!` : `${drops.length} kazma aynı anda madene düşüyor.`);
+        const dropActors = drops.map((event) => actorFrom(event, "drop"));
+        const sameColumn = new Set(drops.map((event) => event.column)).size < drops.length;
+        setNotice(drops.some((event) => event.special === "tnt") ? `${drops.length} TNT kontrollü biçimde şafta iniyor.` : sameColumn ? `${drops.length} kazma şeritlerine ayrılıp madene iniyor.` : `${drops.length} kazma madene iniyor.`);
         const removed = new Set(drops.map((event) => `${event.sourceRow ?? 0}-${event.sourceColumn ?? event.column}`));
         setReel((current) => current.map((row, rowIndex) => row.map((symbol, columnIndex) => removed.has(`${rowIndex}-${columnIndex}`) ? { kind: "special", special: "empty" } : symbol)));
         setActors(dropActors);
         drops.slice(0, 5).forEach((event) => audioRef.current?.play("powerLand", event.column));
-        await wait(tuning.animation.dropMs);
+        const lastDropStagger = Math.max(0, ...dropActors.map((actor) => actor.staggerMs));
+        await wait(tuning.animation.dropMs + lastDropStagger, 260);
         setActors((current) => current.map((actor) => ({ ...actor, phase: "bounce" })));
-        await wait(tuning.animation.bounceMs);
+        await wait(tuning.animation.bounceMs + lastDropStagger, 120);
       }
 
       if (hits.length || blasts.length) {
-        const hitActors = hits.filter((event) => event.tool).map((event) => ({
-          id: ++eventId.current, column: event.column!, sourceRow: event.sourceRow ?? 0, targetRow: event.row!, tool: event.tool, phase: "hit" as const,
-        }));
+        const hitActors = hits.filter((event) => event.tool).map((event) => actorFrom(event, "hit"));
         setActors(hitActors);
         setImpacts([
           ...hits.map((event) => ({ id: ++eventId.current, column: event.column!, row: event.row!, kind: event.special ? "blast" as const : "hit" as const })),
           ...blasts.map((event) => ({ id: ++eventId.current, column: event.column!, row: event.row ?? event.targetRow ?? 0, kind: "blast" as const })),
         ]);
-        updateDisplayMine(waveEvents);
-        setNotice(blasts.length ? `${blasts.length} patlama madeni sarstı!` : `${hits.length} kazma aynı anda vurup sekiyor.`);
-        audioRef.current?.play("cascade", hits[0]?.column ?? blasts[0]?.column ?? 0);
+        setNotice(blasts.length ? `${blasts.length} patlama madeni sarsıyor!` : `${hits.length} kazma bloklara sırayla vuruyor.`);
+        if (hits.length) audioRef.current?.play("pickaxe", hits[0]?.column ?? 0);
         if (blasts.length) audioRef.current?.play("collector");
-      } else if (chests.length) updateDisplayMine(waveEvents);
+        const lastHitStagger = Math.max(0, ...hitActors.map((actor) => actor.staggerMs));
+        await wait(Math.max(hits.length ? tuning.animation.hitMs : 0, blasts.length ? tuning.animation.blastMs : 0) + lastHitStagger, blasts.length ? 320 : 220);
+        updateDisplayMine(hits);
+        setActors([]);
+        setImpacts([]);
+      }
 
-      for (const event of breaks) {
-        displayedBlockWin += event.valueX ?? 0;
-        addBurst(event, "block");
-        audioRef.current?.play(event.valueX && event.valueX >= 5 ? "multiplier" : "coin");
+      if (breaks.length) {
+        for (const event of breaks) {
+          displayedBlockWin += event.valueX ?? 0;
+          addBurst(event, "block");
+        }
+        setNotice(`${breaks.length} blok kırıldı · ödül kasaya yazılıyor.`);
+        audioRef.current?.play("blockBreak", breaks[0]?.column ?? 0);
+        await wait(tuning.animation.breakMs + 350, 300);
       }
-      for (const event of chests) {
-        displayedChestMultiplier *= event.valueX ?? 1;
-        addBurst(event, "chest");
-        audioRef.current?.play("multiplierImpact", event.column ?? 0);
+
+      if (chests.length) {
+        setNotice(`${chests.length} sandık kilidi açılıyor.`);
+        audioRef.current?.play("chestLatch", chests[0]?.column ?? 0);
+        await wait(160, 120);
+        updateDisplayMine(chests);
+        for (const event of chests) {
+          displayedChestMultiplier *= event.valueX ?? 1;
+          addBurst(event, "chest");
+        }
+        setNotice(`${chests.length} sandık açıldı · çarpan kasaya işleniyor.`);
+        audioRef.current?.play("chestOpen", chests[0]?.column ?? 0);
+        await wait(tuning.animation.chestMs + 360, 650);
       }
+
       const displayed = displaySettlement();
       if (chests.length || (breaks.length && displayed.chestMultiplierX > 1)) {
         setChestMath({
@@ -282,22 +343,14 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
         });
         if (chests.length) setNotice(`${chests.length} sandık açıldı · ${activeBonus ? "bonus boyunca biriken" : "bu turun"} blok kazancı ${money.format(displayed.chestMultiplierX)}× ile çarpılıyor.`);
       }
-      setRoundWinX(displayed.creditWinX);
-      const waveWait = Math.max(
-        hits.length ? tuning.animation.hitMs : 0,
-        breaks.length ? tuning.animation.breakMs : 0,
-        blasts.length ? tuning.animation.blastMs : 0,
-        chests.length ? tuning.animation.chestMs : 0,
-      );
-      if (waveWait) await wait(waveWait);
+      if (displayed.creditWinX !== roundWinXRef.current) await countRoundWinX(displayed.creditWinX, presentationDuration(tuning.animation.countUpMs, 360));
     }
     setActors([]);
     setImpacts([]);
     setPhase("settle");
     setDisplayMine(cloneMine(spinResult.mine));
-    setRoundWinX(spinResult.totalWinX);
+    await countRoundWinX(spinResult.totalWinX, presentationDuration(tuning.animation.countUpMs, 420));
     setResult(spinResult);
-    await wait(tuning.animation.countUpMs);
     setPhase("idle");
   };
 
@@ -363,7 +416,7 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
     if (spinResult.eyeCount) audioRef.current?.play("eye");
     if (spinResult.triggeredBonus) {
       const session: BonusSession = { tier: spinResult.triggeredBonus, source: "natural", remaining: tuning.bonusSpins, played: 0, totalWin: 0, progress: createMineBonusProgress(spinResult.mine), maxWinX: tuning.maxWinX - spinResult.totalWinX, openedChests: 0, mine: spinResult.mine };
-      setRoundWinX(0);
+      showRoundWinX(0);
       setBonus(session); setFeatureIntro(spinResult.triggeredBonus);
       setNotice(`${bonusCopy[spinResult.triggeredBonus].title} açıldı.`);
     } else setNotice(spinResult.totalWinX ? `${money.format(spinResult.totalWinX)}× · ${money.format(payout)} PR` : "Kazmalar sustu; yeni duvar hazırlanıyor.");
@@ -393,7 +446,7 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
         ...session, mine: spinResult.mine, remaining: session.remaining - 1,
         played: session.played + 1, totalWin, progress, openedChests: session.openedChests + spinResult.openedChests.length,
       };
-      setBonus(session); setMine(spinResult.mine); setRoundWinX(0);
+      setBonus(session); setMine(spinResult.mine); showRoundWinX(0);
       setNotice(`${bonusCopy[session.tier].title} · ${session.remaining} dönüş kaldı · toplam ${money.format(session.totalWin)} PR`);
       await wait(520);
     }
@@ -443,7 +496,7 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
         const freshMine = createMine(undefined, tuning);
         const tier: MineBonusTier = outcome;
         setMine(freshMine); setDisplayMine(cloneMine(freshMine));
-        setRoundWinX(0);
+        showRoundWinX(0);
         setBonus({ tier, source: "mystery", remaining: tuning.bonusSpins, played: 0, totalWin: 0, progress: createMineBonusProgress(freshMine), maxWinX: tuning.maxWinX, openedChests: 0, mine: freshMine });
         setFeatureIntro(tier);
       }
@@ -453,19 +506,21 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
     const freshMine = createMine(undefined, tuning);
     const tier = pending.kind;
     setMine(freshMine); setDisplayMine(cloneMine(freshMine));
-    setRoundWinX(0);
+    showRoundWinX(0);
     setBonus({ tier, source: "buy", remaining: tuning.bonusSpins, played: 0, totalWin: 0, progress: createMineBonusProgress(freshMine), maxWinX: tuning.maxWinX, openedChests: 0, mine: freshMine });
     setFeatureIntro(tier);
   };
 
   const selectMode = (next: MinePaidMode) => { setMode(next); setBuyOpen(false); audioRef.current?.play("button"); setNotice(`${modeCopy[next].title} etkin · dönüş maliyeti ${money.format(wager * tuning.modeCosts[next])} PR`); };
   const actorStyle = (actor: Actor) => ({
-    "--actor-x": `${actor.column * 20 + 10}%`,
+    "--actor-x": `calc(${actor.column * 20 + 10}% + ${actor.laneOffsetPx}px)`,
     "--actor-start-y": `calc(var(--reel-center-start) + ${actor.sourceRow} * var(--reel-step))`,
     "--actor-y": `calc(var(--wall-top) + ${actor.targetRow} * var(--block-step))`,
-    "--drop-duration": `${Math.max(24, Math.round(tuning.animation.dropMs * animationScale))}ms`,
-    "--bounce-duration": `${Math.max(24, Math.round(tuning.animation.bounceMs * animationScale))}ms`,
-    "--hit-duration": `${Math.max(24, Math.round(tuning.animation.hitMs * animationScale))}ms`,
+    "--drop-duration": `${presentationDuration(tuning.animation.dropMs, 260)}ms`,
+    "--bounce-duration": `${presentationDuration(tuning.animation.bounceMs, 120)}ms`,
+    "--hit-duration": `${presentationDuration(tuning.animation.hitMs, 220)}ms`,
+    "--actor-delay": `${actor.staggerMs}ms`,
+    zIndex: 12 + actor.laneIndex,
   } as CSSProperties);
 
   return (
