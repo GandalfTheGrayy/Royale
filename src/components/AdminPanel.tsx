@@ -8,13 +8,11 @@ import {
   type SetStateAction,
 } from "react";
 import {
-  GAME_PRESET_COPY,
-  applyAdminGamePreset,
-  type GamePresetId,
   ALLAH_PRESET_COPY,
   DEFAULT_ALLAH_TUNING,
   DEFAULT_MINE_DROP_TUNING,
   applyAdminAllahPreset,
+  applyAdminMineDropPreset,
   applyAdminSlotPreset,
   getAdminSettings,
   resetAdminSettings,
@@ -69,7 +67,6 @@ import OwnerActivity from "./OwnerActivity";
 
 type Tab = "activity" | "dashboard" | "games" | "competition" | "users" | "wallet" | "database" | "system";
 type GameEditorSection =
-  | "presets"
   | "general"
   | "math"
   | "flow"
@@ -517,13 +514,14 @@ export default function AdminPanel({ balance, onClose }: Props) {
     const refresh = () => {
       if (!active || inFlight || document.hidden) return;
       inFlight = true;
+      let failedReads = 0;
       void Promise.all([
-        getCasinoSummary('all'),
-        getCasinoRounds('all'),
-        tab === "wallet" || tab === "database" ? getWalletLedger('all') : Promise.resolve([]),
-        tab === "dashboard" ? getCasinoEvents('all') : Promise.resolve([]),
-        tab === "database" ? getAIConversations('all') : Promise.resolve([]),
-        tab === "database" ? getCasinoStorageStats() : Promise.resolve(undefined),
+        getCasinoSummary('all').catch(() => { failedReads += 1; return undefined; }),
+        getCasinoRounds('all', tab === "dashboard" ? 100 : undefined).catch(() => { failedReads += 1; return undefined; }),
+        tab === "wallet" || tab === "database" ? getWalletLedger('all').catch(() => { failedReads += 1; return undefined; }) : Promise.resolve([]),
+        tab === "dashboard" ? getCasinoEvents('all', 100).catch(() => { failedReads += 1; return undefined; }) : Promise.resolve([]),
+        tab === "database" ? getAIConversations('all').catch(() => { failedReads += 1; return undefined; }) : Promise.resolve([]),
+        tab === "database" ? getCasinoStorageStats().catch(() => { failedReads += 1; return undefined; }) : Promise.resolve(undefined),
       ]).then(
         ([
           nextSummary,
@@ -534,16 +532,15 @@ export default function AdminPanel({ balance, onClose }: Props) {
           nextStorage,
         ]) => {
           if (!active) return;
-          setSummary(nextSummary);
-          setRounds(nextRounds);
-          setLedger(nextLedger);
-          setEvents(nextEvents);
-          setConversations(nextConversations);
-          setStorage(nextStorage);
+          if (nextSummary) setSummary(nextSummary);
+          if (nextRounds) setRounds(nextRounds);
+          if (nextLedger) setLedger(nextLedger);
+          if (nextEvents) setEvents(nextEvents);
+          if (nextConversations) setConversations(nextConversations);
+          if (nextStorage) setStorage(nextStorage);
+          if (failedReads) setNotice("Verilerin bir bölümü yenilenemedi; bağlantı düzelince otomatik tamamlanacak.");
         },
-      ).catch(() => {
-        if (active) setNotice("Veriler yenilenemedi; bağlantı düzeldiğinde yeniden denenecek.");
-      }).finally(() => { inFlight = false; });
+      ).finally(() => { inFlight = false; });
     };
     refresh();
     const poll = window.setInterval(refresh, 5000);
@@ -821,15 +818,15 @@ export default function AdminPanel({ balance, onClose }: Props) {
               <article>
                 <i>↻</i>
                 <small>OYUNCU TURLARI</small>
-                <strong>{summary?.playedRounds ?? 0}</strong>
-                <span>{summary?.liveRounds ?? 0} arka plan rulet turu</span>
+                <strong>{summary ? summary.playedRounds : "—"}</strong>
+                <span>{summary ? summary.liveRounds : "—"} arka plan rulet turu</span>
               </article>
               <article>
                 <i>％</i>
                 <small>GÖZLENEN RTP</small>
-                <strong>%{percent.format((summary?.rtp ?? 0) * 100)}</strong>
+                <strong>{summary ? `%${percent.format(summary.rtp * 100)}` : "—"}</strong>
                 <span>
-                  {money.format(summary?.totalStake ?? 0)} PR toplam bahis
+                  {summary ? money.format(summary.totalStake) : "—"} PR toplam bahis
                 </span>
               </article>
               <article
@@ -842,10 +839,10 @@ export default function AdminPanel({ balance, onClose }: Props) {
                 <i>◇</i>
                 <small>KASA SONUCU</small>
                 <strong>
-                  {money.format(Math.abs(summary?.net ?? 0))} <em>PR</em>
+                  {summary ? money.format(Math.abs(summary.net)) : "—"} <em>PR</em>
                 </strong>
                 <span>
-                  {(summary?.net ?? 0) <= 0 ? "Kasa lehine" : "Oyuncu lehine"}
+                  {summary ? (summary.net <= 0 ? "Kasa lehine" : "Oyuncu lehine") : "Veri bekleniyor"}
                 </span>
               </article>
             </section>
@@ -929,7 +926,7 @@ export default function AdminPanel({ balance, onClose }: Props) {
                               : ""
                           }
                         >
-                          %{percent.format((observed?.rtp ?? 0) * 100)} RTP
+                          {summary ? `%${percent.format((observed?.rtp ?? 0) * 100)} RTP` : "—"}
                         </em>
                       </span>
                     );
@@ -984,7 +981,7 @@ export default function AdminPanel({ balance, onClose }: Props) {
                         {percent.format(game.targetRtp)}
                       </small>
                     </span>
-                    <em>%{percent.format((observed?.rtp ?? 0) * 100)}</em>
+                    <em>{summary ? `%${percent.format((observed?.rtp ?? 0) * 100)}` : "—"}</em>
                   </button>
                 );
               })}
@@ -1025,15 +1022,15 @@ export default function AdminPanel({ balance, onClose }: Props) {
                       <div className="game-live-metrics">
                         <span>
                           <small>OYUN TURU</small>
-                          <b>{observed?.playedRounds ?? 0}</b>
+                          <b>{summary ? (observed?.playedRounds ?? 0) : "—"}</b>
                         </span>
                         <span>
                           <small>GÖZLENEN RTP</small>
-                          <b>%{percent.format((observed?.rtp ?? 0) * 100)}</b>
+                          <b>{summary ? `%${percent.format((observed?.rtp ?? 0) * 100)}` : "—"}</b>
                         </span>
                         <span>
                           <small>NET</small>
-                          <b>{money.format(observed?.net ?? 0)} PR</b>
+                          <b>{summary ? money.format(observed?.net ?? 0) : "—"} PR</b>
                         </span>
                       </div>
                       <nav
@@ -1043,7 +1040,6 @@ export default function AdminPanel({ balance, onClose }: Props) {
                         {(
                           [
                             ["general", "GENEL & ÖZELLİKLER"],
-                            ["presets", "HAZIR PROFİLLER · İLK GİRİŞ"],
                             ["math", "MATEMATİK MOTORU"],
                             ["flow", "AKIŞ & VİTRİN"],
                             ["simulation", "HIZLI SİMÜLASYON"],
@@ -1068,14 +1064,6 @@ export default function AdminPanel({ balance, onClose }: Props) {
                           </button>
                         ))}
                       </nav>
-                      <div className="admin-editor-pane" hidden={gameEditorSection !== "presets"}>
-                        <section className="slot-preset-picker">
-                          <header><div><small>{game.name}</small><h4>Hazır profiller · İlk giriş</h4></div><p>Seçili oyunun genel profilini değiştirir. Herkes için geçerlidir; ilk üyelikte otomatik başlayıp bitmez. Dengeli ile geri dönebilirsiniz. Oranlar garanti kazanç veya ölçülmüş RTP değildir.</p></header>
-                          <div>{(Object.entries(GAME_PRESET_COPY) as Array<[GamePresetId, { name: string; summary: string }]>).map(([id, copy]) => <button key={id} type="button" onClick={() => { applyAdminGamePreset(game.id, id); flash(`${game.name}: ${copy.name} profili seçildi.`); }}><b>{copy.name}</b><span>{copy.summary}</span></button>)}</div>
-                          <p>Baykuş Madeni: tüm modlarda ödeme ölçeği; hareketli/açılışta kazma, göz ve TNT ağırlıkları artar. Masa ödülü net kazanç üzerinden hesaplanır; pokerde Casino Hold’em içindir.</p>
-                          <p>Aktif ayar: <code>{game.mineDrop?.profileName ?? game.allah?.profileName ?? game.slot?.math.profileName ?? `Hedef dönüş %${game.targetRtp} · Açılış ödülü %${Math.round((game.openingPayoutBoost ?? 0) * 100)}`}</code></p>
-                        </section>
-                      </div>
                       <div
                         className="admin-editor-pane"
                         hidden={gameEditorSection !== "general"}
@@ -1778,6 +1766,16 @@ export default function AdminPanel({ balance, onClose }: Props) {
                       {mineDrop && (
                         <div className="admin-editor-pane" hidden={gameEditorSection !== "flow"}>
                           <div className="slot-editor-heading"><div><small>MADEN AKIŞ ŞEMASI</small><h4>Basamaklı yüzey, hazır saha derinliği ve ödeme ölçekleri</h4></div><code>belt → drop → bounce → hit → rebound</code></div>
+                          <section className="slot-preset-picker">
+                            <header><div><small>HAZIR AYAR PAKETLERİ</small><h4>Tek tıkla başlangıç profili</h4></div><p>Mevcut Akış &amp; Vitrin düzenini değiştirmeden Baykuş Madeni ayarlarına uygulanır.</p></header>
+                            <div>
+                              {(Object.entries(SLOT_PRESET_COPY) as Array<[SlotPresetId, (typeof SLOT_PRESET_COPY)[SlotPresetId]]>).map(([preset, copy]) => (
+                                <button key={preset} type="button" onClick={() => applyAdminMineDropPreset(preset)}>
+                                  <b>{copy.name}</b><span>{copy.summary}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </section>
                           <div className="slot-flow-explainer"><strong>Normal kazma yalnız kendi sütunundaki ilk sağlam bloğa vurur; çevre hasarı sadece TNT ve Patlayıcı Cevher olayıdır.</strong><p>Duvar 5×6 mantıksal derinliği korur fakat üst yüzeyi her yeni turda basamaklı başlar. Elmas/Obsidyen dönüşleri daha derin ön kazı uygular; bonus duvarı otomatik dönüşlerde aynen korunur.</p></div>
                           <div className="slot-parameter-grid">
                             <label><span>Yüzey en az boş sıra</span><input type="number" min="0" max="5" step="1" value={mineDrop.surfaceProfile.minOpenRows} onChange={(event) => updateAdminGame(game.id, { mineDrop: { ...mineDrop, surfaceProfile: { ...mineDrop.surfaceProfile, minOpenRows: Math.max(0, Math.min(5, Math.round(Number(event.target.value)))) } } })} /><em>açık sıra</em></label>

@@ -1602,7 +1602,12 @@ export function updateAdminGame(
   });
 }
 
-export type AllahPresetId = "kontrollu" | "dengeli" | "hareketli" | "kaotik";
+export type AllahPresetId =
+  | "kontrollu"
+  | "dengeli"
+  | "hareketli"
+  | "kaotik"
+  | "hos-geldin";
 
 export const ALLAH_PRESET_COPY: Record<AllahPresetId, { name: string; summary: string }> = {
   kontrollu: {
@@ -1620,6 +1625,10 @@ export const ALLAH_PRESET_COPY: Record<AllahPresetId, { name: string; summary: s
   kaotik: {
     name: "Kaotik vitrin",
     summary: "Sık ve uzun özel zincirler; yüksek seyrekliği korunur.",
+  },
+  "hos-geldin": {
+    name: "Hoş Geldin",
+    summary: "Yeni sunucu şöleni: daha güçlü ödeme ve daha hareketli özel zincirler.",
   },
 };
 
@@ -1677,25 +1686,49 @@ export function applyAdminAllahPreset(preset: AllahPresetId) {
             coinTierDecay: 22,
             normalAnimationScale: 0.82,
           }
+        : preset === "hos-geldin"
+          ? {
+              ...base,
+              profileName: "allahin-lutfu-v9-welcome-lively",
+              linePayoutScale: Number((base.linePayoutScale * 1.12).toFixed(4)),
+              coinPayoutScale: Number((base.coinPayoutScale * 1.15).toFixed(4)),
+              reelEyeChancePercent: {
+                ...base.reelEyeChancePercent,
+                base: base.reelEyeChancePercent.base * 1.35,
+                enhancer: base.reelEyeChancePercent.enhancer * 1.3,
+              },
+              reelScatterChancePercent: {
+                ...base.reelScatterChancePercent,
+                base: base.reelScatterChancePercent.base * 1.25,
+                enhancer: base.reelScatterChancePercent.enhancer * 1.2,
+              },
+              bonusFeatureChancePercent: { free: 7, super: 16, legendary: 28, mythic: 40 },
+              mysteryWeights: {
+                ...base.mysteryWeights,
+                eye: base.mysteryWeights.eye * 1.25,
+                collector: base.mysteryWeights.collector * 1.2,
+                redrop: base.mysteryWeights.redrop * 1.3,
+              },
+              eyeTargetsMin: Math.max(base.eyeTargetsMin, 5),
+              eyeTargetsMax: Math.max(base.eyeTargetsMax, 9),
+              maxFeatureCycles: Math.max(base.maxFeatureCycles, 16),
+              normalAnimationScale: 0.9,
+            }
         : { ...base };
   updateAdminGame("allahin-lutfu", { allah: next });
 }
 
 export type SlotPresetId =
-  | "ilk-giris"
   | "temkinli"
   | "dengeli"
   | "comert"
-  | "gosterisli";
+  | "gosterisli"
+  | "hos-geldin";
 
 export const SLOT_PRESET_COPY: Record<
   SlotPresetId,
   { name: string; summary: string }
 > = {
-  "ilk-giris": {
-    name: "İlk giriş · Açılış şöleni",
-    summary: "Ödeme ölçeği +%15, bonus ödemesi +%10 ve daha hareketli akış. Seçili oyunda herkes için sonraki turlara uygulanır; otomatik süre sonu yoktur.",
-  },
   temkinli: {
     name: "Temkinli ödeme",
     summary: "Ödeme ölçeğini düşürür; görünür potansiyeli korur.",
@@ -1712,6 +1745,10 @@ export const SLOT_PRESET_COPY: Record<
     name: "Gösterişli vitrin",
     summary: "Ödemeyi korur; yüksek değer ve yakın sonuç görünümünü artırır.",
   },
+  "hos-geldin": {
+    name: "Hoş Geldin",
+    summary: "Ödeme ölçeği +%15, bonus ödemesi +%10 ve daha hareketli gerçek sonuç akışı.",
+  },
 };
 
 export function applyAdminSlotPreset(
@@ -1721,9 +1758,9 @@ export function applyAdminSlotPreset(
   const defaults = gameDefaults[game];
   if (!defaults.slot) return;
   const base = defaults.slot;
-  const payoutFactor = preset === "ilk-giris" ? 1.15 : preset === "temkinli" ? 0.9 : preset === "comert" ? 1.1 : 1;
-  const bonusFactor = preset === "ilk-giris" ? 1.1 : preset === "temkinli" ? 0.92 : preset === "comert" ? 1.07 : 1;
-  const flowFactor = preset === "ilk-giris" ? 1.4 : preset === "comert" ? 1.3 : preset === "temkinli" ? 0.82 : 1;
+  const payoutFactor = preset === "hos-geldin" ? 1.15 : preset === "temkinli" ? 0.9 : preset === "comert" ? 1.1 : 1;
+  const bonusFactor = preset === "hos-geldin" ? 1.1 : preset === "temkinli" ? 0.92 : preset === "comert" ? 1.07 : 1;
+  const flowFactor = preset === "hos-geldin" ? 1.4 : preset === "comert" ? 1.3 : preset === "temkinli" ? 0.82 : 1;
   const spectacle = preset === "gosterisli";
   updateAdminGame(game, {
     targetRtp:
@@ -1779,6 +1816,47 @@ export function applyAdminSlotPreset(
   });
 }
 
+export function applyAdminMineDropPreset(preset: SlotPresetId) {
+  const base = DEFAULT_MINE_DROP_TUNING;
+  const next = structuredClone(base);
+  next.profileName = `${base.profileName}-${preset}`;
+  const payoutFactor =
+    preset === "hos-geldin"
+      ? 1.15
+      : preset === "comert"
+        ? 1.1
+        : preset === "temkinli"
+          ? 0.9
+          : 1;
+  for (const key of Object.keys(next.payoutScales) as Array<keyof typeof next.payoutScales>)
+    next.payoutScales[key] = Number((next.payoutScales[key] * payoutFactor).toFixed(4));
+
+  const eventFactor =
+    preset === "hos-geldin" ? 1.25 : preset === "gosterisli" ? 1.18 : preset === "comert" ? 1.12 : preset === "temkinli" ? 0.9 : 1;
+  if (eventFactor !== 1) {
+    for (const weights of Object.values(next.symbolWeights)) {
+      weights.tool = Number((weights.tool * eventFactor).toFixed(4));
+      weights.eye = Number((weights.eye * eventFactor).toFixed(4));
+      weights.tnt = Number((weights.tnt * eventFactor).toFixed(4));
+      if (preset === "gosterisli" || preset === "hos-geldin") {
+        weights.book = Number((weights.book * 1.15).toFixed(4));
+        weights.maxBook = Number((weights.maxBook * 1.1).toFixed(4));
+      }
+    }
+  }
+  if (preset === "hos-geldin") {
+    next.bonusSpins = Math.max(base.bonusSpins, 5);
+    next.animation = {
+      ...next.animation,
+      reelMs: Math.round(base.animation.reelMs * 0.9),
+      dropMs: Math.round(base.animation.dropMs * 0.88),
+      hitMs: Math.round(base.animation.hitMs * 0.88),
+      breakMs: Math.round(base.animation.breakMs * 0.88),
+    };
+  }
+  updateAdminGame("baykus-madeni", { mineDrop: next });
+}
+
 export type GamePresetId = "dengeli" | "hareketli" | "comert" | "ilk-giris";
 export const GAME_PRESET_COPY: Record<GamePresetId, { name: string; summary: string }> = {
   dengeli: { name: "Dengeli", summary: "Fabrika matematiğine geri dön." },
@@ -1792,7 +1870,14 @@ export function applyAdminGamePreset(game: CasinoGameId, preset: GamePresetId) {
   const lively = preset === "hareketli" || preset === "ilk-giris";
   const factor = preset === "ilk-giris" ? 1.15 : preset === "comert" ? 1.1 : 1;
   if (base.slot) {
-    applyAdminSlotPreset(game, preset === "hareketli" ? "comert" : preset);
+    applyAdminSlotPreset(
+      game,
+      preset === "hareketli"
+        ? "comert"
+        : preset === "ilk-giris"
+          ? "hos-geldin"
+          : preset,
+    );
     return;
   }
   if (base.mineDrop) {

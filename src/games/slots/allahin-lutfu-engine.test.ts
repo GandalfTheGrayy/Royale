@@ -9,6 +9,7 @@ import {
   allahSymbolCell,
   createAllahGrid,
   createSeededAllahRandom,
+  defaultAllahPersistentState,
   evaluateAllahPaylines,
   runAllahSpin,
   type AllahCell,
@@ -573,6 +574,83 @@ describe("Allah’ın Lütfu motoru", () => {
     expect(result.grossMultiplier).toBe(
       (result.lineWinX + result.coinWinX + result.collectorWinX) * 3,
     );
+    const rowEvents = result.events.filter(
+      (event) => event.type === "global-row-charge" || event.type === "global-row-apply",
+    );
+    expect(rowEvents.map((event) => event.type)).toEqual([
+      "global-row-charge",
+      "global-row-apply",
+    ]);
+    expect(rowEvents.every((event) => event.payload.row === 1)).toBe(true);
+    expect(rowEvents.every((event) => event.payload.multiplier === 3)).toBe(true);
+    expect(rowEvents[0].globalAppliedValues).toEqual({});
+    expect(rowEvents[1].globalAppliedValues).toEqual({ collector: 6 });
+    expect(rowEvents[1].cells).toEqual([{ row: 1, column: 1 }]);
+    expect(result.globalAppliedValues).toEqual({ collector: 6 });
+  });
+
+  it("global çarpanı ödeme öncesinde coin bulunan satırlara yukarıdan aşağı uygular", () => {
+    const grid = createAllahGrid(uniqueSymbols);
+    grid[4][3] = allahCoinCell("silver", 10, "lower-coin");
+    grid[1][0] = allahCoinCell("bronze", 2, "upper-coin-a");
+    grid[1][4] = allahCoinCell("bronze", 3, "upper-coin-b");
+    const result = runAllahSpin(
+      {
+        wager: 1,
+        forcedGrid: grid,
+        runId: "global-row-order",
+        persistent: { globalMultiplier: 5 },
+      },
+      () => 0.999,
+    );
+    const rowEvents = result.events.filter(
+      (event) => event.type === "global-row-charge" || event.type === "global-row-apply",
+    );
+    expect(rowEvents.map((event) => [event.type, event.payload.row])).toEqual([
+      ["global-row-charge", 1],
+      ["global-row-apply", 1],
+      ["global-row-charge", 4],
+      ["global-row-apply", 4],
+    ]);
+    expect(rowEvents[1].payload).toMatchObject({ before: 5, multiplier: 5, after: 25 });
+    expect(rowEvents[3].payload).toMatchObject({ before: 10, multiplier: 5, after: 50 });
+    expect(result.globalAppliedValues).toEqual({
+      "upper-coin-a": 10,
+      "upper-coin-b": 15,
+      "lower-coin": 50,
+    });
+    const payoutIndex = result.events.findIndex((event) => event.type === "payout-count");
+    const lastApplyIndex = result.events.reduce(
+      (latest, event, index) => event.type === "global-row-apply" ? index : latest,
+      -1,
+    );
+    expect(lastApplyIndex).toBeLessThan(payoutIndex);
+  });
+
+  it("Hilebaz Dönüşünde oluşan global anahtar coinleri gerçek sonuçla aynı şekilde satır satır çarpar", () => {
+    const result = runAllahSpin(
+      {
+        wager: 1,
+        mode: "trickster",
+        runId: "trickster-global-row-regression",
+        persistent: defaultAllahPersistentState(),
+      },
+      createSeededAllahRandom(73),
+    );
+    const rows = result.events.filter((event) => event.type === "global-row-apply");
+    expect(result.globalMultiplier).toBe(3);
+    expect(rows.map((event) => Number(event.payload.row))).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(rows.map((event) => [event.payload.before, event.payload.after])).toEqual([
+      [13, 39],
+      [7, 21],
+      [8, 24],
+      [22, 66],
+      [6, 18],
+      [7, 21],
+    ]);
+    expect(rows.every((event) => Number(event.payload.after) === Number(event.payload.before) * 3)).toBe(true);
+    expect(result.coinWinX).toBe(63);
+    expect(result.grossMultiplier).toBe(189);
   });
 
   it("düz/V beş scatter Mitik Lütuf açar", () => {

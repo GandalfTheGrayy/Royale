@@ -2,9 +2,13 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   DEFAULT_ALLAH_TUNING,
   DEFAULT_MINE_DROP_TUNING,
+  ALLAH_PRESET_COPY,
+  SLOT_PRESET_COPY,
   migrateMineDropTuning,
   applyAdminAllahPreset,
   applyAdminGamePreset,
+  applyAdminMineDropPreset,
+  applyAdminSlotPreset,
   getAdminSettings,
   resetAdminSettings,
   updateAdminGame,
@@ -155,5 +159,33 @@ describe("casino admin settings", () => {
       DEFAULT_ALLAH_TUNING.reelEyeChancePercent.base,
     );
     expect(lively.eyeTargetsMax).toBeGreaterThan(DEFAULT_ALLAH_TUNING.eyeTargetsMax);
+  });
+
+  it("akış ve vitrin düzeninde mevcut dört moda Hoş Geldin'i beşinci mod olarak ekler", () => {
+    expect(Object.keys(SLOT_PRESET_COPY)).toEqual([
+      "temkinli",
+      "dengeli",
+      "comert",
+      "gosterisli",
+      "hos-geldin",
+    ]);
+    expect(Object.keys(ALLAH_PRESET_COPY)).toHaveLength(5);
+
+    const neonBase = getAdminSettings().games["neon-kasasi"].slot!;
+    applyAdminSlotPreset("neon-kasasi", "hos-geldin");
+    const neonWelcome = getAdminSettings().games["neon-kasasi"].slot!;
+    expect(neonWelcome.math.payoutScale).toBeGreaterThan(neonBase.math.payoutScale);
+    expect(neonWelcome.flow.hotWindowChancePercent).toBeGreaterThan(neonBase.flow.hotWindowChancePercent);
+
+    applyAdminMineDropPreset("hos-geldin");
+    const mineWelcome = getAdminSettings().games["baykus-madeni"].mineDrop!;
+    expect(mineWelcome.payoutScales.base).toBe(1.15);
+    expect(mineWelcome.symbolWeights.base.tool).toBeGreaterThan(DEFAULT_MINE_DROP_TUNING.symbolWeights.base.tool);
+    expect(mineWelcome.profileName).toContain("hos-geldin");
+
+    applyAdminAllahPreset("hos-geldin");
+    const allahWelcome = getAdminSettings().games["allahin-lutfu"].allah!;
+    expect(allahWelcome.coinPayoutScale).toBeGreaterThan(DEFAULT_ALLAH_TUNING.coinPayoutScale);
+    expect(allahWelcome.reelEyeChancePercent.base).toBeGreaterThan(DEFAULT_ALLAH_TUNING.reelEyeChancePercent.base);
   });
 });

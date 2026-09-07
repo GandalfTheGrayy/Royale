@@ -201,7 +201,10 @@ let latestWalletState:
 
 async function sqliteRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 2500);
+  // Analytics reads share the server process with SQLite aggregation. A hard
+  // 2.5 second cutoff made healthy, populated responses look like empty local
+  // data whenever the server was briefly busy.
+  const timeout = setTimeout(() => controller.abort(), 12_000);
   try {
     return await accountRequest<T>(`${SQLITE_API}${path}`, {
       ...init,
@@ -377,12 +380,19 @@ type DataScope = "me" | "all";
 async function readSqlite<T>(
   kind: "rounds" | "ledger" | "events" | "conversations",
   scope: DataScope = "me",
+  limit?: number,
 ) {
   if (!(await ensureSqliteReady())) return undefined;
   try {
+    const query = new URLSearchParams({
+      ...(scope === "all" ? { scope: "all" } : {}),
+      ...(limit === undefined
+        ? {}
+        : { limit: String(Math.max(1, Math.min(10_000, Math.round(limit)))) }),
+    });
     return (
       await sqliteRequest<{ records: T[] }>(
-        `/records/${kind}${scope === "all" ? "?scope=all" : ""}`,
+        `/records/${kind}${query.size ? `?${query}` : ""}`,
       )
     ).records;
   } catch {
@@ -610,30 +620,30 @@ export async function getCasinoMeta<T>(key: string): Promise<T | undefined> {
   return result?.value;
 }
 
-export async function getCasinoRounds(scope: DataScope = "me") {
+export async function getCasinoRounds(scope: DataScope = "me", limit?: number) {
   const values =
-    (await readSqlite<CasinoRoundRecord>("rounds", scope)) ??
+    (await readSqlite<CasinoRoundRecord>("rounds", scope, limit)) ??
     (typeof window !== "undefined" ? [] : [...memory.rounds]);
   return values.sort((a, b) => b.settledAt.localeCompare(a.settledAt));
 }
 
-export async function getWalletLedger(scope: DataScope = "me") {
+export async function getWalletLedger(scope: DataScope = "me", limit?: number) {
   const values =
-    (await readSqlite<WalletLedgerRecord>("ledger", scope)) ??
+    (await readSqlite<WalletLedgerRecord>("ledger", scope, limit)) ??
     (typeof window !== "undefined" ? [] : [...memory.ledger]);
   return values.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
 }
 
-export async function getCasinoEvents(scope: DataScope = "me") {
+export async function getCasinoEvents(scope: DataScope = "me", limit?: number) {
   const values =
-    (await readSqlite<CasinoEventRecord>("events", scope)) ??
+    (await readSqlite<CasinoEventRecord>("events", scope, limit)) ??
     (typeof window !== "undefined" ? [] : [...memory.events]);
   return values.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
 }
 
-export async function getAIConversations(scope: DataScope = "me") {
+export async function getAIConversations(scope: DataScope = "me", limit?: number) {
   const values =
-    (await readSqlite<AIConversationRecord>("conversations", scope)) ??
+    (await readSqlite<AIConversationRecord>("conversations", scope, limit)) ??
     (typeof window !== "undefined" ? [] : [...memory.conversations]);
   return values.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
 }
@@ -870,13 +880,22 @@ export async function getSlotMathAudits(scope: DataScope = "me") {
 }
 
 export async function getCasinoSummary(scope: DataScope = "me") {
+  if (typeof window !== "undefined") {
+    if (!(await ensureSqliteReady()))
+      throw new Error("Sunucu istatistiklerine şu anda ulaşılamıyor.");
+    // The browser fallback intentionally has no shared account data. Returning
+    // an aggregate of that empty fallback used to replace real totals with 0.
+    return sqliteRequest<CasinoSummary>(
+      `/summary${scope === "me" ? "?scope=me" : ""}`,
+    );
+  }
   if (await ensureSqliteReady()) {
     try {
       return await sqliteRequest<CasinoSummary>(
         `/summary${scope === "me" ? "?scope=me" : ""}`,
       );
     } catch {
-      /* Fall back to recent local records. */
+      /* Non-browser tools can still aggregate their in-memory records. */
     }
   }
   return aggregateCasinoRounds(await getCasinoRounds());

@@ -478,10 +478,21 @@ export type SocialCompetition = {
   }>;
 };
 
-export function getCompetitionDashboard() {
-  return accountRequest<CompetitionDashboard>(
-    "/api/casino-data/competition/dashboard",
-  );
+export async function getCompetitionDashboard() {
+  try {
+    return await accountRequest<CompetitionDashboard>(
+      "/api/casino-data/competition/dashboard",
+    );
+  } catch (error) {
+    const status = (error as { status?: number }).status;
+    if (status && status < 500) throw error;
+    // A short retry absorbs transient proxy/SQLite contention instead of
+    // leaving the competition screen permanently empty until a full reload.
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    return accountRequest<CompetitionDashboard>(
+      "/api/casino-data/competition/dashboard",
+    );
+  }
 }
 
 export function setCompetitionTitle(titleId: string) {
