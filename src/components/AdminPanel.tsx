@@ -8,6 +8,9 @@ import {
   type SetStateAction,
 } from "react";
 import {
+  GAME_PRESET_COPY,
+  applyAdminGamePreset,
+  type GamePresetId,
   ALLAH_PRESET_COPY,
   DEFAULT_ALLAH_TUNING,
   DEFAULT_MINE_DROP_TUNING,
@@ -62,9 +65,11 @@ import {
 } from "../games/slots/slot-simulation-engine";
 import SlotSimulationPanel from "./SlotSimulationPanel";
 import CompetitionAdmin from "./CompetitionAdmin";
+import OwnerActivity from "./OwnerActivity";
 
-type Tab = "dashboard" | "games" | "competition" | "users" | "wallet" | "database" | "system";
+type Tab = "activity" | "dashboard" | "games" | "competition" | "users" | "wallet" | "database" | "system";
 type GameEditorSection =
+  | "presets"
   | "general"
   | "math"
   | "flow"
@@ -506,7 +511,7 @@ export default function AdminPanel({ balance, setBalance, onClose }: Props) {
 
   useEffect(() => {
     // These screens load their own data; don't download game history behind them.
-    if (tab === "users" || tab === "competition") return;
+    if (!["dashboard", "wallet", "database"].includes(tab)) return;
     let active = true;
     let inFlight = false;
     const refresh = () => {
@@ -515,10 +520,10 @@ export default function AdminPanel({ balance, setBalance, onClose }: Props) {
       void Promise.all([
         getCasinoSummary('all'),
         getCasinoRounds('all'),
-        getWalletLedger('all'),
-        getCasinoEvents('all'),
-        getAIConversations('all'),
-        getCasinoStorageStats(),
+        tab === "wallet" || tab === "database" ? getWalletLedger('all') : Promise.resolve([]),
+        tab === "dashboard" ? getCasinoEvents('all') : Promise.resolve([]),
+        tab === "database" ? getAIConversations('all') : Promise.resolve([]),
+        tab === "database" ? getCasinoStorageStats() : Promise.resolve(undefined),
       ]).then(
         ([
           nextSummary,
@@ -701,6 +706,12 @@ export default function AdminPanel({ balance, setBalance, onClose }: Props) {
       note: "Kurallar ve salonlar",
     },
     {
+      id: "activity",
+      icon: "◉",
+      label: "Oyuncu hareketleri",
+      note: "Oyun · kazanç · cüzdan",
+    },
+    {
       id: "users",
       icon: "◎",
       label: "Kullanıcılar",
@@ -794,6 +805,8 @@ export default function AdminPanel({ balance, setBalance, onClose }: Props) {
             ✓ {notice}
           </div>
         )}
+
+        {tab === "activity" && <div className="admin-content"><OwnerActivity /></div>}
 
         {tab === "dashboard" && (
           <div className="admin-content">
@@ -1031,6 +1044,7 @@ export default function AdminPanel({ balance, setBalance, onClose }: Props) {
                         {(
                           [
                             ["general", "GENEL & ÖZELLİKLER"],
+                            ["presets", "HAZIR PROFİLLER · İLK GİRİŞ"],
                             ["math", "MATEMATİK MOTORU"],
                             ["flow", "AKIŞ & VİTRİN"],
                             ["simulation", "HIZLI SİMÜLASYON"],
@@ -1055,6 +1069,14 @@ export default function AdminPanel({ balance, setBalance, onClose }: Props) {
                           </button>
                         ))}
                       </nav>
+                      <div className="admin-editor-pane" hidden={gameEditorSection !== "presets"}>
+                        <section className="slot-preset-picker">
+                          <header><div><small>{game.name}</small><h4>Hazır profiller · İlk giriş</h4></div><p>Seçili oyunun genel profilini değiştirir. Herkes için geçerlidir; ilk üyelikte otomatik başlayıp bitmez. Dengeli ile geri dönebilirsiniz. Oranlar garanti kazanç veya ölçülmüş RTP değildir.</p></header>
+                          <div>{(Object.entries(GAME_PRESET_COPY) as Array<[GamePresetId, { name: string; summary: string }]>).map(([id, copy]) => <button key={id} type="button" onClick={() => { applyAdminGamePreset(game.id, id); flash(`${game.name}: ${copy.name} profili seçildi.`); }}><b>{copy.name}</b><span>{copy.summary}</span></button>)}</div>
+                          <p>Baykuş Madeni: tüm modlarda ödeme ölçeği; hareketli/açılışta kazma, göz ve TNT ağırlıkları artar. Masa ödülü net kazanç üzerinden hesaplanır; pokerde Casino Hold’em içindir.</p>
+                          <p>Aktif ayar: <code>{game.mineDrop?.profileName ?? game.allah?.profileName ?? game.slot?.math.profileName ?? `Hedef dönüş %${game.targetRtp} · Açılış ödülü %${Math.round((game.openingPayoutBoost ?? 0) * 100)}`}</code></p>
+                        </section>
+                      </div>
                       <div
                         className="admin-editor-pane"
                         hidden={gameEditorSection !== "general"}

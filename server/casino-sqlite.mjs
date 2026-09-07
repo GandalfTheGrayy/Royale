@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import { createAccountSystem } from "./auth-system.mjs";
+import { getOwnerActivity } from "./owner-activity.mjs";
 import {
   backfillMetaSettlements,
   getMetaStats,
@@ -475,6 +476,7 @@ export function casinoSqlitePlugin(options = {}) {
   const database = new DatabaseSync(databasePath);
   initialize(database);
   const accounts = createAccountSystem(database);
+  database.exec("CREATE INDEX IF NOT EXISTS idx_owner_rounds_user_time ON game_rounds(user_id, player_participated, settled_at DESC)");
   initializeMetaSystem(database);
   initializeCompetitionSystem(database);
   backfillMetaSettlements(database);
@@ -629,6 +631,14 @@ export function casinoSqlitePlugin(options = {}) {
           .filter(Boolean);
         const auth = accounts.requireSession(request, response);
         if (!auth) return;
+        if (request.method === "GET" && parts[0] === "owner-activity") {
+          if (!["owner", "admin"].includes(auth.user.role)) {
+            sendJson(response, 403, { error: "Yönetici yetkisi gerekiyor." });
+            return;
+          }
+          sendJson(response, 200, getOwnerActivity(database, url.searchParams));
+          return;
+        }
         if (request.method === "GET" && parts[0] === "health") {
           sendJson(
             response,

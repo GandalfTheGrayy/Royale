@@ -68,7 +68,7 @@ export function nextStops(previous: number[], held: boolean[], reels = KIRAZ_REE
   return reels.map((reel, index) => held[index] ? previous[index] : secureSlotRandom(reel.length))
 }
 
-export function evaluateSlot(stops: number[], wager: number, reels = KIRAZ_REELS): SlotSpinResult {
+export function evaluateSlot(stops: number[], wager: number, reels = KIRAZ_REELS, payoutScale = 1): SlotSpinResult {
   const grid = gridFromStops(stops, reels)
   const lineBet = wager / SLOT_PAYLINES.length
   const wins: SlotWin[] = []
@@ -86,6 +86,8 @@ export function evaluateSlot(stops: number[], wager: number, reels = KIRAZ_REELS
     }
   })
 
+  const scale = Number.isFinite(payoutScale) ? Math.max(0, payoutScale) : 1
+  wins.forEach(win => { win.returnAmount *= scale; win.multiplier *= scale })
   const grossReturn = wins.reduce((sum, win) => sum + win.returnAmount, 0)
   return { stops, grid, wins, grossReturn, net: grossReturn - wager }
 }

@@ -484,6 +484,7 @@ function KirazSlot({
     skipPresentationRef.current = false;
     const startedAt = new Date().toISOString();
     const roundId = `kiraz-77-${Date.now()}-${crypto.randomUUID()}`;
+    const payoutScale = getAdminSettings().games["kiraz-77"].slot?.math.payoutScale ?? 1;
     const balanceBefore = balance;
     if (fromAuto) setAutoRemaining((value) => Math.max(0, value - 1));
     setSpinning(true);
@@ -506,7 +507,7 @@ function KirazSlot({
       turbo ? 140 : 180,
       () => skipPresentationRef.current,
     );
-    const nextResult = evaluateSlot(next, wager);
+    const nextResult = evaluateSlot(next, wager, undefined, payoutScale);
     if (nextResult.grossReturn)
       setBalance((value) => value + nextResult.grossReturn);
     setResult(nextResult);

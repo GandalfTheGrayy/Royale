@@ -1,3 +1,4 @@
+import { openingReward } from "../wagering";
 import {
   compareEvaluations,
   evaluatePokerHand,
@@ -26,6 +27,7 @@ export type CasinoHoldemResolution = {
   callGross: number;
   aaGross: number;
   grossPayout: number;
+  openingBonus: number;
   net: number;
   message: string;
 };
@@ -75,6 +77,7 @@ export function resolveCasinoHoldem(
   ante: number,
   aaBet: number,
   called: boolean,
+  openingBoost = 0,
 ): CasinoHoldemResolution {
   const board = [...deal.flop, deal.turn, deal.river];
   const playerHand = evaluatePokerHand([...deal.player, ...board]);
@@ -118,7 +121,8 @@ export function resolveCasinoHoldem(
   }
 
   const aaGross = aaMultiplier ? aaBet * (aaMultiplier + 1) : 0;
-  const grossPayout = mainGross + aaGross;
+  const openingBonus = openingReward(mainGross + aaGross, stake, openingBoost);
+  const grossPayout = mainGross + aaGross + openingBonus;
   return {
     playerHand,
     dealerHand,
@@ -131,6 +135,7 @@ export function resolveCasinoHoldem(
     callGross,
     aaGross,
     grossPayout,
+    openingBonus,
     net: grossPayout - stake,
     message,
   };

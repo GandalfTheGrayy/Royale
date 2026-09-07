@@ -17,6 +17,7 @@ export type AdminGameSettings = {
   minBet: number;
   defaultBet: number;
   targetRtp: number;
+  openingPayoutBoost?: number;
   volatility: "düşük" | "orta" | "yüksek" | "çok yüksek";
   autoplay: boolean;
   aiHost: boolean;
@@ -1681,6 +1682,7 @@ export function applyAdminAllahPreset(preset: AllahPresetId) {
 }
 
 export type SlotPresetId =
+  | "ilk-giris"
   | "temkinli"
   | "dengeli"
   | "comert"
@@ -1690,6 +1692,10 @@ export const SLOT_PRESET_COPY: Record<
   SlotPresetId,
   { name: string; summary: string }
 > = {
+  "ilk-giris": {
+    name: "İlk giriş · Açılış şöleni",
+    summary: "Ödeme ölçeği +%15, bonus ödemesi +%10 ve daha hareketli akış. Seçili oyunda herkes için sonraki turlara uygulanır; otomatik süre sonu yoktur.",
+  },
   temkinli: {
     name: "Temkinli ödeme",
     summary: "Ödeme ölçeğini düşürür; görünür potansiyeli korur.",
@@ -1715,9 +1721,9 @@ export function applyAdminSlotPreset(
   const defaults = gameDefaults[game];
   if (!defaults.slot) return;
   const base = defaults.slot;
-  const payoutFactor = preset === "temkinli" ? 0.9 : preset === "comert" ? 1.1 : 1;
-  const bonusFactor = preset === "temkinli" ? 0.92 : preset === "comert" ? 1.07 : 1;
-  const flowFactor = preset === "comert" ? 1.3 : preset === "temkinli" ? 0.82 : 1;
+  const payoutFactor = preset === "ilk-giris" ? 1.15 : preset === "temkinli" ? 0.9 : preset === "comert" ? 1.1 : 1;
+  const bonusFactor = preset === "ilk-giris" ? 1.1 : preset === "temkinli" ? 0.92 : preset === "comert" ? 1.07 : 1;
+  const flowFactor = preset === "ilk-giris" ? 1.4 : preset === "comert" ? 1.3 : preset === "temkinli" ? 0.82 : 1;
   const spectacle = preset === "gosterisli";
   updateAdminGame(game, {
     targetRtp:
@@ -1770,6 +1776,52 @@ export function applyAdminSlotPreset(
           }
         : { ...base.potential },
     },
+  });
+}
+
+export type GamePresetId = "dengeli" | "hareketli" | "comert" | "ilk-giris";
+export const GAME_PRESET_COPY: Record<GamePresetId, { name: string; summary: string }> = {
+  dengeli: { name: "Dengeli", summary: "Fabrika matematiğine geri dön." },
+  hareketli: { name: "Hareketli", summary: "Slotlarda daha sık özellik; diğer oyunlarda daha yüksek hedef dönüş." },
+  comert: { name: "Cömert", summary: "Varsayılana göre daha yüksek ödeme." },
+  "ilk-giris": { name: "İlk giriş · Açılış şöleni", summary: "Slotlarda +%15 ödeme ölçeği ve daha sık özellik. Diğer oyunlarda %99,5 hedef dönüş; masa oyunlarında net kazanç üzerine +%15 açılış ödülü." },
+};
+
+export function applyAdminGamePreset(game: CasinoGameId, preset: GamePresetId) {
+  const base = gameDefaults[game];
+  const lively = preset === "hareketli" || preset === "ilk-giris";
+  const factor = preset === "ilk-giris" ? 1.15 : preset === "comert" ? 1.1 : 1;
+  if (base.slot) {
+    applyAdminSlotPreset(game, preset === "hareketli" ? "comert" : preset);
+    return;
+  }
+  if (base.mineDrop) {
+    const mineDrop = structuredClone(base.mineDrop);
+    mineDrop.profileName = `${base.mineDrop.profileName}-${preset}`;
+    for (const key of Object.keys(mineDrop.payoutScales) as Array<keyof typeof mineDrop.payoutScales>) mineDrop.payoutScales[key] *= factor;
+    if (lively) for (const weights of Object.values(mineDrop.symbolWeights)) {
+      weights.tool *= 1.15;
+      weights.eye *= 1.1;
+      weights.tnt *= 1.1;
+    }
+    updateAdminGame(game, { mineDrop });
+    return;
+  }
+  if (base.allah) {
+    const allah = structuredClone(base.allah);
+    allah.profileName = `${base.allah.profileName}-${preset}`;
+    allah.coinPayoutScale *= factor;
+    if (lively) {
+      allah.reelEyeChancePercent.base *= 1.2;
+      allah.reelScatterChancePercent.base *= 1.15;
+    }
+    updateAdminGame(game, { allah });
+    return;
+  }
+  const table = ["blackjack", "roulette", "poker"].includes(game);
+  updateAdminGame(game, {
+    targetRtp: table || preset === "dengeli" ? base.targetRtp : preset === "ilk-giris" ? 99.5 : Math.min(99.5, base.targetRtp + (preset === "comert" ? 2 : 1)),
+    openingPayoutBoost: table ? factor - 1 : 0,
   });
 }
 

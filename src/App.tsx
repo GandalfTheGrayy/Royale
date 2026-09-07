@@ -1,3 +1,4 @@
+import { openingReward } from "./games/wagering";
 import {
   useEffect,
   lazy,
@@ -393,7 +394,7 @@ export default function App() {
   const lastGameLineRef = useRef("");
   const financeRef = useRef<RoundFinance>(emptyFinance);
   const previousBalanceRef = useRef(balance);
-  const blackjackRoundRef = useRef({ id: "", startedAt: "", balanceBefore: 0 });
+  const blackjackRoundRef = useRef({ id: "", startedAt: "", balanceBefore: 0, openingBoost: 0 });
   const blackjackAiSessionRef = useRef(
     `ai-blackjack-${Date.now()}-${crypto.randomUUID()}`,
   );
@@ -804,6 +805,8 @@ export default function App() {
         won = true;
       }
     });
+    const openingBonus = openingReward(financeRef.current.sideReturn + mainAward + insurancePayout, financeRef.current.stake, blackjackRoundRef.current.openingBoost);
+    mainAward += openingBonus;
     award += mainAward;
     setMainSettlementReturn(mainAward);
     const finance = financeRef.current;
@@ -916,6 +919,8 @@ export default function App() {
           winMultiple: finance.stake ? totalReturns / finance.stake : 0,
         },
         modifiers: {
+          openingBonus,
+          openingBoost: tracked.openingBoost,
           initialMainBet: bet,
           sideBets,
           insuranceBet: round.insuranceBet,
@@ -955,7 +960,7 @@ export default function App() {
         type: "hand-settled",
         payload: { results, net, outcome },
       });
-      blackjackRoundRef.current = { id: "", startedAt: "", balanceBefore: 0 };
+      blackjackRoundRef.current = { id: "", startedAt: "", balanceBefore: 0, openingBoost: 0 };
     }
   };
 
@@ -1047,6 +1052,7 @@ export default function App() {
     setRoundMoneyDismissed(false);
     const startedAt = new Date().toISOString();
     blackjackRoundRef.current = {
+      openingBoost: getAdminSettings().games.blackjack.openingPayoutBoost ?? 0,
       id: `blackjack-${Date.now()}-${crypto.randomUUID()}`,
       startedAt,
       balanceBefore: balance,
@@ -1532,7 +1538,7 @@ export default function App() {
           balanceAfter: tracked.balanceBefore + net,
           note: "Teslim iadesi ve yan bahis dönüşü",
         });
-      blackjackRoundRef.current = { id: "", startedAt: "", balanceBefore: 0 };
+      blackjackRoundRef.current = { id: "", startedAt: "", balanceBefore: 0, openingBoost: 0 };
     }
   };
 

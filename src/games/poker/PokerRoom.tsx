@@ -1,3 +1,4 @@
+import { getAdminSettings } from "../../data/casino-admin";
 import {
   useEffect,
   useMemo,
@@ -249,6 +250,7 @@ function CasinoHoldemTable({
   const [aaChips, setAaChips] = useState<number[]>([]);
   const [customChip, setCustomChip] = useState(1_000_000);
   const [betTarget, setBetTarget] = useState<"ante" | "aa">("ante");
+  const openingBoostRef = useRef(0);
   const [deal, setDeal] = useState<CasinoHoldemDeal>();
   const [resolution, setResolution] = useState<CasinoHoldemResolution>();
   const [summaryOpen, setSummaryOpen] = useState(false);
@@ -322,6 +324,7 @@ function CasinoHoldemTable({
     playPokerSound("shuffle", 0.5);
     await wait(650);
     const nextDeal = dealCasinoHoldem();
+    openingBoostRef.current = getAdminSettings().games.poker.openingPayoutBoost ?? 0;
     setDeal(nextDeal);
     const dealDuration = playPokerDealSequence(7, 145);
     await wait(dealDuration);
@@ -412,7 +415,7 @@ function CasinoHoldemTable({
     } else {
       await wait(650);
     }
-    const next = resolveCasinoHoldem(deal, ante, aaBet, called);
+    const next = resolveCasinoHoldem(deal, ante, aaBet, called, openingBoostRef.current);
     setResolution(next);
     if (next.grossPayout) setBalance((current) => current + next.grossPayout);
     setPhase("settled");
@@ -446,6 +449,7 @@ function CasinoHoldemTable({
         result: next.result,
       },
       modifiers: {
+        openingBonus: next.openingBonus,
         ante,
         call: callCost,
         aaBet,
@@ -827,6 +831,7 @@ function CasinoHoldemTable({
               {money.format(resolution.grossPayout)} <em>PR TOPLAM ÖDEME</em>
             </strong>
             <p>{resolution.message}</p>
+            {resolution.openingBonus > 0 && <p>Açılış ödülü: +{money.format(resolution.openingBonus)} PR (toplam ödemeye dahil)</p>}
             {winningSide === "fold" ? (
               <div className="casino-fold-explanation">
                 <b>FOLD</b>

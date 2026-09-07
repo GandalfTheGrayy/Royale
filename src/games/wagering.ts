@@ -37,3 +37,8 @@ export function normalizeWagerInput(value: number, minimum: number) {
   if (!Number.isFinite(value)) return minimum;
   return Math.max(minimum, value);
 }
+
+export function openingReward(gross: number, stake: number, boost = 0) {
+  if (!Number.isFinite(boost) || boost <= 0) return 0;
+  return Math.round(Math.max(0, gross - stake) * Math.min(0.25, boost) * 100) / 100;
+}

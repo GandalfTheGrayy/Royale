@@ -19,6 +19,7 @@ export type LiveRouletteState = {
 }
 
 export type LiveRouletteTicket = {
+  openingBoost?: number
   ticketId: string
   roundId: string
   bets: PlacedBet[]
@@ -121,7 +122,7 @@ function settleLiveTickets(current: LiveRouletteState) {
   roundTickets.forEach((ticket) => {
     tickets.delete(ticket.ticketId)
     const stake = totalStake(ticket.bets)
-    const settlement = { ...settleBets(ticket.bets, current.winner, current.luckyNumbers), number: current.winner, stake, luckyNumbers: current.luckyNumbers }
+    const settlement = { ...settleBets(ticket.bets, current.winner, current.luckyNumbers, ticket.openingBoost), number: current.winner, stake, luckyNumbers: current.luckyNumbers }
     const balanceAfter = ticket.balanceBefore - stake + settlement.grossReturn
     void recordGameRound({
       id: `round:${current.roundId}:player:${ticket.ticketId}`,
@@ -229,7 +230,7 @@ export function submitLiveRouletteTicket(ticket: LiveRouletteTicket) {
   // must not be dropped. Result phase is intentionally excluded because the
   // winning number is visible by then.
   if (!acceptsClosedRouletteTicket(state.phase) || ticket.roundId !== state.roundId || tickets.has(ticket.ticketId) || recordedRounds.has(ticket.roundId)) return false
-  tickets.set(ticket.ticketId, ticket)
+  tickets.set(ticket.ticketId, { ...ticket, openingBoost: getAdminSettings().games.roulette.openingPayoutBoost ?? 0 })
   return true
 }
 
