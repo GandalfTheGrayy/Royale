@@ -364,7 +364,7 @@ export default function PlinkoRoom({
     const before = balanceRef.current;
     const after = before + round.grossPayout;
     balanceRef.current = after;
-    setBalance(after);
+    setBalance(current => current + round.grossPayout);
     setBalls((items) =>
       items.filter((item) => item.round.roundId !== round.roundId),
     );
@@ -493,7 +493,7 @@ export default function PlinkoRoom({
       const before = balanceRef.current,
         after = before - stake;
       balanceRef.current = after;
-      setBalance(after);
+      setBalance(current => current - stake);
       const duration = Math.max(1_200, tuning.animationMs + rows * 24);
       // The round is settled when the ball reaches its pocket, not when its
       // cryptographic outcome is committed. Keeping these timestamps distinct

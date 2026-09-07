@@ -332,7 +332,7 @@ export default function AltinRotaRoom({
     if (amount > balanceRef.current) return;
     const before = balanceRef.current;
     balanceRef.current = before - amount;
-    setBalance(balanceRef.current);
+    setBalance(current => current - amount);
     updatePanels((current) =>
       current.map((item, itemIndex) =>
         itemIndex === index
@@ -368,7 +368,7 @@ export default function AltinRotaRoom({
     if (!panel?.queued) return;
     const before = balanceRef.current;
     balanceRef.current += panel.amount;
-    setBalance(balanceRef.current);
+    setBalance(current => current + panel.amount);
     updatePanels((current) =>
       current.map((item, itemIndex) =>
         itemIndex === index ? { ...item, queued: false } : item,
@@ -400,7 +400,7 @@ export default function AltinRotaRoom({
     const payout = Math.round(activeAmount * preciseAt * 100) / 100;
     const before = balanceRef.current;
     balanceRef.current += payout;
-    setBalance(balanceRef.current);
+    setBalance(current => current + payout);
     updatePanels((current) =>
       current.map((item, itemIndex) =>
         itemIndex === index

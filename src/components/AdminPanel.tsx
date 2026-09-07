@@ -477,7 +477,7 @@ function Toggle({
   );
 }
 
-export default function AdminPanel({ balance, setBalance, onClose }: Props) {
+export default function AdminPanel({ balance, onClose }: Props) {
   const { user } = useAuth();
   const settings = useSyncExternalStore(
     subscribeAdminSettings,
@@ -597,8 +597,7 @@ export default function AdminPanel({ balance, setBalance, onClose }: Props) {
     const amount = Math.max(0, Math.abs(adjustment)) * direction;
     if (!amount || balance + amount < 0) return;
     const result = await accountRequest<{ balance: number; version: number }>(`/api/admin/accounts/users/${encodeURIComponent(user.id)}/wallet`, { method: 'POST', body: JSON.stringify({ amount, reason: adjustmentReason || "Yönetici bakiye düzenlemesi" }) });
-    setBalance(result.balance);
-    window.dispatchEvent(new CustomEvent('pehlevan-wallet-updated', { detail: { balance: result.balance, version: result.version } }));
+    window.dispatchEvent(new CustomEvent('pehlevan-wallet-updated', { detail: { userId: user.id, balance: result.balance, version: result.version } }));
     flash(
       `${money.format(Math.abs(amount))} PR ${amount > 0 ? "eklendi" : "düşüldü"}.`,
     );

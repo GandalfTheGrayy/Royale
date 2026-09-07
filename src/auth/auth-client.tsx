@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { accountRequest, clearAccountCsrfToken } from './auth-api'
+import { accountRequest, clearAccountCsrfToken, getAccountUserId, setAccountUserId } from './auth-api'
 import './auth.css'
 
 export { accountRequest } from './auth-api'
@@ -12,6 +12,7 @@ export type AuthUser = {
   status: 'pending' | 'active' | 'suspended' | 'rejected'
   balance: number
   walletVersion: number
+  walletAcknowledgedDelta?: number
   createdAt: string
   approvedAt?: string
   lastSeenAt?: string
@@ -40,11 +41,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [localSetupAllowed, setLocalSetupAllowed] = useState(false)
   const [message, setMessage] = useState('')
+  const [walletIssue, setWalletIssue] = useState('')
+  const [walletRetrying, setWalletRetrying] = useState(false)
   const walletVersionRef = useRef(-1)
 
   const acceptUser = useCallback((next: AuthUser) => {
-    walletVersionRef.current = Number.isFinite(next.walletVersion) ? next.walletVersion : 0
-    setUser(next)
+    const sameUser = getAccountUserId() === next.id
+    setAccountUserId(next.id)
+    const stale = sameUser && next.walletVersion < walletVersionRef.current
+    if (!stale) walletVersionRef.current = Number.isFinite(next.walletVersion) ? next.walletVersion : 0
+    setUser(current => ({ ...next, ...(stale && current ? { balance: current.balance, walletVersion: current.walletVersion } : {}), walletAcknowledgedDelta: sameUser ? current?.walletAcknowledgedDelta ?? 0 : 0 }))
   }, [])
 
   const refresh = useCallback(async () => {
@@ -61,23 +67,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [acceptUser])
 
   useEffect(() => { void refresh() }, [refresh])
+  const recoverWallet = useCallback(async () => {
+    setWalletRetrying(true)
+    try {
+      const { retryCasinoWalletWrites } = await import('../data/casino-database')
+      await retryCasinoWalletWrites()
+      setWalletIssue('')
+    } catch { setWalletIssue('Cüzdan işlemi doğrulanamadı. Bağlantı düzeldiğinde yeniden eşitleyin; aynı işlem iki kez uygulanmaz.') }
+    finally { setWalletRetrying(false) }
+  }, [])
+  useEffect(() => {
+    if (!user?.id || state !== 'ready') return
+    const failed = (event: Event) => {
+      if ((event as CustomEvent<{ userId: string }>).detail?.userId === getAccountUserId()) setWalletIssue('Cüzdan işlemi doğrulanamadı. Yeni bahis vermeden önce yeniden eşitleyin.')
+    }
+    window.addEventListener('pehlevan-wallet-error', failed)
+    window.addEventListener('online', recoverWallet)
+    void recoverWallet()
+    return () => { window.removeEventListener('pehlevan-wallet-error', failed); window.removeEventListener('online', recoverWallet) }
+  }, [user?.id, state, recoverWallet])
   useEffect(() => {
     const listener = (event: Event) => {
-      const detail = (event as CustomEvent<{ balance: number; version?: number }>).detail
+      const detail = (event as CustomEvent<{ userId: string; balance: number; version?: number; acknowledgedDelta?: number }>).detail
       const balance = detail?.balance
       const version = Number(detail?.version)
-      if (!Number.isFinite(balance)) return
-      if (Number.isFinite(version) && version < walletVersionRef.current) return
-      if (Number.isFinite(version)) walletVersionRef.current = version
-      setUser((current) => current ? { ...current, balance, walletVersion: Number.isFinite(version) ? version : current.walletVersion } : current)
+      if (!Number.isFinite(balance) || !detail.userId || detail.userId !== getAccountUserId()) return
+      if (!Number.isFinite(version)) return
+      const stale = version < walletVersionRef.current
+      if (!stale) walletVersionRef.current = version
+      setUser((current) => current?.id === detail.userId ? { ...current, balance: stale ? current.balance : balance, walletVersion: stale ? current.walletVersion : version, walletAcknowledgedDelta: (current.walletAcknowledgedDelta ?? 0) + (detail.acknowledgedDelta ?? 0) } : current)
     }
     window.addEventListener('pehlevan-wallet-updated', listener)
     return () => window.removeEventListener('pehlevan-wallet-updated', listener)
   }, [])
 
   const refreshWallet = useCallback(async () => {
-    const result = await accountRequest<{ balance: number; version: number }>('/api/me/wallet')
-    if (result.version >= walletVersionRef.current) {
+    const expectedUser = getAccountUserId()
+    const result = await accountRequest<{ userId: string; balance: number; version: number }>('/api/me/wallet')
+    if (result.userId === expectedUser && expectedUser === getAccountUserId() && result.version >= walletVersionRef.current) {
       walletVersionRef.current = result.version
       setUser((current) => current ? { ...current, balance: result.balance, walletVersion: result.version } : current)
     }
@@ -89,15 +116,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // SQLite; otherwise a fast account switch could authenticate a queued write
     // as the next user.
     const { flushCasinoWalletWrites } = await import('../data/casino-database')
-    await flushCasinoWalletWrites()
+    try { await flushCasinoWalletWrites() } catch { setWalletIssue('Çıkıştan önce bekleyen cüzdan işlemlerini yeniden eşitleyin.'); return }
     await accountRequest('/api/auth/logout', { method: 'POST' })
-    clearAccountCsrfToken(); walletVersionRef.current = -1; setUser(null); setState('login')
+    clearAccountCsrfToken(); setAccountUserId(''); walletVersionRef.current = -1; setUser(null); setState('login')
   }, [])
 
   const value = useMemo(() => user ? { user, logout, refresh, refreshWallet } : null, [user, logout, refresh, refreshWallet])
   if (state === 'loading') return <AuthShell><div className="auth-loading"><i /><strong>Salon hazırlanıyor</strong><span>Hesap ve cüzdan doğrulanıyor…</span></div></AuthShell>
   if (state !== 'ready' || !value) return <AuthPortal state={state} setState={setState} localSetupAllowed={localSetupAllowed} message={message} setMessage={setMessage} onAuthenticated={(next) => { acceptUser(next); setState('ready') }} />
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider key={user?.id} value={value}>{children}{walletIssue && <div role="alert" style={{ position: 'fixed', inset: 0, zIndex: 100000, background: 'rgba(8,12,14,.95)', color: '#f4e3c4', display: 'grid', placeContent: 'center', padding: 28, gap: 18 }}><h2>Cüzdan eşitlemesi gerekiyor</h2><p>{walletIssue}</p><button disabled={walletRetrying} onClick={() => void recoverWallet()}>{walletRetrying ? 'Eşitleniyor…' : 'Yeniden eşitle'}</button><p>Başka sekmede farklı hesaba giriş yaptıysanız bu sayfayı yenileyin.</p></div>}</AuthContext.Provider>
 }
 
 function AuthShell({ children }: { children: ReactNode }) {

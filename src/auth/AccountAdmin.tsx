@@ -51,7 +51,10 @@ export default function AccountAdmin() {
       const amount = Number(amounts[user.id] || (name === 'approve' ? defaultStartingPiar : 0))
       const reason = reasons[user.id] || (name === 'approve' ? 'Üyelik onayı ve başlangıç bakiyesi' : 'Muharrem Pehlevan kullanıcı düzenlemesi')
       const payload = name === 'approve' ? { initialBalance: Math.max(0, amount), reason } : name === 'wallet' ? { amount, reason } : { reason }
-      await accountRequest(`/api/admin/accounts/users/${encodeURIComponent(user.id)}/${name}`, { method: 'POST', body: JSON.stringify(payload) })
+      const result = await accountRequest<{ userId?: string; balance?: number; version?: number }>(`/api/admin/accounts/users/${encodeURIComponent(user.id)}/${name}`, { method: 'POST', body: JSON.stringify(payload) })
+      if (name === 'wallet' && result.userId === currentUser.id && Number.isFinite(result.balance) && Number.isFinite(result.version)) {
+        window.dispatchEvent(new CustomEvent('pehlevan-wallet-updated', { detail: { userId: result.userId, balance: result.balance, version: result.version } }))
+      }
       setNotice(`${user.displayName}: işlem tamamlandı.`)
       await load().catch(() => setNotice(`${user.displayName}: işlem tamamlandı; listenin bir bölümü yenilenemedi. YENİLE ile tekrar yükleyebilirsiniz.`))
     } catch (error) { setNotice(error instanceof Error ? error.message : 'İşlem tamamlanamadı.') }

@@ -1,4 +1,5 @@
 import { openingReward } from "./games/wagering";
+import { reconcileWalletBalance } from "./auth/wallet-reconciliation";
 import {
   useEffect,
   lazy,
@@ -307,6 +308,7 @@ export default function App() {
   );
   const [view, setView] = useState<View>("lobby");
   const [balance, setBalance] = useState(user.balance);
+  const serverWalletRef = useRef({ balance: user.balance, acknowledgedDelta: user.walletAcknowledgedDelta ?? 0 });
   const [hands, setHands] = useState(saved.hands);
   const [wins, setWins] = useState(saved.wins);
   const [profileReady, setProfileReady] = useState(false);
@@ -410,8 +412,11 @@ export default function App() {
   );
 
   useEffect(() => {
-    setBalance(user.balance);
-  }, [user.balance]);
+    const previous = serverWalletRef.current;
+    const acknowledgedDelta = user.walletAcknowledgedDelta ?? 0;
+    serverWalletRef.current = { balance: user.balance, acknowledgedDelta };
+    setBalance(current => reconcileWalletBalance(current, previous.balance, user.balance, acknowledgedDelta - previous.acknowledgedDelta));
+  }, [user.balance, user.walletAcknowledgedDelta]);
 
   useEffect(() => {
     setProfileReady(true);
@@ -1591,10 +1596,9 @@ export default function App() {
         }),
       },
     );
-    setBalance(result.balance);
     window.dispatchEvent(
       new CustomEvent("pehlevan-wallet-updated", {
-        detail: { balance: result.balance, version: result.version },
+        detail: { userId: user.id, balance: result.balance, version: result.version },
       }),
     );
     playSound("chip");

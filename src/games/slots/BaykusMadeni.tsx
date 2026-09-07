@@ -159,7 +159,7 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
 
   const changeBalance = (delta: number) => {
     balanceRef.current = Math.round((balanceRef.current + delta) * 100) / 100;
-    setBalance(balanceRef.current);
+    setBalance(current => Math.round((current + delta) * 100) / 100);
   };
 
   const addBurst = (event: MineSpinEvent, kind: Burst["kind"]) => {

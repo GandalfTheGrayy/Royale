@@ -1,4 +1,4 @@
-import { accountRequest } from "../auth/auth-api";
+import { accountRequest, getAccountUserId } from "../auth/auth-api";
 import { withCasinoRoundTelemetryAudit } from "./round-telemetry";
 
 export type CasinoGameId =
@@ -43,6 +43,7 @@ export type CasinoRoundRecord = {
 };
 
 export type WalletLedgerRecord = {
+  userId?: string;
   id: string;
   roundId?: string;
   game?: CasinoGameId;
@@ -189,8 +190,14 @@ type SqliteHealth = {
 let sqliteReadyPromise: Promise<boolean> | undefined;
 let walletWriteTail: Promise<void> = Promise.resolve();
 let pendingWalletWrites = 0;
+const walletRecovery = new Map<string, { record: WalletLedgerRecord; acknowledgedDelta: number }>();
+const recoveryKey = (userId: string) => `pehlevan-pending-wallet-v1:${userId}`;
+function persistWalletRecovery(userId: string) {
+  if (typeof localStorage === "undefined" || !userId) return;
+  localStorage.setItem(recoveryKey(userId), JSON.stringify([...walletRecovery.values()].filter(item => item.record.userId === userId).map(item => item.record)));
+}
 let latestWalletState:
-  { balance: number; version: number; updatedAt?: string } | undefined;
+  { userId: string; balance: number; version: number; updatedAt?: string; acknowledgedDelta: number } | undefined;
 
 async function sqliteRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const controller = new AbortController();
@@ -333,6 +340,7 @@ export type CompetitionResultSignal =
 
 type SqliteWriteResult = {
   ok: boolean;
+  userId?: string;
   balance?: number;
   version?: number;
   updatedAt?: string;
@@ -425,22 +433,47 @@ export async function recordGameRound(record: CasinoRoundRecord) {
   notify();
 }
 
-export function recordWalletEntry(record: WalletLedgerRecord) {
+export function recordWalletEntry(record: WalletLedgerRecord, acknowledgedDelta = record.amount) {
+  const expectedUserId = getAccountUserId();
+  record = { ...record, userId: expectedUserId };
+  walletRecovery.set(record.id, { record, acknowledgedDelta });
+  try { persistWalletRecovery(expectedUserId); } catch { /* in-memory recovery remains available */ }
   pendingWalletWrites += 1;
   const task = walletWriteTail
     .catch(() => undefined)
     .then(async () => {
-      const result = await writeSqlite("ledger", record);
+      // Ledger writes must not share the 2.5s analytics timeout. Keep the
+      // originating identity even when another tab changes the session cookie.
+      let result: SqliteWriteResult | undefined;
+      if (expectedUserId) {
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            result = await accountRequest<SqliteWriteResult>(`${SQLITE_API}/records/ledger`, {
+              method: "POST", headers: { "X-Pehlevan-User": expectedUserId }, body: JSON.stringify(record),
+            });
+            break;
+          } catch (error) {
+            const status = (error as { status?: number }).status;
+            if (status && status < 500) break;
+            // The same record id is idempotent, including a lost response.
+          }
+        }
+      }
       if (
         result &&
+        result.userId === expectedUserId && expectedUserId === getAccountUserId() &&
         Number.isFinite(result.balance) &&
         Number.isFinite(result.version)
       ) {
         latestWalletState = {
+          userId: expectedUserId,
           balance: result.balance!,
           version: result.version!,
           updatedAt: result.updatedAt,
+          acknowledgedDelta: (latestWalletState?.userId === expectedUserId ? latestWalletState.acknowledgedDelta : 0) + acknowledgedDelta,
         };
+        walletRecovery.delete(record.id);
+        try { persistWalletRecovery(expectedUserId); } catch { /* idempotent recovery is safe */ }
         if (
           record.game !== "allahin-lutfu" &&
           result.signals?.length &&
@@ -455,7 +488,8 @@ export function recordWalletEntry(record: WalletLedgerRecord) {
             }),
           );
       } else {
-        await writeFallback(LEDGER_STORE, memory.ledger, record);
+        await writeFallback(LEDGER_STORE, memory.ledger, { ...record, userId: expectedUserId });
+        if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("pehlevan-wallet-error", { detail: { userId: expectedUserId } }));
       }
     });
   walletWriteTail = task.then(
@@ -481,6 +515,23 @@ export function recordWalletEntry(record: WalletLedgerRecord) {
 
 export async function flushCasinoWalletWrites() {
   await walletWriteTail;
+  if ([...walletRecovery.values()].some(item => item.record.userId === getAccountUserId())) throw new Error("Cüzdan işlemleri henüz sunucuya ulaşmadı. Önce cüzdanı yeniden eşitleyin.");
+}
+
+export async function retryCasinoWalletWrites() {
+  const userId = getAccountUserId();
+  await walletWriteTail;
+  if (typeof localStorage !== "undefined") {
+    let stored: WalletLedgerRecord[] = [];
+    try { stored = JSON.parse(localStorage.getItem(recoveryKey(userId)) ?? "[]") as WalletLedgerRecord[]; }
+    catch { localStorage.removeItem(recoveryKey(userId)); }
+    for (const record of stored) if (record.userId === userId && !walletRecovery.has(record.id)) walletRecovery.set(record.id, { record, acknowledgedDelta: 0 });
+  }
+  for (const item of [...walletRecovery.values()]) {
+    if (item.record.userId !== userId || userId !== getAccountUserId()) continue;
+    await recordWalletEntry(item.record, item.acknowledgedDelta);
+  }
+  await flushCasinoWalletWrites();
 }
 
 export async function recordGameEvent(record: CasinoEventRecord) {

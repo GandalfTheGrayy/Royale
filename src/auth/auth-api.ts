@@ -1,4 +1,7 @@
 let csrfToken = ''
+let accountUserId = ''
+export const getAccountUserId = () => accountUserId
+export function setAccountUserId(id: string) { accountUserId = id }
 
 export function clearAccountCsrfToken() {
   csrfToken = ''
@@ -15,6 +18,7 @@ export async function accountRequest<T>(path: string, init: RequestInit = {}): P
       credentials: 'same-origin',
       headers: {
         ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(accountUserId ? { 'X-Pehlevan-User': accountUserId } : {}),
         ...(!['GET', 'HEAD', 'OPTIONS'].includes(method) && csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
         ...init.headers,
       },

@@ -575,6 +575,10 @@ export function createAccountSystem(database, { initialize = true } = {}) {
       });
       return null;
     }
+    if (request.headers["x-pehlevan-user"] && request.headers["x-pehlevan-user"] !== auth.user.id) {
+      json(response, 409, { error: "Bu sekmenin hesabı değişmiş. Sayfayı yenileyin.", code: "ACCOUNT_CHANGED" });
+      return null;
+    }
     const origin = request.headers.origin;
     if (origin) {
       try {
@@ -949,6 +953,7 @@ export function createAccountSystem(database, { initialize = true } = {}) {
           )
           .get(auth.user.id);
         json(response, 200, {
+          userId: auth.user.id,
           balance: fromMicro(wallet.balance_micro),
           version: Number(wallet.version),
           updatedAt: wallet.updated_at,
@@ -1253,12 +1258,6 @@ export function createAccountSystem(database, { initialize = true } = {}) {
             json(response, 400, { error: "Geçerli bir tutar girin." });
             return true;
           }
-          const before = asMicroBigInt(target.balance_micro),
-            after = before + amountMicro;
-          if (after < 0n) {
-            json(response, 400, { error: "Bakiye negatif olamaz." });
-            return true;
-          }
           const reason = String(payload.reason ?? "").trim();
           if (reason.length < 3) {
             json(response, 400, { error: "İşlem sebebi gerekli." });
@@ -1267,6 +1266,15 @@ export function createAccountSystem(database, { initialize = true } = {}) {
           const ledgerId = id("admin-wallet");
           database.exec("BEGIN IMMEDIATE");
           try {
+            // Read only after acquiring the write lock: games and the account
+            // service use separate connections and may have settled meanwhile.
+            const currentWallet = database.prepare("SELECT CAST(balance_micro AS TEXT) balance_micro FROM wallets WHERE user_id=?").get(targetId);
+            const before = asMicroBigInt(currentWallet.balance_micro), after = before + amountMicro;
+            if (after < 0n) {
+              database.exec("ROLLBACK");
+              json(response, 400, { error: "Bakiye negatif olamaz." });
+              return true;
+            }
             database
               .prepare(
                 "UPDATE wallets SET balance_micro=?,version=version+1,updated_at=? WHERE user_id=?",
@@ -1311,6 +1319,7 @@ export function createAccountSystem(database, { initialize = true } = {}) {
             .get(targetId);
           json(response, 200, {
             ok: true,
+            userId: targetId,
             balance: fromMicro(wallet.balance_micro),
             version: Number(wallet.version),
             updatedAt: wallet.updated_at,
@@ -1545,6 +1554,7 @@ export function createAccountSystem(database, { initialize = true } = {}) {
         )
         .get(auth.user.id);
       return {
+        userId: auth.user.id,
         balance: fromMicro(wallet.balance_micro),
         version: Number(wallet.version),
         updatedAt: wallet.updated_at,

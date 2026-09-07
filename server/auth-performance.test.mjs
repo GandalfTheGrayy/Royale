@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { Readable } from "node:stream";
+import { PassThrough, Readable } from "node:stream";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createAccountSystem } from "./auth-system.mjs";
@@ -51,5 +51,33 @@ describe("account polling and approval", () => {
     expect((await approve()).statusCode).toBe(409);
     expect(database.prepare("SELECT balance_micro n FROM wallets WHERE user_id='pending'").get().n).toBe(7000000000);
     expect(database.prepare("SELECT COUNT(*) n FROM admin_audit_log WHERE action='user.approve'").get().n).toBe(1);
+  });
+
+  it("rejects a stale browser tab after the shared session changes account", () => {
+    const req = { method: "GET", headers: { ...headers, "x-pehlevan-user": "another-user" } };
+    const response = { setHeader() {}, end(data) { this.payload = JSON.parse(data); } };
+    expect(accounts.requireSession(req, response)).toBeNull();
+    expect(response.statusCode).toBe(409);
+    expect(response.payload.code).toBe("ACCOUNT_CHANGED");
+  });
+
+  it("adds an admin adjustment to the wallet value current at transaction time", async () => {
+    database.exec(`INSERT INTO users(id,username_normalized,username_display,display_name,role,status,created_at,updated_at)
+      VALUES('player','player','Player','Player','player','active','2026-01-01','2026-01-01');
+      INSERT INTO wallets(user_id,balance_micro,updated_at) VALUES('player',100000000,'2026-01-01');`);
+    const req = new PassThrough();
+    req.headers = headers;
+    req.method = "POST";
+    const response = { setHeader() {}, end(data) { this.payload = JSON.parse(data); } };
+    const pending = accounts.handleAuth(req, response, new URL("http://localhost/api/admin/accounts/users/player/wallet"));
+    await new Promise((resolve) => setImmediate(resolve));
+    // This represents a game settlement arriving after the target was selected
+    // but before the admin request body completed.
+    database.exec("UPDATE wallets SET balance_micro=125000000,version=version+1 WHERE user_id='player'");
+    req.end(JSON.stringify({ amount: 10, reason: "concurrent adjustment test" }));
+    await pending;
+    expect(response.statusCode).toBe(200);
+    expect(response.payload).toMatchObject({ userId: "player", balance: 135, version: 2 });
+    expect(database.prepare("SELECT CAST(balance_micro AS TEXT) value FROM wallets WHERE user_id='player'").get().value).toBe("135000000");
   });
 });
