@@ -69,7 +69,7 @@ type PowerEvent = {
   baseReturn: number;
   totalReturn: number;
   bonusMode: boolean;
-  stage: "collecting" | "impact";
+  stage: "collecting" | "impact" | "counting";
 };
 type BonusSummary = {
   total: number;
@@ -92,6 +92,7 @@ type WinCelebration = {
   tier: WinTier;
 };
 type RetriggerEvent = { scatters: number; awarded: number; remaining: number };
+type ClusterPayoutBurst = { id: number; row: number; column: number; amount: number };
 
 const money = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 });
 const now = () =>
@@ -182,7 +183,7 @@ export default function NeonVault({
   );
   const [motionPhase, setMotionPhase] = useState<MotionPhase>("idle");
   const [powerEvent, setPowerEvent] = useState<PowerEvent>();
-  const [powerReceipts, setPowerReceipts] = useState<PowerEvent[]>([]);
+  const [clusterPayoutBursts, setClusterPayoutBursts] = useState<ClusterPayoutBurst[]>([]);
   const [spinning, setSpinning] = useState(false);
   const [cascadeNo, setCascadeNo] = useState(0);
   const [cascadeWin, setCascadeWin] = useState(0);
@@ -227,7 +228,11 @@ export default function NeonVault({
     { speaker: "Mira", text: miraEventLine("welcome"), moment: now() },
   ]);
   const audioRef = useRef<SlotAudio | null>(null);
+  const activePresentationRef = useRef<NeonSpinResult | undefined>(undefined);
+  const clusterBurstSerialRef = useRef(0);
   const skipPresentationRef = useRef(false);
+  const cascadeCountFrameRef = useRef<number | undefined>(undefined);
+  const cascadeCountResolveRef = useRef<(() => void) | undefined>(undefined);
   const miraAiSessionRef = useRef(
     `ai-neon-${Date.now()}-${crypto.randomUUID()}`,
   );
@@ -343,9 +348,64 @@ export default function NeonVault({
     );
   };
 
-  const stopPresentation = () => {
+  const countFinalCascadeWin = (target: number, milliseconds: number) => new Promise<void>((resolve) => {
+    if (cascadeCountFrameRef.current !== undefined) window.cancelAnimationFrame(cascadeCountFrameRef.current);
+    cascadeCountFrameRef.current = undefined;
+    cascadeCountResolveRef.current?.();
+    cascadeCountResolveRef.current = resolve;
+    if (skipPresentationRef.current || milliseconds <= 0) {
+      setCascadeWin(target);
+      cascadeCountResolveRef.current = undefined;
+      resolve();
+      return;
+    }
+    const startedAt = performance.now();
+    const frame = (at: number) => {
+      if (skipPresentationRef.current) {
+        setCascadeWin(target);
+        cascadeCountFrameRef.current = undefined;
+        cascadeCountResolveRef.current = undefined;
+        resolve();
+        return;
+      }
+      const progress = Math.min(1, (at - startedAt) / milliseconds);
+      setCascadeWin(Math.round(target * (1 - (1 - progress) ** 3) * 100) / 100);
+      if (progress < 1) cascadeCountFrameRef.current = window.requestAnimationFrame(frame);
+      else {
+        cascadeCountFrameRef.current = undefined;
+        cascadeCountResolveRef.current = undefined;
+        resolve();
+      }
+    };
+    cascadeCountFrameRef.current = window.requestAnimationFrame(frame);
+  });
+
+  const skipPresentation = () => {
     skipPresentationRef.current = true;
+    if (cascadeCountFrameRef.current !== undefined) window.cancelAnimationFrame(cascadeCountFrameRef.current);
+    cascadeCountFrameRef.current = undefined;
+    cascadeCountResolveRef.current?.();
+    cascadeCountResolveRef.current = undefined;
+    const finalResult = activePresentationRef.current;
+    if (!finalResult) return;
+    setGrid(finalResult.finalGrid);
+    setPowerGrid(finalResult.finalPowerGrid);
+    setWinningCells(new Set());
+    setActivePowerCells(new Set());
+    setEnteringCellIds(new Set());
+    setMotionPhase("idle");
+    setCascadeWin(finalResult.grossReturn);
+  };
+
+  const stopPresentation = () => {
     setAutoRemaining(0);
+    skipPresentation();
+  };
+
+  const requestPresentationSkip = (target?: EventTarget | null) => {
+    if (!spinning) return;
+    if (target instanceof Element && target.closest("button, input, select, label, a")) return;
+    skipPresentation();
   };
 
   const spin = async (fromAuto = false) => {
@@ -369,7 +429,7 @@ export default function NeonVault({
     setWinningCells(new Set());
     setActivePowerCells(new Set());
     setPowerEvent(undefined);
-    setPowerReceipts([]);
+    setClusterPayoutBursts([]);
     setResult(undefined);
     if (!isFreeSpin) {
       setLastNet(undefined);
@@ -396,6 +456,7 @@ export default function NeonVault({
       flow: flowDecision,
       potential: slotTuning.potential,
     });
+    activePresentationRef.current = nextResult;
     flowStateRef.current = settleSlotFlow(
       flowStateBefore,
       flowDecision,
@@ -444,6 +505,16 @@ export default function NeonVault({
             );
             runningWin += cascade.returnAmount;
             setCascadeWin(runningWin);
+            const clusterTotal = cascade.clusters.reduce((sum, cluster) => sum + cluster.returnAmount, 0);
+            const paidRatio = clusterTotal > 0 ? cascade.returnAmount / clusterTotal : 0;
+            const bursts = cascade.clusters.map((cluster) => ({
+              id: ++clusterBurstSerialRef.current,
+              row: cluster.cells.reduce((sum, cell) => sum + cell[0], 0) / cluster.cells.length,
+              column: cluster.cells.reduce((sum, cell) => sum + cell[1], 0) / cluster.cells.length,
+              amount: Math.round(cluster.returnAmount * paidRatio * 100) / 100,
+            }));
+            setClusterPayoutBursts((current) => [...current.slice(-7), ...bursts]);
+            window.setTimeout(() => setClusterPayoutBursts((current) => current.filter((burst) => !bursts.some((item) => item.id === burst.id))), turbo ? 580 : 920);
             audioRef.current?.play("cascade");
           } else if (phase === "cleared") {
             setWinningCells(new Set());
@@ -570,9 +641,7 @@ export default function NeonVault({
         stage: "impact",
       };
       setPowerEvent(equation);
-      setPowerReceipts([equation]);
       if (isFreeSpin) setBonusMultiplier(nextResult.finalBonusMultiplier);
-      setCascadeWin(nextResult.grossReturn);
       audioRef.current?.play(
         "multiplierImpact",
         Math.min(9, Math.floor(Math.log10(nextResult.appliedMultiplier + 1))),
@@ -583,6 +652,13 @@ export default function NeonVault({
           : slotTuning.presentation.teaseMs,
         () => skipPresentationRef.current,
       );
+      setPowerEvent({ ...equation, stage: "counting" });
+      setCascadeWin(0);
+      const finalCountDuration = turbo
+        ? 1_050
+        : Math.max(1_500, Math.min(2_800, 1_300 + Math.log10(nextResult.grossReturn + 10) * 460));
+      await countFinalCascadeWin(nextResult.grossReturn, finalCountDuration);
+      await waitForPresentation(turbo ? 700 : 1_300, () => skipPresentationRef.current);
       setActivePowerCells(new Set());
       setPowerEvent(undefined);
     }
@@ -845,6 +921,7 @@ export default function NeonVault({
       });
     }
     setSpinning(false);
+    activePresentationRef.current = undefined;
   };
 
   useEffect(() => {
@@ -1055,7 +1132,7 @@ export default function NeonVault({
   };
 
   return (
-    <main className="neon-vault">
+    <main className="neon-vault" onPointerDown={(event) => requestPresentationSkip(event.target)}>
       <header className="neon-topbar">
         <button
           onClick={() => {
@@ -1216,6 +1293,16 @@ export default function NeonVault({
                 }),
               )}
             </div>
+            {clusterPayoutBursts.map((burst) => (
+              <span
+                key={burst.id}
+                className="neon-cluster-payout"
+                style={{
+                  "--payout-x": `${((burst.column + .5) / 7) * 100}%`,
+                  "--payout-y": `${((burst.row + .5) / 7) * 100}%`,
+                } as CSSProperties}
+              >+{money.format(burst.amount)} PR</span>
+            ))}
             {freeSpins > 0 && (
               <div className="bonus-hud">
                 <span>
@@ -1243,37 +1330,18 @@ export default function NeonVault({
                 <small>
                   {powerEvent.stage === "collecting"
                     ? "TUMBLE BİTTİ · GÜÇLER TOPLANIYOR"
+                    : powerEvent.stage === "counting"
+                      ? "KESİN KAZANÇ SAYILIYOR"
                     : powerEvent.bonusMode
                       ? "BONUS ÇARPANI KİLİTLENDİ"
                       : "TOPLAM ÇARPAN KAZANCA VURDU"}
                 </small>
-                <div className="power-sum">
-                  {powerEvent.bonusMode &&
-                    powerEvent.previousMultiplier > 0 && (
-                      <span className="power-previous">
-                        <b>{powerEvent.previousMultiplier}×</b>
-                        <em>+</em>
-                      </span>
-                    )}
-                  {powerEvent.values.map((value, index) => (
-                    <span
-                      className="power-collected"
-                      key={`${value}-${index}`}
-                      style={{ "--collect-index": index } as CSSProperties}
-                    >
-                      <b>{value}×</b>
-                      {index < powerEvent.values.length - 1 && <em>+</em>}
-                    </span>
-                  ))}
-                  {(powerEvent.values.length > 1 ||
-                    powerEvent.previousMultiplier > 0) && (
-                    <>
-                      <i>=</i>
-                      <strong>{powerEvent.multiplier}×</strong>
-                    </>
-                  )}
-                </div>
-                {powerEvent.stage === "impact" ? (
+                {powerEvent.stage === "collecting" && <div className="power-sum">
+                  {powerEvent.bonusMode && powerEvent.previousMultiplier > 0 && <span className="power-previous"><b>{powerEvent.previousMultiplier}×</b><em>+</em></span>}
+                  {powerEvent.values.map((value, index) => <span className="power-collected" key={`${value}-${index}`} style={{ "--collect-index": index } as CSSProperties}><b>{value}×</b>{index < powerEvent.values.length - 1 && <em>+</em>}</span>)}
+                  {(powerEvent.values.length > 1 || powerEvent.previousMultiplier > 0) && <><i>=</i><strong>{powerEvent.multiplier}×</strong></>}
+                </div>}
+                {powerEvent.stage === "impact" || powerEvent.stage === "counting" ? (
                   <div className="power-equation">
                     <span>
                       {money.format(powerEvent.baseReturn)} <i>PR</i>
@@ -1296,6 +1364,8 @@ export default function NeonVault({
                 <p>
                   {powerEvent.stage === "collecting"
                     ? "Ödeme bekliyor; bütün güçler sayılmadan çarpma yapılmaz."
+                    : powerEvent.stage === "counting"
+                      ? "Toplam ödeme sıfırdan gerçek PR tutarına yükseliyor."
                     : powerEvent.bonusMode
                       ? `Ortak bonus çarpanı ${powerEvent.multiplier}× oldu`
                       : `${powerEvent.landed}× güç bütün tumble kazancına uygulandı`}
@@ -1369,27 +1439,6 @@ export default function NeonVault({
               </>
             )}
           </div>
-          {!spinning && powerReceipts.length > 0 && (
-            <div className="neon-power-receipt">
-              <small>TUMBLE SONU ÇARPAN HESABI</small>
-              <div>
-                {powerReceipts.map((item, index) => (
-                  <span key={index}>
-                    <b>{money.format(item.baseReturn)} PR</b>
-                    <em>×</em>
-                    <strong>{item.multiplier}×</strong>
-                    <em>=</em>
-                    <i>{money.format(item.totalReturn)} PR</i>
-                  </span>
-                ))}
-              </div>
-              <p>
-                Tüm zincirin son ödemesi{" "}
-                <b>{money.format(powerReceipts.at(-1)?.totalReturn ?? 0)} PR</b>
-              </p>
-            </div>
-          )}
-
           <div className="neon-controls">
             <div className="neon-control-rail">
               <button

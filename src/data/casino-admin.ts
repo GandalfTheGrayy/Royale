@@ -969,7 +969,7 @@ const gameDefaults: Record<CasinoGameId, AdminGameSettings> = {
     defaultBet: 5,
     targetRtp: 96.7,
     volatility: "çok yüksek",
-    autoplay: false,
+    autoplay: true,
     aiHost: false,
     sound: true,
     music: DEFAULT_GAME_MUSIC["baykus-madeni"],
@@ -1312,6 +1312,10 @@ function loadSettings(): CasinoAdminSettings {
           {
             ...defaults,
             ...current,
+            autoplay:
+              id === "baykus-madeni" && current?.autoplay === false
+                ? true
+                : (current?.autoplay ?? defaults.autoplay),
             targetRtp: legacySlotProfile || legacyMinesProfile
               ? defaults.targetRtp
               : (current?.targetRtp ?? defaults.targetRtp),

@@ -45,6 +45,22 @@ Normal modda sonuç anlatılır; Turbo yalnızca beklemeleri kısaltır, darbe/�
 
 Bu değerler oyun başına uyarlanır; tek bir küresel hız çarpanı kullanılmaz.
 
+## Tüm slotlara aktarılacak sunum standardı
+
+Bu maddeler oyun temasından bağımsızdır; her oyunun motoru ve gerçek sonucu korunarak uygulanır.
+
+1. **Global çarpan finali:** Ortak çarpan, tek bir son sembole veya ara ödemeye uygulanmış gibi görünmez. Tüm kaskad, darbe, tumble ya da serbest dönüş bittiğinde gerçek ana kasa sabitlenir; çarpan yalnız bir kez bu toplama uygulanır.
+2. **Ödül zirvesine zaman ver:** Global çarpan sahnesi hızlı geçilmez. Sıra: toplam PR kasası görünür → çarpan gelir → çarpma darbesi görünür → kesin final tutarı sıfırdan okunabilir hızda sayılır. Turbo bu anı yok etmez; yalnız kısaltır. Boş alana tıklama sunumu güvenle atlar.
+3. **İşlevi hareket anlatır:** Scatter, yükseltici, kitap, anahtar, collector veya benzeri semboller açıklama kartıyla anlatılmaz. Kendi rozeti ve gerçek hedefe giden animasyonuyla ne yaptığını gösterir. Metin yalnız `+1 serbest dönüş` gibi sayısal olarak takip edilmesi gereken kazanılmış haklar için kullanılır.
+4. **Gerçek hedef animasyonu:** Bir yükseltici/kitap/collector, motorun ürettiği gerçek hedef hücrelere gider; görsel hedefteki değer aynı anda değişir. Dekoratif veya rastgele hedef kullanılmaz.
+5. **Ana akış durmaz:** Küçük kırılma, PR etiketi ve ara sayaç; sonraki darbe/kaskad/düşüşü durdurmaz. Aynı turdaki araçlar ve semboller kimliklerini korur; kaybolup yeniden oluşmaz. Aynı hatta birden çok araç şeritlenir.
+6. **Bahis ve kontrol standardı:** Bahis klavyeden girilebilir. Kompakt standart tek bir “bet capsule”dır: merkezde doğrudan `PR` tutarı, iki yanında `− / +`, yanında MİN/MAKS ve üç nokta bulunur. Üç nokta, autoplay ile aynı görsel dilde açılan ayrı `Bahis Ayarları` penceresini açar; yarıya bölme, ikiye katlama ve adım seçimi burada kalır. Böylece kontrol dar ekranda yer kaplamaz fakat hiçbir bahis işlevi kaybolmaz. Boş oyun alanına tıklamak yalnız sunumu atlar, oyunun sonucunu değiştirmez.
+7. **Kazanım görünür ve dürüsttür:** Kırılan blok/coin/küme gerçek PR tutarını kısa süre gösterir. Büyük kazanım kademesi yalnız kesinleşen sonuçtan belirlenir; sahte yakın kazanım veya ayrı bir ikinci ödeme gösterilmez.
+8. **Ses ve erişilebilirlik:** Onaylı temel sesler korunur; yeni sesler oyun içindeki mevcut seslerle birlikte dinlenmeden eklenmez. `prefers-reduced-motion` desteği korunur.
+9. **Para ve çarpan ayrımı:** Bakiye, bahis, blok/coin kazancı, ara kasa, tur toplamı ve final ödeme her zaman doğrudan `PR` olarak gösterilir. `×` yalnızca gerçek bir çarpanın kendisi için kullanılır. Oyuncuya `38× × 2×` gibi hesap yaptıran ara değerler gösterilmez; bunun yerine `380 PR × 2× → 760 PR` gibi, paranın sonucu anlaşılır biçimde sunulur.
+10. **Büyük kazanım sayacı:** Bir tur, oyunun büyük kazanım eşiğine ulaştığında (örneğin Güzel/Büyük/Muhteşem/Efsanevi kademe), kesin ödeme tutarı ekrana tek karede düşmez. Final para sayacı `0 PR`dan gerçek son `PR` tutarına hızlı fakat okunabilir şekilde yükselir; kademe başlığı sayım sırasında ilgili eşiğe gelince değişir. Sayım ve başlık yalnız kesinleşmiş ödeme üzerinden üretilir; ekranda en az kısa bir onay anı kalır.
+11. **Tek tip autoplay menüsü:** Tüm slotlarda Allah’ın Lütfu’ndaki menü kullanılır: `Turbo Spin`, `Quick Spin`, `Ekranları Atla`; 1–1.000 tur sürgüsü, 10/25/50/100/250/500/1.000 hazır seçimleri, toplam `PR` önizlemesi ve belirgin başlat/durdur durumu bulunur. Otomatik tur yetersiz bakiyede veya bonus tetiklenince güvenle durur.
+
 ## Oyun bazlı planlar
 
 ### Baykuş Madeni — ilk pilot
@@ -56,7 +72,7 @@ Bu değerler oyun başına uyarlanır; tek bir küresel hız çarpanı kullanıl
 1. Her `(dalga, sütun)` için kararlı şerit hesaplanır. İki kazma `- / +`, üç kazma `- / 0 / +` yatay şeritlere yerleşir; kaynak satırı üzerinden sonraki darbelerde aynı şeridi korur.
 2. Düşüşler küçük bir gecikmeyle girer. Böylece aynı sütundaki araçların ikisi de görünür kalır.
 3. Sunum evrelere ayrılır: makara → düşüş → darbe → blok kırılması/ödül → sandık → tur toplamı.
-4. Blok ödülü ve sandık matematiği mevcut gerçek ödeme değerlerinden üretilir. Tur çarpanı kademeli sayılır; bakiye yalnızca mevcut ödeme akışında güncellenir.
+4. Blok ödülü ve sandık matematiği mevcut gerçek ödeme değerlerinden üretilir. Normal turda sandık tur sonucuna uygulanır. Özel oyunda blok kasası birikir; bonus içinde açılan sandık `×` değerleri birbiriyle çarpılmaz, toplanır. Finalde bu tek toplam çarpan animasyonla kasaya uygulanır ve bakiye o anda güncellenir.
 5. Kitap geliştirmesi bağımsız kısa sahne, TNT ise ayrı şok ve hasar özeti olarak görünür.
 6. Normal/Turbo için okunabilir taban süreler kullanılır; azaltılmış hareket medya tercihi korunur.
 7. Kazma, blok, sandık ve kitap için CC0 ses katmanı eklenir; lisans kaynağı asset klasöründe saklanır.
@@ -65,7 +81,16 @@ Bu değerler oyun başına uyarlanır; tek bir küresel hız çarpanı kullanıl
 
 ### Neon Kasası
 
-Mevcut kaskad ve güç toplamını koru. Anlatım: sembol çözülmesi → güç kürelerinin toplanması → denklem/çarpan → final. Mira yalnızca scatter veya yüksek olay için sahneye girer.
+**Mevcut zincir:** 7×7 komşu sembol kümeleri patlar, boşluklar fiziksel olarak dolar, ekranda kalan güç küreleri tumble sonunda toplanır ve son toplam çarpan ana kasaya uygulanır.
+
+**Neon uygulama sırası:**
+
+1. Her kaskadın patlayan kümesi kısa neon patlaması ve gerçek `PR` etiketiyle görünür; bir sonraki düşüş bu etiket yüzünden durmaz.
+2. Tüm kaskad bitmeden güç küresi kasaya uygulanmış gibi gösterilmez. Kümeler bittiğinde küreler kendi hücrelerinden merkez kasaya sırayla uçar.
+3. Final güç sahnesi dört okunabilir adımda oynar: biriken `PR` kasa → kürelerden oluşan gerçek `×` toplamı → çarpma darbesi → `0 PR`dan kesin son ödeme sayacı. Sonuç, büyük kazanım eşiğinde kısa süre sahnede kalır.
+4. MIRA yalnız scatter ve yüksek güç/kazanım olayında kısa, anlam taşıyan giriş yapar; sıradan kayıplarda gereksiz konuşma veya sahne oluşmaz.
+5. Boş oyun alanına tıklama, o anki grid, kasa ve sağ paneli doğrudan gerçek son hâle taşır; kalan sayım/efekt baştan oynamaz.
+6. Autoplay ve bahis kapsülü, ortak Allah’ın Lütfu menü/pencere standardını kullanır.
 
 ### Kaptan Mercan
 
@@ -102,4 +127,4 @@ Klasik 3×3 kimliğini koru: kazanan ödeme çizgileri sırayla taranır, tutma/
 
 Sunum örnekleri, yalnızca tasarım davranışını incelemek için kullanıldı: [Sweet Bonanza](https://www.pragmaticplay.com/en/games/sweet-bonanza-slot/), [Gates of Olympus](https://www.pragmaticplay.com/en/games/gates-of-olympus-1000/), [Sugar Rush 1000](https://www.pragmaticplay.com/en/games/sugar-rush-1000/), [Bigger Bass Bonanza](https://www.pragmaticplay.com/en/games/bigger-bass-bonanza/), [Fire in the Hole 3](https://nolimitcity.com/games/fire-in-the-hole-3) ve [Money Train 4](https://www.relax-gaming.com/products/casino/moneytrain4). Hareket azaltma yaklaşımı için [W3C açıklaması](https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions) izlenir.
 
-Baykuş için yeni sesler [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) ve [CC0 Sounds / Kenney RPG Audio](https://cc0-sounds.exi.software/collection/kenney_rpgaudio/) üzerinden CC0 kaynakla seçilir. Her indirilen dosyanın kaynak kaydı kendi `LICENSES.md` dosyasında tutulur.
+Baykuş için olası ek bonus sesleri [Kenney Music Jingles](https://kenney.nl/assets/music-jingles) üzerinden araştırılır; paket CC0 lisanslıdır. Normal kazı sesleri mevcut, beğenilmiş ses eşlemelerinde kalır. Yeni bir bonus jingle'ı ancak oyun içindeki mevcut seslerle birlikte dinlenip uygun bulunduğunda eklenir.

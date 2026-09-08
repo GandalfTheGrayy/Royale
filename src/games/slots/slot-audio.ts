@@ -1,7 +1,7 @@
 import type { CasinoGameId } from '../../data/casino-database'
 import { gameSfxLevel, isGameSfxEnabled } from '../../audio/user-sfx-preferences'
 
-type AudioMode = 'spin' | 'stop' | 'win' | 'bigWin' | 'winTier' | 'button' | 'cascade' | 'scatter' | 'multiplier' | 'powerLand' | 'multiplierCollect' | 'multiplierImpact' | 'eye' | 'mystery' | 'key' | 'coin' | 'collector' | 'pickaxe' | 'blockBreak' | 'chestLatch' | 'chestOpen' | 'bookUpgrade'
+type AudioMode = 'spin' | 'stop' | 'win' | 'bigWin' | 'winTier' | 'button' | 'cascade' | 'scatter' | 'multiplier' | 'powerLand' | 'multiplierCollect' | 'multiplierImpact' | 'eye' | 'mystery' | 'key' | 'coin' | 'collector'
 
 const ALLAH_AUDIO_ROOT = '/assets/slots/allahin-lutfu/audio'
 const ALLAH_AUDIO_ASSETS: Partial<Record<AudioMode, { src: string; volume: number }>> = {
@@ -24,17 +24,11 @@ const ALLAH_AUDIO_ASSETS: Partial<Record<AudioMode, { src: string; volume: numbe
 
 const BAYKUS_MINE_AUDIO_ROOT = '/assets/instant/obsidyen-damari/audio'
 const BAYKUS_ORIGINAL_AUDIO_ROOT = '/assets/instant/originals/audio'
-const BAYKUS_PRESENTATION_AUDIO_ROOT = '/assets/slots/baykus-madeni/audio'
 const BAYKUS_AUDIO_ASSETS: Partial<Record<AudioMode, { src: string; volume: number }>> = {
   spin: { src: '/assets/audio/slot-reel-spin.mp3', volume: .28 },
   stop: { src: `${BAYKUS_MINE_AUDIO_ROOT}/ui-click.ogg`, volume: .18 },
   button: { src: `${BAYKUS_MINE_AUDIO_ROOT}/ui-click.ogg`, volume: .16 },
   powerLand: { src: `${BAYKUS_MINE_AUDIO_ROOT}/pressure-burst.ogg`, volume: .2 },
-  pickaxe: { src: `${BAYKUS_PRESENTATION_AUDIO_ROOT}/pickaxe-impact-a.ogg`, volume: .2 },
-  blockBreak: { src: `${BAYKUS_PRESENTATION_AUDIO_ROOT}/pickaxe-impact-b.ogg`, volume: .22 },
-  chestLatch: { src: `${BAYKUS_PRESENTATION_AUDIO_ROOT}/chest-latch.ogg`, volume: .19 },
-  chestOpen: { src: `${BAYKUS_PRESENTATION_AUDIO_ROOT}/chest-coins.ogg`, volume: .23 },
-  bookUpgrade: { src: `${BAYKUS_PRESENTATION_AUDIO_ROOT}/upgrade-book.ogg`, volume: .19 },
   cascade: { src: `${BAYKUS_MINE_AUDIO_ROOT}/tile-crack.ogg`, volume: .22 },
   collector: { src: `${BAYKUS_ORIGINAL_AUDIO_ROOT}/mines-deep-explosion.wav`, volume: .32 },
   mystery: { src: `${BAYKUS_MINE_AUDIO_ROOT}/crystal-reveal.ogg`, volume: .25 },

@@ -28,6 +28,7 @@ export type MineSpinEvent = {
   maxHp?: number;
   label: string;
   valueX?: number;
+  upgradeTargets?: Array<{ row: number; column: number; from: MineTool; to: MineTool }>;
 };
 export type MineSpinResult = {
   reel: MineReelSymbol[][];
@@ -38,6 +39,7 @@ export type MineSpinResult = {
   addedSpins: number;
   blockWinX: number;
   chestMultiplierX: number;
+  chestAddX: number;
   totalWinX: number;
   openedChests: number[];
   events: MineSpinEvent[];
@@ -56,23 +58,32 @@ export type MineBonusProgress = {
 export function createMineBonusProgress(mine: MineState): MineBonusProgress {
   return {
     blockWinX: 0,
-    chestMultiplierX: mine.chests.reduce((product, chest) => product * (chest.opened ? chest.multiplier ?? 1 : 1), 1),
+    // A special-game chest is collected into the finale bank only when it is
+    // opened during that bonus. Existing base-game chests do not carry over.
+    chestMultiplierX: 0,
     totalWinX: 0,
   };
 }
 
-// Revalue the accumulated, unmultiplied block bank. Never multiply an already
-// multiplied payout again, and only credit the increase over the previous total.
-export function settleMineBonusSpin(
+/** Adds a bonus spin to the unmultiplied block bank. Chest values are held until the bonus finale. */
+export function accrueMineBonusSpin(
   previous: MineBonusProgress,
-  spin: Pick<MineSpinResult, "blockWinX" | "chestMultiplierX">,
+  spin: Pick<MineSpinResult, "blockWinX" | "chestAddX">,
+) {
+  const blockWinX = previous.blockWinX + spin.blockWinX;
+  const chestMultiplierX = previous.chestMultiplierX + spin.chestAddX;
+  return { blockWinX, chestMultiplierX, totalWinX: 0, creditWinX: 0 };
+}
+
+/** Applies every collected chest multiplier once, after the last bonus spin. */
+export function settleMineBonusFinal(
+  progress: MineBonusProgress,
   scale = 1,
   maxWinX = MINE_MAX_WIN_X,
 ) {
-  const blockWinX = previous.blockWinX + spin.blockWinX;
-  const chestMultiplierX = previous.chestMultiplierX * spin.chestMultiplierX;
-  const totalWinX = Math.min(Math.max(0, maxWinX), blockWinX * chestMultiplierX * scale);
-  return { blockWinX, chestMultiplierX, totalWinX, creditWinX: Math.max(0, totalWinX - previous.totalWinX) };
+  const effectiveChestMultiplierX = progress.chestMultiplierX || 1;
+  const totalWinX = Math.min(Math.max(0, maxWinX), progress.blockWinX * effectiveChestMultiplierX * scale);
+  return { ...progress, totalWinX, creditWinX: totalWinX };
 }
 
 function browserRandom() {
@@ -215,21 +226,28 @@ export function runMineSpin(options: {
   const upgradeTo: MineTool | undefined = hasMaxBook ? "obsidian" : hasBook ? "diamond" : undefined;
   if (upgradeTo) {
     const toolRank: Record<MineTool, number> = { bronze: 0, iron: 1, gold: 2, diamond: 3, obsidian: 4 };
-    for (const row of reel) {
+    const upgradeTargets: Array<{ row: number; column: number; from: MineTool; to: MineTool }> = [];
+    for (let rowIndex = 0; rowIndex < reel.length; rowIndex += 1) {
+      const row = reel[rowIndex];
       for (let column = 0; column < row.length; column += 1) {
         const symbol = row[column];
-        if (symbol.kind === "tool" && toolRank[symbol.tool] < toolRank[upgradeTo]) row[column] = { kind: "tool", tool: upgradeTo };
+        if (symbol.kind === "tool" && toolRank[symbol.tool] < toolRank[upgradeTo]) {
+          upgradeTargets.push({ row: rowIndex, column, from: symbol.tool, to: upgradeTo });
+          row[column] = { kind: "tool", tool: upgradeTo };
+        }
       }
     }
     events.push({
       kind: "upgrade",
       special: upgradeTo === "obsidian" ? "max-book" : "book",
       label: upgradeTo === "obsidian" ? "MAX kitap: tüm kazmalar Obsidyen" : "Geliştirme kitabı: tüm kazmalar Elmas",
+      upgradeTargets,
     });
   }
 
   let blockWinX = 0;
   let chestMultiplierX = 1;
+  let chestAddX = 0;
   const openedChests: number[] = [];
   const exploded = new Set<string>();
   const rollValue = (record: Record<string, number>) => Number(weightedRecord(record, random));
@@ -239,6 +257,7 @@ export function runMineSpin(options: {
     const multiplier = rollValue(tuning.chestValueWeights);
     mine.chests[column] = { opened: true, multiplier };
     chestMultiplierX *= multiplier;
+    chestAddX += multiplier;
     openedChests.push(column);
     events.push({ kind: "chest", column, wave, label: `Sandık ${multiplier}×`, valueX: multiplier });
   };
@@ -333,6 +352,7 @@ export function runMineSpin(options: {
     addedSpins,
     blockWinX,
     chestMultiplierX,
+    chestAddX,
     totalWinX: Math.min(tuning.maxWinX, blockWinX * chestMultiplierX * scale),
     openedChests,
     events,

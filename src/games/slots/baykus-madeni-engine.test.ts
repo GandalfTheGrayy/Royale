@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   MINE_MAX_WIN_X,
+  accrueMineBonusSpin,
   createMine,
   createMineBonusProgress,
   runMineSpin,
   seededMineRandom,
-  settleMineBonusSpin,
+  settleMineBonusFinal,
 } from "./baykus-madeni-engine";
 import { DEFAULT_MINE_DROP_TUNING } from "../../data/casino-admin";
 
@@ -62,6 +63,19 @@ describe("Baykuş Madeni motoru", () => {
     const tools = result.reel.flat().filter((symbol) => symbol.kind === "tool");
     expect(result.reel.flat().some((symbol) => symbol.kind === "special" && symbol.special === "book")).toBe(true);
     expect(tools.every((symbol) => symbol.kind === "tool" && symbol.tool === "obsidian")).toBe(true);
+  });
+
+  it("geliştirme kitabı animasyonunun dönüştüreceği her kazmayı kaynak seviyesiyle verir", () => {
+    const tuning = structuredClone(DEFAULT_MINE_DROP_TUNING);
+    tuning.symbolWeights.base = { tool: 1, eye: 0, tnt: 0, book: 1, maxBook: 0, empty: 0 };
+    tuning.toolWeights.base = { bronze: 1, iron: 0, gold: 0, diamond: 0, obsidian: 0 };
+    const samples = [0.1, 0.1, 0.75, ...Array.from({ length: 13 }, () => [0.1, 0.1]).flat()];
+    let cursor = 0;
+    const result = runMineSpin({ mine: createMine(seededMineRandom(19), tuning), random: () => samples[cursor++] ?? 0.1, tuning });
+    const upgrade = result.events.find((event) => event.kind === "upgrade");
+    expect(upgrade?.special).toBe("book");
+    expect(upgrade?.upgradeTargets).toHaveLength(14);
+    expect(upgrade?.upgradeTargets?.every((target) => target.from === "bronze" && target.to === "diamond")).toBe(true);
   });
 
   it("kazancı 50.000 kat sınırında tutar", () => {
@@ -121,39 +135,37 @@ describe("Baykuş Madeni motoru", () => {
     expect(mine.columns.every((column) => column[0].type === "dirt" && column[0].hp === 9)).toBe(true);
   });
 
-  it("geç açılan sandık önceki ve sonraki bonus kazançlarını çarpar, yalnız farkı öder", () => {
-    let progress = { blockWinX: 0, chestMultiplierX: 1, totalWinX: 0 };
+  it("bonus sandıklarını biriktirir ve bütün blok kasasını yalnız finalde öder", () => {
+    let progress = { blockWinX: 0, chestMultiplierX: 0, totalWinX: 0 };
     const credits: number[] = [];
     for (const spin of [
-      { blockWinX: 10, chestMultiplierX: 1 },
-      { blockWinX: 5, chestMultiplierX: 1 },
-      { blockWinX: 0, chestMultiplierX: 3 },
-      { blockWinX: 2, chestMultiplierX: 2 },
+      { blockWinX: 10, chestAddX: 0 },
+      { blockWinX: 5, chestAddX: 0 },
+      { blockWinX: 0, chestAddX: 3 },
+      { blockWinX: 2, chestAddX: 2 },
     ]) {
-      const settled = settleMineBonusSpin(progress, spin);
+      const settled = accrueMineBonusSpin(progress, spin);
       credits.push(settled.creditWinX);
       progress = settled;
     }
-    expect(credits).toEqual([10, 5, 30, 57]);
-    expect(progress).toMatchObject({ blockWinX: 17, chestMultiplierX: 6, totalWinX: 102 });
-    expect(credits.reduce((sum, credit) => sum + credit, 0)).toBe(102);
-    expect(settleMineBonusSpin(progress, { blockWinX: 0, chestMultiplierX: 1 }).creditWinX).toBe(0);
+    expect(credits).toEqual([0, 0, 0, 0]);
+    expect(progress).toMatchObject({ blockWinX: 17, chestMultiplierX: 5, totalWinX: 0 });
+    expect(settleMineBonusFinal(progress)).toMatchObject({ totalWinX: 85, creditWinX: 85 });
   });
 
-  it("bonus ve Gizem ödeme ölçeklerini birikmiş ham kazanca bir kez uygular", () => {
-    const first = settleMineBonusSpin({ blockWinX: 0, chestMultiplierX: 1, totalWinX: 0 }, { blockWinX: 10, chestMultiplierX: 2 }, 0.5 * 0.4);
-    const second = settleMineBonusSpin(first, { blockWinX: 5, chestMultiplierX: 3 }, 0.5 * 0.4);
-    expect(first.totalWinX).toBe(4);
-    expect(second.totalWinX).toBe(18);
-    expect(second.creditWinX).toBe(14);
+  it("bonus ve Gizem ödeme ölçeklerini finaldeki ham kazanca bir kez uygular", () => {
+    const first = accrueMineBonusSpin({ blockWinX: 0, chestMultiplierX: 0, totalWinX: 0 }, { blockWinX: 10, chestAddX: 2 });
+    const second = accrueMineBonusSpin(first, { blockWinX: 5, chestAddX: 3 });
+    expect(first.creditWinX).toBe(0);
+    expect(second.creditWinX).toBe(0);
+    expect(settleMineBonusFinal(second, 0.5 * 0.4)).toMatchObject({ totalWinX: 15, creditWinX: 15 });
   });
 
-  it("azami ödemeyi bütün bonusa uygular ve tetikleyen el için kalan sınırı gözetir", () => {
-    const first = settleMineBonusSpin({ blockWinX: 0, chestMultiplierX: 1, totalWinX: 0 }, { blockWinX: 10_000, chestMultiplierX: 2 }, 1, 45_000);
-    const second = settleMineBonusSpin(first, { blockWinX: 10_000, chestMultiplierX: 10 }, 1, 45_000);
-    const third = settleMineBonusSpin(second, { blockWinX: 1, chestMultiplierX: 2 }, 1, 45_000);
-    expect(first.creditWinX + second.creditWinX + third.creditWinX).toBe(45_000);
-    expect(third.creditWinX).toBe(0);
+  it("azami ödemeyi bütün bonusun nihai tek ödemesine uygular", () => {
+    const first = accrueMineBonusSpin({ blockWinX: 0, chestMultiplierX: 0, totalWinX: 0 }, { blockWinX: 10_000, chestAddX: 2 });
+    const second = accrueMineBonusSpin(first, { blockWinX: 10_000, chestAddX: 10 });
+    const third = accrueMineBonusSpin(second, { blockWinX: 1, chestAddX: 2 });
+    expect(settleMineBonusFinal(third, 1, 45_000)).toMatchObject({ totalWinX: 45_000, creditWinX: 45_000 });
   });
 
   it.each(["block", "super", "epic"] as const)("%s bonusunda aynı sandığı tekrar açmaz, önceki çarpanı sonraki kazanca taşır", (bonusTier) => {
@@ -168,23 +180,23 @@ describe("Baykuş Madeni motoru", () => {
     });
     const initial = createMineBonusProgress(mine);
     const first = runMineSpin({ mine, bonusTier, tuning, random: () => 0 });
-    const progress = settleMineBonusSpin(initial, first);
+    const progress = accrueMineBonusSpin(initial, first);
     expect(first.openedChests).toEqual([0]);
-    expect(progress.totalWinX).toBe(9);
+    expect(progress.totalWinX).toBe(0);
     const second = runMineSpin({ mine: first.mine, bonusTier, tuning, random: () => 0 });
-    const final = settleMineBonusSpin(progress, second);
+    const final = settleMineBonusFinal(accrueMineBonusSpin(progress, second));
     expect(second.openedChests).toEqual([1, 2, 3, 4]);
-    expect(final.totalWinX).toBe(15 * 3 ** 5);
-    expect(progress.totalWinX + final.creditWinX).toBe(final.totalWinX);
+    expect(final.totalWinX).toBe(15 * 15);
+    expect(final.creditWinX).toBe(final.totalWinX);
     expect(mine.chests.every((chest) => !chest.opened)).toBe(true);
   });
 
-  it("doğal bonusa açık sandığı taşır, tetikleyen elin bloklarını tekrar ödemez", () => {
+  it("doğal bonusa temel oyunda açılmış sandığı taşımaz", () => {
     const mine = createMine(seededMineRandom(10));
     mine.chests[0] = { opened: true, multiplier: 3 };
     const progress = createMineBonusProgress(mine);
-    expect(progress).toEqual({ blockWinX: 0, chestMultiplierX: 3, totalWinX: 0 });
-    expect(settleMineBonusSpin(progress, { blockWinX: 5, chestMultiplierX: 1 }).totalWinX).toBe(15);
+    expect(progress).toEqual({ blockWinX: 0, chestMultiplierX: 0, totalWinX: 0 });
+    expect(settleMineBonusFinal(accrueMineBonusSpin(progress, { blockWinX: 5, chestAddX: 0 })).totalWinX).toBe(5);
   });
 
   it("Obsidyen varsayılanında sık azami ödeme ve sürekli kâr regresyonunu engeller", () => {
