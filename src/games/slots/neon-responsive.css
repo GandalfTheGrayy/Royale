@@ -535,13 +535,6 @@
     0 0 62px rgba(255, 220, 60, 0.58),
     inset 0 0 38px rgba(255, 255, 255, 0.12);
 }
-.power-event.stage-counting {
-  border-color: #7affbd;
-  box-shadow:
-    0 18px 62px rgba(0, 0, 0, 0.75),
-    0 0 62px rgba(76, 255, 180, 0.46),
-    inset 0 0 38px rgba(255, 255, 255, 0.1);
-}
 @keyframes powerImpactIn {
   0% {
     filter: brightness(2.5);

@@ -390,8 +390,10 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
       const accrued = accrueMineBonusSpin(progressBefore, {
         blockWinX: displayedBlockWin, chestAddX: displayedChestMultiplier,
       });
-      const projected = settleMineBonusFinal(accrued, scale, activeBonus.maxWinX);
-      return { ...projected, creditWinX: 0 };
+      // Bonus sürerken final hesabını projeksiyon amacıyla bile çalıştırma.
+      // Özellikle son dönüşte açılan sandık böylece tekil turun sonucuna hiçbir
+      // yoldan dokunamaz; sadece session.progress'e eklenip gerçek finali bekler.
+      return { ...accrued, totalWinX: 0, creditWinX: 0 };
     };
 
     for (const event of upgrades) {
@@ -513,21 +515,10 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
       }
 
       const displayed = displaySettlement();
-      if (!deferChestSettlement && (chests.length || (breaks.length && (activeBonus ? displayed.chestMultiplierX > 0 : displayed.chestMultiplierX > 1)))) {
-        setChestMath({
-          id: ++eventId.current,
-          blockWinX: displayed.blockWinX * scale,
-          chestMultiplierX: displayed.chestMultiplierX,
-          totalWinX: activeBonus ? displayed.blockWinX * scale : displayed.totalWinX,
-          payout: Math.round(wager * (activeBonus ? displayed.blockWinX * scale : displayed.totalWinX) * 100) / 100,
-          credited: false,
-          capped: displayed.totalWinX < displayed.blockWinX * Math.max(1, displayed.chestMultiplierX) * scale,
-          deferred: Boolean(activeBonus),
-        });
-        if (chests.length) setNotice(activeBonus
-          ? `${chests.length} sandık çarpanı kasaya eklendi · bütün bonus sonunda uygulanacak.`
-          : `${chests.length} sandık açıldı · bu turun blok kazancı ${money.format(displayed.chestMultiplierX)}× ile çarpılıyor.`);
-      }
+      // Bonus içindeki sandıklar burada bir denklem/ödeme sahnesi açmaz. Yalnız
+      // bonus kasasına eklenir ve bütün bonus bittikten sonra tek global işlemde
+      // uygulanır. Böylece son elde açılan sandık da tekil eli çarpıyor görünmez.
+      if (activeBonus && chests.length) setNotice(`${chests.length} sandık çarpanı bonus kasasına eklendi · yalnız finalde uygulanacak.`);
       if (displayed.creditWinX !== roundWinXRef.current) void countRoundWinX(displayed.creditWinX, presentationDuration(tuning.animation.countUpMs, 360));
     }
     setActors([]);

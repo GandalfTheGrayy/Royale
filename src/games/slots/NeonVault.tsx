@@ -69,7 +69,7 @@ type PowerEvent = {
   baseReturn: number;
   totalReturn: number;
   bonusMode: boolean;
-  stage: "collecting" | "impact" | "counting";
+  stage: "collecting" | "impact";
 };
 type BonusSummary = {
   total: number;
@@ -640,6 +640,7 @@ export default function NeonVault({
         bonusMode: isFreeSpin,
         stage: "impact",
       };
+      setCascadeWin(0);
       setPowerEvent(equation);
       if (isFreeSpin) setBonusMultiplier(nextResult.finalBonusMultiplier);
       audioRef.current?.play(
@@ -652,8 +653,6 @@ export default function NeonVault({
           : slotTuning.presentation.teaseMs,
         () => skipPresentationRef.current,
       );
-      setPowerEvent({ ...equation, stage: "counting" });
-      setCascadeWin(0);
       const finalCountDuration = turbo
         ? 1_050
         : Math.max(1_500, Math.min(2_800, 1_300 + Math.log10(nextResult.grossReturn + 10) * 460));
@@ -1330,8 +1329,6 @@ export default function NeonVault({
                 <small>
                   {powerEvent.stage === "collecting"
                     ? "TUMBLE BİTTİ · GÜÇLER TOPLANIYOR"
-                    : powerEvent.stage === "counting"
-                      ? "KESİN KAZANÇ SAYILIYOR"
                     : powerEvent.bonusMode
                       ? "BONUS ÇARPANI KİLİTLENDİ"
                       : "TOPLAM ÇARPAN KAZANCA VURDU"}
@@ -1341,7 +1338,7 @@ export default function NeonVault({
                   {powerEvent.values.map((value, index) => <span className="power-collected" key={`${value}-${index}`} style={{ "--collect-index": index } as CSSProperties}><b>{value}×</b>{index < powerEvent.values.length - 1 && <em>+</em>}</span>)}
                   {(powerEvent.values.length > 1 || powerEvent.previousMultiplier > 0) && <><i>=</i><strong>{powerEvent.multiplier}×</strong></>}
                 </div>}
-                {powerEvent.stage === "impact" || powerEvent.stage === "counting" ? (
+                {powerEvent.stage === "impact" ? (
                   <div className="power-equation">
                     <span>
                       {money.format(powerEvent.baseReturn)} <i>PR</i>
@@ -1350,7 +1347,7 @@ export default function NeonVault({
                     <b>{powerEvent.multiplier}×</b>
                     <em>=</em>
                     <strong>
-                      {money.format(powerEvent.totalReturn)} <i>PR</i>
+                      {money.format(cascadeWin)} <i>PR</i>
                     </strong>
                   </div>
                 ) : (
@@ -1364,8 +1361,6 @@ export default function NeonVault({
                 <p>
                   {powerEvent.stage === "collecting"
                     ? "Ödeme bekliyor; bütün güçler sayılmadan çarpma yapılmaz."
-                    : powerEvent.stage === "counting"
-                      ? "Toplam ödeme sıfırdan gerçek PR tutarına yükseliyor."
                     : powerEvent.bonusMode
                       ? `Ortak bonus çarpanı ${powerEvent.multiplier}× oldu`
                       : `${powerEvent.landed}× güç bütün tumble kazancına uygulandı`}
