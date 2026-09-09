@@ -5,6 +5,7 @@ import {
   useSyncExternalStore,
   type CSSProperties,
   type Dispatch,
+  type PointerEvent,
   type SetStateAction,
 } from "react";
 import GameMusicControls from "../../audio/GameMusicControls";
@@ -28,6 +29,7 @@ import {
 import { SlotAudio } from "./slot-audio";
 import {
   ALLAH_COIN_TIERS,
+  ALLAH_EYE_SYMBOL_ROSTER,
   ALLAH_SYMBOLS,
   allahPurchaseCost,
   createSeededAllahRandom,
@@ -42,6 +44,7 @@ import {
   type AllahSpinResult,
 } from "./allahin-lutfu-engine";
 import "./allahin-lutfu.css";
+import "./slot-game-shell.css";
 
 type Props = {
   balance: number;
@@ -106,6 +109,20 @@ const winScenes = {
   },
 } as const;
 
+function winPresentation(multiplier: number) {
+  if (multiplier >= 1_000)
+    return { ...winScenes.divine, title: "TARİHİ KAZANÇ" };
+  if (multiplier >= 500)
+    return { ...winScenes.insane, title: "AKILALMAZ KAZANÇ" };
+  if (multiplier >= 100)
+    return { ...winScenes.insane, title: "EFSANEVİ KAZANÇ" };
+  if (multiplier >= 25)
+    return { ...winScenes.epic, title: "MUHTEŞEM KAZANÇ" };
+  if (multiplier >= 10)
+    return { ...winScenes.great, title: "BÜYÜK KAZANÇ" };
+  return { ...winScenes.nice, title: "GÜZEL KAZANÇ" };
+}
+
 const autoSkippableEvents = new Set<AllahFeatureEvent["type"]>([
   "guardian-ack",
   "bonus-portal",
@@ -129,21 +146,28 @@ const mysteryFlowImages = [
   "/assets/slots/allahin-lutfu/symbols/coin-ruby.png",
   "/assets/slots/allahin-lutfu/symbols/coin-diamond.png",
   "/assets/slots/allahin-lutfu/symbols/celestial-key.png",
+  "/assets/slots/allahin-lutfu/symbols/eye-blue.png",
+  "/assets/slots/allahin-lutfu/symbols/eye-gold.png",
+  "/assets/slots/allahin-lutfu/symbols/eye-emerald.png",
   "/assets/slots/allahin-lutfu/symbols/collector.png",
+  "/assets/slots/allahin-lutfu/symbols/super-collector.png",
   "/assets/slots/allahin-lutfu/symbols/coin-upgrader.png",
-  "/assets/slots/allahin-lutfu/symbols/multiplier-medallion.png",
+  "/assets/slots/allahin-lutfu/symbols/redrop.png",
+  "/assets/slots/allahin-lutfu/symbols/scatter.png",
+  "/assets/slots/allahin-lutfu/symbols/max-win-coin.png",
+  "/assets/slots/allahin-lutfu/symbols/multiplier-medallion-sealed.png",
 ] as const;
 
 const mysteryFlowLoop = [...mysteryFlowImages, ...mysteryFlowImages];
 
-function cellVisual(cell: AllahCell, collectedValue = 0, maxWinX = 500_000) {
+function cellVisual(cell: AllahCell, collectedValue = 0, maxWinX = 500_000, wager = 1) {
   if (cell.kind === "symbol")
     return { image: ALLAH_SYMBOLS[cell.symbol].image, label: ALLAH_SYMBOLS[cell.symbol].label };
   if (cell.kind === "coin")
     return {
       image: `/assets/slots/allahin-lutfu/symbols/coin-${cell.tier}.png`,
-      label: `${cell.tier} ${cell.value}×`,
-      value: `${compactWager(cell.value)}×`,
+      label: `${cell.tier} coin · ${money.format(cell.value * wager)} PR`,
+      value: `${money.format(cell.value * wager)} PR`,
     };
   if (cell.kind === "eye")
     return { image: eyeImages[cell.variant], label: `${cell.variant} Nur Gözü` };
@@ -153,7 +177,7 @@ function cellVisual(cell: AllahCell, collectedValue = 0, maxWinX = 500_000) {
     return {
       image: `/assets/slots/allahin-lutfu/symbols/${cell.super ? "super-collector" : "collector"}.png`,
       label: cell.super ? "Çifte Lütuf Toplayıcı" : "Lütuf Toplayıcı",
-      value: collectedValue > 0 ? `${compactWager(collectedValue)}×` : undefined,
+      value: collectedValue > 0 ? `${money.format(collectedValue * wager)} PR` : undefined,
     };
   if (cell.kind === "upgrader")
     return { image: "/assets/slots/allahin-lutfu/symbols/coin-upgrader.png", label: "Lütuf Yükseltici" };
@@ -170,7 +194,7 @@ function cellVisual(cell: AllahCell, collectedValue = 0, maxWinX = 500_000) {
   if (cell.kind === "global-key")
     return { image: "/assets/slots/allahin-lutfu/symbols/celestial-key.png", label: "Global Çarpan Anahtarı" };
   if (cell.kind === "empty") return { image: "", label: "Boş alan" };
-  return { image: "/assets/slots/allahin-lutfu/symbols/max-win-coin.png", label: `${money.format(maxWinX)}× Max Lütuf`, value: "MAX" };
+  return { image: "/assets/slots/allahin-lutfu/symbols/max-win-coin.png", label: `${money.format(maxWinX * wager)} PR Max Lütuf`, value: "MAX" };
 }
 
 function eventSound(audio: SlotAudio | null, event: AllahFeatureEvent) {
@@ -179,17 +203,21 @@ function eventSound(audio: SlotAudio | null, event: AllahFeatureEvent) {
   if (event.type === "reel-impact") audio.play("stop", Number(event.payload.column ?? 0));
   if (event.type === "eye-wake") audio.play("eye");
   if (event.type === "mystery-reveal" || event.type === "modifier-coin-roll") audio.play("mystery");
+  if (event.type === "board-multiplier-anticipation") audio.play("mystery");
+  if (event.type === "board-multiplier-reveal") audio.play("multiplier", Number(event.payload.value ?? 0));
   if (event.type === "modifier-coin-land") audio.play("coin");
   if (event.type === "key-flight") audio.play("key");
   if (event.type === "redrop-fall") audio.play("cascade");
   if (event.type === "scatter-lock" || event.type === "bonus-portal") audio.play("scatter");
-  if (event.type === "key-slot-lock" || event.type === "wheel-spin" || event.type === "global-merge")
+  if (event.type === "max-coin-award") audio.play("winTier", 4);
+  if (event.type === "key-slot-lock" || event.type === "wheel-spin" || event.type === "global-merge-apply")
     audio.play("multiplier", Number(event.payload.value ?? 0));
   if (event.type === "coin-flight") audio.play("coin", event.cells[0]?.column ?? 0);
   if (event.type === "collector-wake" || event.type === "collector-merge") audio.play("collector");
   if (event.type === "board-multiplier-apply" || event.type === "coin-upgrader-charge" || event.type === "coin-upgrader-apply") audio.play("multiplierImpact");
   if (event.type === "global-row-charge") audio.play("multiplier", Number(event.payload.row ?? 0));
   if (event.type === "global-row-apply") audio.play("multiplierImpact", Number(event.payload.row ?? 0));
+  if (event.type === "global-final") audio.play("multiplierImpact", Number(event.payload.multiplier ?? 0));
   if (event.type === "win-tier") audio.play("winTier", Math.min(4, Math.floor(Number(event.payload.grossMultiplier ?? 0) / 100)));
 }
 
@@ -198,6 +226,10 @@ function bonusLabel(tier?: AllahBonusState["tier"]) {
   if (tier === "legendary") return "Efsanevi Lütuf";
   if (tier === "mythic") return "Mitik Lütuf";
   return "Lütuf Dönüşleri";
+}
+
+function bonusArt(tier?: AllahBonusState["tier"]) {
+  return `/assets/slots/allahin-lutfu/bonus/${tier === "super" ? "super-" : tier === "legendary" ? "legendary-" : tier === "mythic" ? "mythic-" : ""}free-spins.png`;
 }
 
 export default function AllahinLutfu({
@@ -234,15 +266,22 @@ export default function AllahinLutfu({
   const [displayMinTier, setDisplayMinTier] = useState(0);
   const [displayGlobalMultiplier, setDisplayGlobalMultiplier] = useState(1);
   const [displayCollectorValues, setDisplayCollectorValues] = useState<Record<string, number>>({});
+  const [displayConcealedFeatureIds, setDisplayConcealedFeatureIds] = useState<Set<string>>(new Set());
+  const [displayConsumedFeatureIds, setDisplayConsumedFeatureIds] = useState<Set<string>>(new Set());
+  const [keyVaultOpen, setKeyVaultOpen] = useState(false);
   const [globalAppliedValues, setGlobalAppliedValues] = useState<Record<string, number>>({});
   const [eventDuration, setEventDuration] = useState(0);
   const [displayWin, setDisplayWin] = useState(0);
+  const [celebrationWin, setCelebrationWin] = useState(0);
+  const [globalFinalWin, setGlobalFinalWin] = useState(0);
   const [specialSummary, setSpecialSummary] = useState<SpecialSummary>();
+  const [purchaseIntroTier, setPurchaseIntroTier] = useState<AllahBonusState["tier"]>();
   const [spinSpeed, setSpinSpeed] = useState<"normal" | "quick" | "turbo">("normal");
   const [autoSkipScreens, setAutoSkipScreens] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [buyOpen, setBuyOpen] = useState(false);
   const [autoOpen, setAutoOpen] = useState(false);
+  const [betToolsOpen, setBetToolsOpen] = useState(false);
   const [autoCount, setAutoCount] = useState(25);
   const [autoRemaining, setAutoRemaining] = useState(0);
   const [notice, setNotice] = useState("");
@@ -296,9 +335,12 @@ export default function AllahinLutfu({
   const eyeVariant = (activeEvent?.payload.variant as keyof typeof eyeImages | undefined) ?? persistent.persistentEye ?? "blue";
   const eventClass = activeEvent ? `event-${activeEvent.type}` : "event-idle";
   const eventSideClass = activeEvent?.payload.side ? `event-side-${activeEvent.payload.side}` : "";
+  const eventDetailClass = activeEvent?.payload.complete ? "event-complete" : "";
   const activeWinScene = activeEvent?.type === "win-tier"
-    ? winScenes[String(activeEvent.payload.tier) as keyof typeof winScenes]
+    ? winPresentation(Number(activeEvent.payload.grossMultiplier ?? 0))
     : undefined;
+  const liveWinScene = winPresentation(Math.max(5, celebrationWin / Math.max(wager, 0.01)));
+  const eventBonusTier = (activeEvent?.type === "bonus-upgrade" ? activeEvent.payload.to : activeEvent?.payload.tier) as AllahBonusState["tier"] | undefined;
   const displayedEyeSlots = activeEvent ? displayEyeSlots : persistent.eyeSlots;
   const wait = (ms: number) =>
     new Promise<void>((resolve) => {
@@ -319,6 +361,35 @@ export default function AllahinLutfu({
     for (const resolve of [...waitersRef.current]) resolve();
   };
 
+  const countValue = async (
+    setter: Dispatch<SetStateAction<number>>,
+    from: number,
+    to: number,
+    duration: number,
+  ) => {
+    if (duration <= 0 || skipPresentationRef.current) {
+      setter(to);
+      return;
+    }
+    const startedAt = performance.now();
+    setter(from);
+    while (mountedRef.current && !skipPresentationRef.current) {
+      const progress = Math.min(1, (performance.now() - startedAt) / duration);
+      const eased = 1 - (1 - progress) ** 3;
+      setter(from + (to - from) * eased);
+      if (progress >= 1) return;
+      await wait(32);
+    }
+    setter(to);
+  };
+
+  const skipFromStage = (event: PointerEvent<HTMLElement>) => {
+    if (!busy) return;
+    const target = event.target as HTMLElement;
+    if (target.closest("button,input,select,a,[role='dialog']")) return;
+    skipPresentation();
+  };
+
   const playResult = async (result: AllahSpinResult, automatic: boolean) => {
     const accumulatedBefore = bonusRef.current?.totalPayout ?? 0;
     const settledDisplayWin = bonusRef.current
@@ -326,6 +397,8 @@ export default function AllahinLutfu({
       : result.payout;
     skipPresentationRef.current = false;
     setDisplayWin(accumulatedBefore);
+    setCelebrationWin(0);
+    setGlobalFinalWin(0);
     setGrid(result.initialGrid);
     setVisibleColumns(new Set());
     setDisplayEyeSlots([]);
@@ -333,6 +406,9 @@ export default function AllahinLutfu({
     setDisplayMinTier(0);
     setDisplayGlobalMultiplier(1);
     setDisplayCollectorValues({});
+    setDisplayConcealedFeatureIds(new Set(result.events[0]?.concealedFeatureIds ?? []));
+    setDisplayConsumedFeatureIds(new Set());
+    setKeyVaultOpen(false);
     setGlobalAppliedValues({});
     for (let index = 0; index < result.events.length; index += 1) {
       if (skipPresentationRef.current) break;
@@ -348,8 +424,10 @@ export default function AllahinLutfu({
       setDisplayMinTier(event.minimumCoinTier);
       setDisplayGlobalMultiplier(event.globalMultiplier);
       setDisplayCollectorValues(event.collectorValues);
+      setDisplayConcealedFeatureIds(new Set(event.concealedFeatureIds));
+      setDisplayConsumedFeatureIds(new Set(event.consumedFeatureIds));
+      if (event.type === "key-slot-spin") setKeyVaultOpen(true);
       setGlobalAppliedValues(event.globalAppliedValues);
-      if (event.type === "payout-count") setDisplayWin(settledDisplayWin);
       if (event.type === "spin-commit") setVisibleColumns(new Set());
       if (event.type === "column-feed" || event.type === "reel-impact") {
         const column = Number(event.payload.column ?? 0);
@@ -365,7 +443,28 @@ export default function AllahinLutfu({
             ? Math.max(24, Math.round(event.durationTurbo * 0.82))
             : Math.max(20, Math.round(event.durationNormal * tuning.normalAnimationScale));
       setEventDuration(baseDuration);
-      await wait(baseDuration);
+      if (event.type === "global-final") {
+        await wait(Math.round(baseDuration * .3));
+        await countValue(setGlobalFinalWin, 0, Number(event.payload.finalPayout ?? 0), Math.round(baseDuration * .5));
+        setDisplayWin(settledDisplayWin);
+        if (!skipPresentationRef.current) await wait(Math.round(baseDuration * .2));
+      } else if (event.type === "payout-count") {
+        if (Number(event.payload.globalMultiplier ?? 1) > 1) {
+          setDisplayWin(settledDisplayWin);
+          await wait(Math.min(baseDuration, 180));
+        } else if (Number(event.payload.grossMultiplier ?? 0) >= 5)
+          await countValue(setDisplayWin, accumulatedBefore, settledDisplayWin, baseDuration);
+        else {
+          setDisplayWin(settledDisplayWin);
+          await wait(Math.min(baseDuration, 220));
+        }
+      } else if (event.type === "win-tier") {
+        if (result.globalMultiplier > 1) setCelebrationWin(Number(event.payload.payout ?? 0));
+        else await countValue(setCelebrationWin, 0, Number(event.payload.payout ?? 0), Math.round(baseDuration * .72));
+        if (!skipPresentationRef.current) await wait(Math.round(baseDuration * .28));
+      } else {
+        await wait(baseDuration);
+      }
     }
     setGrid(result.finalGrid);
     setActiveEvent(undefined);
@@ -376,6 +475,9 @@ export default function AllahinLutfu({
     setDisplayMinTier(result.persistent.minimumCoinTier);
     setDisplayGlobalMultiplier(result.globalMultiplier);
     setDisplayCollectorValues(result.collectorValues);
+    setDisplayConcealedFeatureIds(new Set());
+    setDisplayConsumedFeatureIds(new Set());
+    setKeyVaultOpen(result.globalMultiplier > 1);
     setGlobalAppliedValues(result.globalAppliedValues);
     setDisplayWin(settledDisplayWin);
     skipPresentationRef.current = false;
@@ -496,7 +598,7 @@ export default function AllahinLutfu({
       ...persistent,
       minimumCoinTier: 0,
       globalMultiplier: 1,
-      eyeSlots: currentBonus ? persistent.eyeSlots : [],
+      eyeSlots: currentBonus && persistent.persistentEye ? persistent.eyeSlots : [],
       persistentEye: currentBonus ? persistent.persistentEye : undefined,
     };
     const result = runAllahSpin({
@@ -616,7 +718,12 @@ export default function AllahinLutfu({
     setAutoRemaining(0);
     autoRemainingRef.current = 0;
     setPhase("bonus-ready");
-    scheduleNext(650);
+    setPurchaseIntroTier(tier);
+    window.clearTimeout(autoTimerRef.current);
+    autoTimerRef.current = window.setTimeout(() => {
+      setPurchaseIntroTier(undefined);
+      scheduleNext(80);
+    }, 1_650);
   };
 
   const activateSpinMode = (nextMode: Exclude<AllahPurchaseMode, "bonus-buy" | "super-bonus-buy">) => {
@@ -656,25 +763,25 @@ export default function AllahinLutfu({
   };
 
   return (
-    <main className={`allah-slot ${eventClass} ${eventSideClass} is-${spinSpeed}`} style={{ "--allah-event-duration": `${eventDuration}ms` } as CSSProperties}>
-      <header className="allah-topbar">
-        <button className="allah-back" onClick={exitRoom}>← <span>Slot salonu</span></button>
-        <div className="allah-brand">
+    <main className={`allah-slot slot-game-shell ${eventClass} ${eventSideClass} ${eventDetailClass} is-${spinSpeed}`} style={{ "--allah-event-duration": `${eventDuration}ms` } as CSSProperties} onPointerDown={skipFromStage}>
+      <header className="allah-topbar slot-game-topbar">
+        <button className="allah-back slot-game-back" onClick={exitRoom}>← <span>Slot salonu</span></button>
+        <div className="allah-brand slot-game-brand">
           <small>ROYAL REELS · NUR DİVANI</small>
           <strong>ALLAH’IN LÜTFU</strong>
         </div>
-        <div className="allah-audio-tools">
+        <div className="allah-audio-tools slot-game-audio">
           <GameMusicControls game="allahin-lutfu" />
         </div>
-        <div className="allah-balance"><small>BAKİYE</small><strong>{money.format(balance)} PR</strong></div>
+        <div className="allah-balance slot-game-balance"><small>BAKİYE</small><strong>{money.format(balance)} PR</strong></div>
       </header>
 
-      <section className="allah-game-stage">
-        <section className="allah-machine">
+      <section className="allah-game-stage slot-game-stage">
+        <section className="allah-machine slot-game-machine">
           <div className="allah-global-bar">
             <div className="allah-wheel might"><img src="/assets/slots/allahin-lutfu/ui/might-wheel.png" alt="Kudret Çarkı" /><span>KUDRET</span></div>
             <div className="allah-global-core">
-              <div className="allah-key-slots" aria-label="Semavi Anahtar üçlü çarpan hanesi">
+              <div className={`allah-key-slots ${keyVaultOpen ? "is-unlocked" : activeEvent?.type === "key-vault-open" ? "is-opening" : "is-sealed"}`} aria-label="Semavi Anahtar üçlü çarpan hanesi">
                 {displayKeySlots.map((value, index) => {
                   const active = (activeEvent?.type === "key-slot-spin" || activeEvent?.type === "key-slot-lock") && Number(activeEvent.payload.slot) === index;
                   return <span className={`${value !== null ? "locked" : ""} ${active ? "active" : ""}`} key={index} style={{ "--key-slot": index } as CSSProperties}>
@@ -682,11 +789,9 @@ export default function AllahinLutfu({
                     <strong>{value === null ? "—" : `${value}×`}</strong>
                   </span>;
                 })}
+                {!keyVaultOpen && <div className="allah-key-vault-seal" aria-hidden="true"><i /><b>✦</b><i /></div>}
               </div>
               <div className="allah-global-value"><small>GLOBAL ÇARPAN</small><strong>{displayGlobalMultiplier}×</strong></div>
-              {(activeEvent?.type === "global-row-charge" || activeEvent?.type === "global-row-apply") && <div className="allah-global-row-caption" role="status">
-                {Number(activeEvent.payload.row) + 1}. SATIR · {money.format(Number(activeEvent.payload.before))}× × {displayGlobalMultiplier} = {money.format(Number(activeEvent.payload.after))}×
-              </div>}
             </div>
             <div className="allah-wheel mercy"><img src="/assets/slots/allahin-lutfu/ui/mercy-wheel.png" alt="Rahmet Çarkı" /><span>RAHMET</span></div>
           </div>
@@ -708,13 +813,14 @@ export default function AllahinLutfu({
             </div>
             <div className="allah-eye-console-copy">
               <strong>NUR GÖZÜ</strong>
-              <small>{persistent.persistentEye ? "BONUS BOYUNCA KALICI" : "HEDEFİ TAKİP EDER"}</small>
+              <small>{persistent.persistentEye ? "AÇILANLAR BONUS BOYUNCA KALIR" : "EŞLEŞEN SEMBOLLERİ GİZEME ÇEVİRİR"}</small>
               <div className="allah-eye-slots">
-                {Array.from({ length: 10 }, (_, index) => {
-                  const symbol = displayedEyeSlots[index];
+                {ALLAH_EYE_SYMBOL_ROSTER.map((symbol, index) => {
+                  const opened = displayedEyeSlots.includes(symbol);
                   return (
-                    <span key={index} className={`${symbol ? "filled" : ""} ${activeEvent?.type === "eye-slot-fill" && Number(activeEvent.payload.slot) === index ? "active" : ""}`}>
-                      {symbol ? <img src={ALLAH_SYMBOLS[symbol].image} alt={ALLAH_SYMBOLS[symbol].label} /> : <i />}
+                    <span key={symbol} title={ALLAH_SYMBOLS[symbol].label} className={`${opened ? "filled" : "locked"} ${(activeEvent?.type === "eye-slot-fill" || activeEvent?.type === "eye-symbol-trigger") && Number(activeEvent.payload.slot) === index ? "active" : ""}`}>
+                      <img src={ALLAH_SYMBOLS[symbol].image} alt={ALLAH_SYMBOLS[symbol].label} />
+                      {!opened && <i />}
                     </span>
                   );
                 })}
@@ -727,32 +833,44 @@ export default function AllahinLutfu({
             </div>
           </aside>
 
-          <div className="allah-grid" aria-label="5 reel 6 satır oyun alanı">
+          <div className="allah-grid slot-shell-reels" aria-label="5 reel 6 satır oyun alanı">
             {grid.map((row, rowIndex) =>
               row.map((cell, column) => {
-                const visual = cellVisual(cell, displayCollectorValues[cell.id] ?? 0, tuning.maxWinX);
+                const visual = cellVisual(cell, displayCollectorValues[cell.id] ?? 0, tuning.maxWinX, wager);
                 const key = `${rowIndex}-${column}`;
-                const globalTarget = activeCells.has(key) && (activeEvent?.type === "global-row-charge" || activeEvent?.type === "global-row-apply");
+                const globalTarget = activeCells.has(key) && activeEvent?.type === "global-row-apply";
                 const appliedValue = globalAppliedValues[cell.id];
-                const displayedValue = appliedValue === undefined ? visual.value : `${compactWager(appliedValue)}×`;
+                const displayedValue = appliedValue === undefined ? visual.value : `${money.format(appliedValue * wager)} PR`;
                 const mysterySequenceActive = activeEvent?.type === "mystery-roll" || activeEvent?.type === "mystery-reveal";
                 const streamsUntilResolved = mysterySequenceActive && cell.kind === "mystery";
                 const modifierIsRolling = activeEvent?.type === "modifier-coin-roll" && activeCells.has(key);
                 const showMysteryFlow = streamsUntilResolved || modifierIsRolling;
+                const featureIsConcealed = displayConcealedFeatureIds.has(cell.id);
+                const featureIsConsumed = displayConsumedFeatureIds.has(cell.id);
+                const featureIsOpening = activeEvent?.type === "board-multiplier-reveal" && activeCells.has(key);
+                const flightSource = activeEvent?.type === "coin-flight" && activeEvent.cells.slice(0, -1).some((position) => `${position.row}-${position.column}` === key);
+                const flightTarget = activeEvent?.type === "coin-flight" && (() => {
+                  const position = activeEvent.cells[activeEvent.cells.length - 1];
+                  return position ? `${position.row}-${position.column}` === key : false;
+                })();
                 return (
                   <div
-                    className={`allah-cell kind-${cell.kind} ${cell.fromMystery ? "mystery-born" : ""} ${activeCells.has(key) ? "event-target" : ""} ${appliedValue !== undefined ? "global-applied" : ""} ${visibleColumns.has(column) ? "is-visible" : "is-awaiting"}`}
+                    className={`allah-cell kind-${cell.kind} ${cell.fromMystery ? "mystery-born" : ""} ${activeCells.has(key) ? "event-target" : ""} ${flightSource ? "coin-flight-source" : ""} ${flightTarget ? "coin-flight-target" : ""} ${appliedValue !== undefined ? "global-applied" : ""} ${featureIsConcealed ? "is-feature-concealed" : ""} ${featureIsConsumed ? "is-feature-consumed" : ""} ${featureIsOpening ? "is-feature-opening" : ""} ${visibleColumns.has(column) ? "is-visible" : "is-awaiting"}`}
                     key={cell.id}
                     style={{ "--row": rowIndex, "--column": column } as CSSProperties}
-                    title={appliedValue === undefined ? visual.label : `${visual.label} · Global ${displayGlobalMultiplier}× → ${money.format(appliedValue)}×`}
+                    title={featureIsConcealed ? "Mühürlü özellik" : appliedValue === undefined ? visual.label : `${visual.label} · Global ${displayGlobalMultiplier}× → ${money.format(appliedValue * wager)} PR`}
                   >
-                    {visual.image && <img src={visual.image} alt="" draggable={false} />}
-                    {displayedValue && <b className={globalTarget && activeEvent?.type === "global-row-apply" ? "allah-global-new-value" : undefined}>{displayedValue}</b>}
+                    {visual.image && <img className="allah-cell-face" src={visual.image} alt="" draggable={false} />}
+                    {displayedValue && !featureIsConcealed && !featureIsConsumed && <b className={globalTarget && activeEvent?.type === "global-row-apply" ? "allah-global-new-value" : undefined}>{displayedValue}</b>}
+                    {(featureIsConcealed || featureIsOpening) && <span className={`allah-feature-seal ${featureIsOpening ? "is-opening" : ""}`} aria-hidden="true">
+                      <img className="seal-left" src="/assets/slots/allahin-lutfu/symbols/multiplier-medallion-sealed.png" alt="" />
+                      <img className="seal-right" src="/assets/slots/allahin-lutfu/symbols/multiplier-medallion-sealed.png" alt="" />
+                    </span>}
                     {globalTarget && <span className="allah-global-coin-equation" key={activeEvent!.id} aria-hidden="true">
                       {visual.value} <i>× {displayGlobalMultiplier}</i>
                     </span>}
-                    {cell.kind === "redrop" && <span className="allah-feature-tag">REDROP</span>}
-                    {cell.kind === "eye" && <i className="allah-cell-eye-pupil" />}
+                    {cell.kind === "redrop" && !featureIsConsumed && <span className="allah-feature-tag">REDROP</span>}
+                    {cell.kind === "eye" && !featureIsConsumed && <i className="allah-cell-eye-pupil" />}
                     {showMysteryFlow && (
                       <span
                         className={`allah-mystery-reel ${streamsUntilResolved ? "is-streaming" : "is-converting"}`}
@@ -770,7 +888,7 @@ export default function AllahinLutfu({
                 );
               }),
             )}
-            {(activeEvent?.type === "global-row-charge" || activeEvent?.type === "global-row-apply") && <div
+            {activeEvent?.type === "global-row-apply" && <div
               key={activeEvent.id}
               className="allah-global-row-wave"
               aria-hidden="true"
@@ -789,7 +907,11 @@ export default function AllahinLutfu({
                       "--y1": `${(target.row + .5) * (100 / 6)}%`,
                       "--flight-delay": `${Math.min(index * 34, 360)}ms`,
                     } as CSSProperties}
-                  ><b>{compactWager(Number(activeEvent.payload.value ?? 0))}×</b></i>
+                    className={activeEvent.payload.sourceKind === "collector" ? "source-collector" : "source-coin"}
+                  >
+                    {activeEvent.payload.sourceKind === "collector" && <img src="/assets/slots/allahin-lutfu/symbols/collector.png" alt="" />}
+                    <b>{money.format(Number(activeEvent.payload.value ?? 0) * wager)} PR</b>
+                  </i>
                 ))}
               </div>;
             })()}
@@ -800,8 +922,19 @@ export default function AllahinLutfu({
                 "--y0": `${(source.row + .5) * (100 / 6)}%`,
                 "--x1": `${(target.column + .5) * 20}%`,
                 "--y1": `${(target.row + .5) * (100 / 6)}%`,
-              } as CSSProperties}>M</i>;
+              } as CSSProperties}><img src={ALLAH_SYMBOLS[activeEvent.payload.selected as keyof typeof ALLAH_SYMBOLS].image} alt="" /></i>;
             })()}
+            {activeEvent?.type === "eye-symbol-trigger" && <div className="allah-eye-match-layer" aria-hidden="true">
+              {activeEvent.cells.map((target, index) => (
+                <i key={`${target.row}-${target.column}`} style={{
+                  "--x0": "-7%",
+                  "--y0": "44%",
+                  "--x1": `${(target.column + .5) * 20}%`,
+                  "--y1": `${(target.row + .5) * (100 / 6)}%`,
+                  "--flight-delay": `${index * 70}ms`,
+                } as CSSProperties}><img src={ALLAH_SYMBOLS[activeEvent.payload.selected as keyof typeof ALLAH_SYMBOLS].image} alt="" /></i>
+              ))}
+            </div>}
             {activeEvent?.type === "board-multiplier-cast" && activeEvent.cells.length === 2 && (() => {
               const [source, target] = activeEvent.cells;
               return <i className="allah-multiplier-projectile" aria-hidden="true" style={{
@@ -815,47 +948,85 @@ export default function AllahinLutfu({
               "--wave-x": `${(activeEvent.cells[0].column + .5) * 20}%`,
               "--wave-y": `${(activeEvent.cells[0].row + .5) * (100 / 6)}%`,
             } as CSSProperties} />}
+            {activeEvent?.type === "payline-trace" && activeEvent.cells.at(-1) && <span className="allah-line-pr" role="status" style={{
+              "--line-x": `${(activeEvent.cells.at(-1)!.column + .5) * 20}%`,
+              "--line-y": `${(activeEvent.cells.at(-1)!.row + .5) * (100 / 6)}%`,
+            } as CSSProperties}>{money.format(Number(activeEvent.payload.payout ?? 0))} PR</span>}
           </div>
+
+          {activeEvent?.type === "global-final" && <div className="allah-global-final" role="status">
+            <small>TOPLAM KAZANÇ BANKASI</small>
+            <div>
+              <strong>{money.format(Number(activeEvent.payload.basePayout ?? 0))} PR</strong>
+              <i>×</i>
+              <b>{money.format(Number(activeEvent.payload.multiplier ?? 1))}×</b>
+            </div>
+            <span>{money.format(globalFinalWin)} PR</span>
+          </div>}
+
+          {((activeEvent?.type === "bonus-portal" || activeEvent?.type === "bonus-upgrade") && eventBonusTier) && <div className={`allah-bonus-transition tier-${eventBonusTier}`} role="status">
+            <img src={bonusArt(eventBonusTier)} alt="" />
+            <small>{activeEvent.type === "bonus-upgrade" ? "LÜTUF YÜKSELİYOR" : "KAPI AÇILDI"}</small>
+            <strong>{bonusLabel(eventBonusTier)}</strong>
+            <b>{tuning.bonusSpins} DÖNÜŞ</b>
+          </div>}
+
+          {purchaseIntroTier && <div className={`allah-bonus-transition purchased tier-${purchaseIntroTier}`} role="status">
+            <img src={bonusArt(purchaseIntroTier)} alt="" />
+            <small>ÖZEL OYUN HAZIR</small>
+            <strong>{bonusLabel(purchaseIntroTier)}</strong>
+            <b>{tuning.bonusSpins} DÖNÜŞ</b>
+          </div>}
+
+          {activeEvent?.type === "max-coin-award" && <div className="allah-max-coin-award" role="status">
+            <img src="/assets/slots/allahin-lutfu/symbols/max-win-coin.png" alt="" />
+            <small>KASA SINIRI AÇILDI</small>
+            <strong>{money.format(Number(activeEvent.payload.payout ?? 0))} PR</strong>
+          </div>}
 
           {activeWinScene && <div
             className={`allah-win-overlay tier-${String(activeEvent?.payload.tier)}`}
             style={{ "--win-scene": `url(${activeWinScene.image})` } as CSSProperties}
           >
             <div className="allah-win-copy">
-              <small>{activeWinScene.eyebrow}</small>
-              <strong>{activeWinScene.title}</strong>
-              <b>{money.format(Number(activeEvent?.payload.payout ?? 0))} PR</b>
-              <em>{money.format(Number(activeEvent?.payload.grossMultiplier ?? 0))}×</em>
+              <small>{liveWinScene.eyebrow}</small>
+              <strong>{liveWinScene.title}</strong>
+              <b>{money.format(celebrationWin)} PR</b>
+              <em>KESİN TUR ÖDEMESİ</em>
             </div>
           </div>}
 
         </section>
+        <aside className="allah-guardian-panel slot-game-character" aria-label="Nur Muhafızı">
+          <i className="allah-guardian-halo" />
+          <img className="allah-guardian" src="/assets/slots/allahin-lutfu/character/nur-muhafizi-v3-source.png" alt="Baykuşlu Nur Muhafızı" />
+          <div className="allah-guardian-caption"><small>KASANIN MUHAFIZI</small><strong>NUR MUHAFIZI</strong></div>
+        </aside>
       </section>
 
-      <section className="allah-controls">
-        <div className="allah-bet-control">
+      <section className="allah-controls slot-game-dock">
+        <div className="allah-bet-control slot-game-dock__bet">
           <label htmlFor="allah-wager">BAHİS</label>
-          <button onClick={() => setWager(settings.minBet)} disabled={busy || Boolean(bonus)}>MİN</button>
-          <input
-            id="allah-wager"
-            inputMode="decimal"
-            type="number"
-            min={settings.minBet}
-            value={wager}
-            disabled={busy || Boolean(bonus)}
-            onChange={(event) => setWager(normalizeWagerInput(Number(event.target.value), settings.minBet))}
-          />
-          <button onClick={() => setWager(Math.max(settings.minBet, maxWager))} disabled={busy || Boolean(bonus)}>MAKS</button>
-          <button onClick={() => setWager((value) => Math.max(settings.minBet, value - betStep))} disabled={busy || Boolean(bonus)}>−{compactWager(betStep)}</button>
-          <button onClick={() => setWager((value) => Math.min(Math.max(settings.minBet, maxWager), value + betStep))} disabled={busy || Boolean(bonus)}>+{compactWager(betStep)}</button>
-          <button onClick={() => setWager((value) => Math.max(settings.minBet, Math.floor(value / 2)))} disabled={busy || Boolean(bonus)}>½</button>
-          <button onClick={() => setWager((value) => Math.min(Math.max(settings.minBet, maxWager), value * 2))} disabled={busy || Boolean(bonus)}>2×</button>
-          <select value={betStep} onChange={(event) => setBetStep(Number(event.target.value))} disabled={busy || Boolean(bonus)} aria-label="Bahis artış adımı">
-            {CASINO_BET_STEPS.map((step) => <option key={step} value={step}>Adım {compactWager(step)}</option>)}
-          </select>
+          <button className="slot-game-dock__min" onClick={() => setWager(settings.minBet)} disabled={busy || Boolean(bonus)}>MİN</button>
+          <button className="slot-game-dock__decrease" onClick={() => setWager((value) => Math.max(settings.minBet, value - betStep))} disabled={busy || Boolean(bonus)} aria-label={`Bahsi ${compactWager(betStep)} PR azalt`}>−</button>
+          <label className="allah-bet-input slot-game-dock__amount">
+            <input
+              id="allah-wager"
+              inputMode="decimal"
+              type="number"
+              min={settings.minBet}
+              value={wager}
+              disabled={busy || Boolean(bonus)}
+              onChange={(event) => setWager(normalizeWagerInput(Number(event.target.value), settings.minBet))}
+            />
+            <span>PR</span>
+          </label>
+          <button className="slot-game-dock__increase" onClick={() => setWager((value) => Math.min(Math.max(settings.minBet, maxWager), value + betStep))} disabled={busy || Boolean(bonus)} aria-label={`Bahsi ${compactWager(betStep)} PR artır`}>+</button>
+          <button className="slot-game-dock__max" onClick={() => setWager(Math.max(settings.minBet, maxWager))} disabled={busy || Boolean(bonus)}>MAKS</button>
+          <button className="slot-game-dock__more" onClick={() => setBetToolsOpen(true)} disabled={busy || Boolean(bonus)} aria-label="Bahis ayarlarını aç">•••</button>
         </div>
 
-        <div className="allah-mode-control">
+        <div className="allah-mode-control slot-game-dock__mode">
           <label>SEÇİLİ OYUN</label>
           <button
             className="allah-mode-opener"
@@ -871,7 +1042,7 @@ export default function AllahinLutfu({
         </div>
 
         <button
-          className={`allah-spin ${busy ? "is-stop" : ""}`}
+          className={`allah-spin slot-game-dock__spin ${busy ? "is-stop" : ""}`}
           onClick={() => void spin(false)}
           disabled={!busy && !bonus && balance < currentCost}
         >
@@ -880,7 +1051,7 @@ export default function AllahinLutfu({
           <small>{busy ? "SONUCU HEMEN GÖR" : bonus ? bonusLabel(bonus.tier) : `${money.format(currentCost)} PR`}</small>
         </button>
 
-        <div className="allah-quick-actions">
+        <div className="allah-quick-actions slot-game-dock__actions">
           <button
             className={spinSpeed === "turbo" ? "active" : ""}
             onClick={() => {
@@ -1045,6 +1216,35 @@ export default function AllahinLutfu({
         </div>
       )}
 
+      {betToolsOpen && (
+        <div className="allah-modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setBetToolsOpen(false)}>
+          <section className="allah-modal allah-bet-modal" role="dialog" aria-modal="true" aria-labelledby="allah-bet-title">
+            <button className="allah-modal-close" onClick={() => setBetToolsOpen(false)}>×</button>
+            <small>BAHİS AYARLARI</small>
+            <h2 id="allah-bet-title">Bahsini hassas ayarla.</h2>
+            <div className="allah-bet-modal-value">
+              <span>AKTİF BAHİS</span>
+              <strong>{money.format(wager)} PR</strong>
+            </div>
+            <div className="allah-bet-modal-actions">
+              <button onClick={() => setWager(settings.minBet)}>MİN</button>
+              <button onClick={() => setWager((value) => Math.max(settings.minBet, Math.floor(value / 2)))}>½</button>
+              <button onClick={() => setWager((value) => Math.min(Math.max(settings.minBet, maxWager), value * 2))}>2×</button>
+              <button onClick={() => setWager(Math.max(settings.minBet, maxWager))}>MAKS</button>
+            </div>
+            <label className="allah-bet-step-label" htmlFor="allah-bet-step">ARTIŞ / AZALIŞ ADIMI</label>
+            <select id="allah-bet-step" value={betStep} onChange={(event) => setBetStep(Number(event.target.value))}>
+              {CASINO_BET_STEPS.map((step) => <option key={step} value={step}>{compactWager(step)} PR</option>)}
+            </select>
+            <div className="allah-bet-step-preview">
+              <button onClick={() => setWager((value) => Math.max(settings.minBet, value - betStep))}>− {compactWager(betStep)} PR</button>
+              <button onClick={() => setWager((value) => Math.min(Math.max(settings.minBet, maxWager), value + betStep))}>+ {compactWager(betStep)} PR</button>
+            </div>
+            <button className="allah-modal-primary" onClick={() => setBetToolsOpen(false)}>UYGULA</button>
+          </section>
+        </div>
+      )}
+
       {rulesOpen && (
         <div className="allah-modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setRulesOpen(false)}>
           <section className="allah-modal allah-rules-modal" role="dialog" aria-modal="true" aria-labelledby="allah-rules-title">
@@ -1054,7 +1254,7 @@ export default function AllahinLutfu({
             <div className="allah-rules-grid">
               <article><b>5×6 · 28 çizgi</b><p>3+ aynı sembol en soldan başlayıp bitişik reellerde sürerse öder.</p></article>
               <article><b>Coin’ler</b><p>Bronz 1×–4× ile başlar; Elmas 10.000×–50.000×. Max Coin {money.format(tuning.maxWinX)}× sınırıdır.</p></article>
-              <article><b>Nur Gözü</b><p>Makaraya indiğinde alanı tarar, rastgele hücrelere Mystery yollar. Mystery’ler soldan sağa ve yukarıdan aşağıya tek tek dönerek yalnız coin veya özelliklere açılır; Mystery’den yeni bir Göz gelirse o da yeni Mystery alanları açarak zinciri büyütür. Normal ödeme sembolü üretemez. İşlev sembolleri görevleri tamamlanınca yeniden dönüp coin olur.</p></article>
+              <article><b>Nur Gözü</b><p>Makaraya indiğinde soldaki sembol tabletinden bir karakter açar; tahtada yalnız o karakterle eşleşen bütün semboller Gizem’e dönüşür. Altın ve Zümrüt Göz ile açılan tablet sembolleri bonus boyunca kalır ve sonraki tahtalarda da kendi eşlerini tetikler. Gizem’ler yalnız coin veya özelliklere açılır; normal ödeme sembolü üretmez.</p></article>
               <article><b>Collector</b><p>Normal makaraya doğrudan düşmez; Mystery’den açılır. Bütün coin ve dolu Collector değerlerini, diğer işlevler bittikten sonra sırayla kendine çeker. Ardından yalnız o özellikte aktif olan `M` kökenli hücreler yeniden Mystery dönmeye başlar; normal makara alanları değişmez. Çifte Lütuf bunu iki kez yapar.</p></article>
               <article><b>Kaderin Hükmü</b><p>5.000× maliyetli FU Spin karşılığıdır: ilk 5×6 ekranın tamamı Mystery gelir ve tek bahis içinde özellik zincirine açılır.</p></article>
               <article><b>Yükseltici / Redrop</b><p>Yükseltici açıldığı anda en düşük coin katmanını kaldırır; aynı Mystery akışında ondan sonra açılan coin bile yeni tabanı kullanır. Redrop, Odin’s Vault’taki Redrop özelliğinin karşılığıdır: normal/premium ödeme sembollerini siler, coin ve özellikleri korur, boşluklara yeni sonuçları yukarıdan indirir.</p></article>

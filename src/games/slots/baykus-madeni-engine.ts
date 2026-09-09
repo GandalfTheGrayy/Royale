@@ -246,7 +246,7 @@ export function runMineSpin(options: {
   }
 
   let blockWinX = 0;
-  let chestMultiplierX = 1;
+  let chestMultiplierX = 0;
   let chestAddX = 0;
   const openedChests: number[] = [];
   const exploded = new Set<string>();
@@ -256,7 +256,7 @@ export function runMineSpin(options: {
     if (mine.chests[column].opened || !mine.columns[column].every((cell) => cell.hp <= 0)) return;
     const multiplier = rollValue(tuning.chestValueWeights);
     mine.chests[column] = { opened: true, multiplier };
-    chestMultiplierX *= multiplier;
+    chestMultiplierX += multiplier;
     chestAddX += multiplier;
     openedChests.push(column);
     events.push({ kind: "chest", column, wave, label: `Sandık ${multiplier}×`, valueX: multiplier });
@@ -353,7 +353,7 @@ export function runMineSpin(options: {
     blockWinX,
     chestMultiplierX,
     chestAddX,
-    totalWinX: Math.min(tuning.maxWinX, blockWinX * chestMultiplierX * scale),
+    totalWinX: Math.min(tuning.maxWinX, blockWinX * (chestMultiplierX || 1) * scale),
     openedChests,
     events,
   };

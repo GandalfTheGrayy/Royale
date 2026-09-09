@@ -11,7 +11,24 @@ export type AllahNormalSymbolId =
   | "star-of-david"
   | "gate-of-light"
   | "hand-of-blessing"
+  | "ruby-pomegranate"
   | "celestial-key";
+
+/**
+ * The fixed symbol tablet shown beneath Odin's Eye. An Eye unlocks one entry
+ * on this tablet and only matching symbols on the board become Mystery cells.
+ */
+export const ALLAH_EYE_SYMBOL_ROSTER: readonly AllahNormalSymbolId[] = [
+  "rosette",
+  "golden-owl",
+  "lantern",
+  "star-of-david",
+  "crescent",
+  "gate-of-light",
+  "tree-of-life",
+  "hand-of-blessing",
+  "ruby-pomegranate",
+];
 
 export type AllahEyeVariant = "blue" | "gold" | "emerald";
 export type AllahCoinTier =
@@ -75,9 +92,12 @@ export type AllahFeatureEventType =
   | "eye-look-down-grid"
   | "eye-ray"
   | "eye-slot-fill"
+  | "eye-symbol-trigger"
   | "mystery-seed"
   | "mystery-roll"
   | "mystery-reveal"
+  | "board-multiplier-anticipation"
+  | "board-multiplier-reveal"
   | "key-flight"
   | "key-vault-open"
   | "key-slot-spin"
@@ -85,8 +105,10 @@ export type AllahFeatureEventType =
   | "wheel-anticipation"
   | "wheel-spin"
   | "global-merge"
+  | "global-merge-apply"
   | "global-row-charge"
   | "global-row-apply"
+  | "global-final"
   | "board-multiplier-wake"
   | "board-multiplier-cast"
   | "board-multiplier-apply"
@@ -105,6 +127,7 @@ export type AllahFeatureEventType =
   | "scatter-lock"
   | "bonus-portal"
   | "bonus-upgrade"
+  | "max-coin-award"
   | "payout-count"
   | "win-tier"
   | "settlement"
@@ -124,6 +147,10 @@ export type AllahFeatureEvent = {
   minimumCoinTier: number;
   globalMultiplier: number;
   collectorValues: Record<string, number>;
+  /** Feature faces that are still physically sealed in this presentation frame. */
+  concealedFeatureIds: string[];
+  /** Feature sources already consumed by a flight, hidden until their next roll. */
+  consumedFeatureIds: string[];
   /** Presentation-only values after the final global multiplier, keyed by cell id. */
   globalAppliedValues: Record<string, number>;
 };
@@ -244,6 +271,12 @@ export const ALLAH_SYMBOLS: Record<
     pays: { 3: 2, 4: 3, 5: 10 },
     weight: 4,
   },
+  "ruby-pomegranate": {
+    label: "Yakut Nar",
+    image: "/assets/slots/allahin-lutfu/symbols/ruby-pomegranate.png",
+    pays: { 3: 2.2, 4: 5, 5: 15 },
+    weight: 3,
+  },
   "celestial-key": {
     label: "Semavi Anahtar",
     image: "/assets/slots/allahin-lutfu/symbols/celestial-key.png",
@@ -310,11 +343,11 @@ export const ALLAH_COIN_TIERS = Object.keys(
  */
 const normalDurations: Record<AllahFeatureEventType, [number, number]> = {
   "spin-commit": [80, 30],
-  "guardian-ack": [190, 70],
+  "guardian-ack": [800, 120],
   "column-feed": [240, 65],
   "reel-impact": [85, 35],
-  "payline-trace": [340, 105],
-  "symbol-pulse": [300, 90],
+  "payline-trace": [650, 125],
+  "symbol-pulse": [460, 100],
   "eye-wake": [620, 110],
   "eye-look-up": [340, 90],
   "eye-look-left": [340, 90],
@@ -322,18 +355,23 @@ const normalDurations: Record<AllahFeatureEventType, [number, number]> = {
   "eye-look-down-grid": [340, 90],
   "eye-ray": [480, 110],
   "eye-slot-fill": [560, 130],
+  "eye-symbol-trigger": [1_300, 220],
   "mystery-seed": [680, 45],
   "mystery-roll": [480, 60],
   "mystery-reveal": [420, 45],
-  "key-flight": [520, 150],
-  "key-vault-open": [420, 120],
+  "board-multiplier-anticipation": [720, 170],
+  "board-multiplier-reveal": [880, 210],
+  "key-flight": [720, 160],
+  "key-vault-open": [620, 150],
   "key-slot-spin": [540, 130],
   "key-slot-lock": [260, 70],
-  "wheel-anticipation": [480, 150],
+  "wheel-anticipation": [760, 180],
   "wheel-spin": [980, 300],
   "global-merge": [480, 150],
+  "global-merge-apply": [620, 160],
   "global-row-charge": [360, 100],
   "global-row-apply": [640, 180],
+  "global-final": [2_400, 780],
   "board-multiplier-wake": [420, 110],
   "board-multiplier-cast": [340, 85],
   "board-multiplier-apply": [260, 65],
@@ -343,15 +381,16 @@ const normalDurations: Record<AllahFeatureEventType, [number, number]> = {
   "modifier-coin-roll": [430, 95],
   "modifier-coin-land": [460, 65],
   "redrop-clear": [480, 140],
-  "redrop-fall": [680, 200],
+  "redrop-fall": [820, 220],
   "collector-wake": [580, 120],
   "coin-flight": [220, 48],
   "collector-merge": [100, 36],
   "super-collector-reset": [400, 120],
   "feature-respin": [680, 90],
-  "scatter-lock": [620, 190],
+  "scatter-lock": [700, 180],
   "bonus-portal": [1_200, 380],
   "bonus-upgrade": [1_150, 360],
+  "max-coin-award": [1_850, 520],
   "payout-count": [1_100, 330],
   "win-tier": [3_600, 1_400],
   settlement: [120, 50],
@@ -743,15 +782,6 @@ function roundX(value: number) {
   return Math.round((value + Number.EPSILON) * 10_000) / 10_000;
 }
 
-function shufflePositions(values: AllahCellPosition[], random: AllahRandom) {
-  const shuffled = values.map((value) => ({ ...value }));
-  for (let index = shuffled.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(boundedRandom(random) * (index + 1));
-    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
-  }
-  return shuffled;
-}
-
 export function runAllahSpin(
   request: AllahSpinRequest,
   random: AllahRandom = Math.random,
@@ -765,6 +795,7 @@ export function runAllahSpin(
     ...request.persistent,
     eyeSlots: [...(request.persistent?.eyeSlots ?? [])],
   };
+  if (request.bonus && !state.persistentEye) state.eyeSlots = [];
   const serial = { value: 0 };
   // Forced boards are deterministic fixtures and must not consume the random
   // stream before their feature sequence starts.
@@ -787,6 +818,8 @@ export function runAllahSpin(
   const collectorValues: Record<string, number> = {};
   const globalAppliedValues: Record<string, number> = {};
   const collectedCoinIds = new Set<string>();
+  const revealedFeatureIds = new Set<string>();
+  const consumedFeatureIds = new Set<string>();
   let globalKeySlots: Array<number | null> = state.globalMultiplier > 1
     ? [state.globalMultiplier, null, null]
     : [null, null, null];
@@ -811,6 +844,10 @@ export function runAllahSpin(
       minimumCoinTier: state.minimumCoinTier,
       globalMultiplier: state.globalMultiplier,
       collectorValues: { ...collectorValues },
+      concealedFeatureIds: grid.flat()
+        .filter((cell) => cell.kind === "multiplier" && !revealedFeatureIds.has(cell.id))
+        .map((cell) => cell.id),
+      consumedFeatureIds: [...consumedFeatureIds],
       globalAppliedValues: { ...globalAppliedValues },
     });
   };
@@ -835,6 +872,7 @@ export function runAllahSpin(
         payline: win.payline + 1,
         symbol: win.symbol,
         multiplier: win.multiplier,
+        payout: roundMoney(Math.max(0, request.wager) * win.multiplier * tuning.linePayoutScale),
       });
       emit("symbol-pulse", win.cells, { symbol: win.symbol });
     }
@@ -878,7 +916,7 @@ export function runAllahSpin(
     state.minimumCoinTier = nextMinimumTier;
     // Existing coins keep their face value. Every cell generated after this
     // exact point in reading order sees the new minimum immediately.
-    emit("coin-upgrader-charge", [position], {
+    emit("coin-upgrader-apply", [position], {
       removedTier,
       minimumTier: ALLAH_COIN_TIERS[state.minimumCoinTier],
       upgradeLevel: state.minimumCoinTier,
@@ -926,6 +964,57 @@ export function runAllahSpin(
         activateUpgrader(position);
     });
   };
+
+  const seedEyeMatches = (
+    selected: AllahNormalSymbolId,
+    sourcePosition?: AllahCellPosition,
+    persistent = false,
+  ) => {
+    const slot = ALLAH_EYE_SYMBOL_ROSTER.indexOf(selected);
+    const targets = readingOrder(positionsOf(
+      grid,
+      (cell) => cell.kind === "symbol" && cell.symbol === selected,
+    ));
+    if (persistent && targets.length)
+      emit("eye-symbol-trigger", targets, {
+        selected,
+        slot,
+        persistent: true,
+        count: targets.length,
+      });
+    for (let index = 0; index < targets.length; index += 1) {
+      const target = targets[index];
+      if (sourcePosition)
+        emit("eye-ray", [sourcePosition, target], {
+          selected,
+          slot,
+          targetColumn: target.column,
+          targetRow: target.row,
+          index: index + 1,
+          total: targets.length,
+        });
+      grid[target.row][target.column] = {
+        id: `${runId}-eye-mystery-${serial.value++}`,
+        kind: "mystery",
+        source: "eye",
+      };
+      emit("mystery-seed", [target], {
+        source: "eye",
+        selected,
+        slot,
+        persistent,
+        index: index + 1,
+        total: targets.length,
+      });
+    }
+    return targets;
+  };
+
+  // Golden and emerald Eyes keep previously unlocked tablet symbols active
+  // during the bonus. Each new board converts only those exact matches.
+  if (request.bonus && state.persistentEye && state.eyeSlots.length) {
+    for (const selected of state.eyeSlots) seedEyeMatches(selected, undefined, true);
+  }
   let featureCycles = 0;
   const maxCycles = Math.max(
     1,
@@ -956,51 +1045,29 @@ export function runAllahSpin(
       const eye = eventPayloadCell(grid, position);
       if (eye.kind !== "eye") continue;
       processed.add(eye.id);
-      const selected = pickNormalSymbol(random);
+      const visibleUnopened = ALLAH_EYE_SYMBOL_ROSTER.filter(
+        (symbol) =>
+          !state.eyeSlots.includes(symbol) &&
+          grid.flat().some((cell) => cell.kind === "symbol" && cell.symbol === symbol),
+      );
+      const unopened = ALLAH_EYE_SYMBOL_ROSTER.filter(
+        (symbol) => !state.eyeSlots.includes(symbol),
+      );
+      const selected = pick(visibleUnopened.length ? visibleUnopened : unopened.length ? unopened : ALLAH_EYE_SYMBOL_ROSTER, random);
       emit("eye-wake", [position], { variant: eye.variant });
-      emit("eye-look-left", [position], { targetColumn: Math.max(0, position.column - 1) });
-      emit("eye-look-right", [position], { targetColumn: Math.min(ALLAH_REELS - 1, position.column + 1) });
-      emit("eye-look-up", [position], { targetColumn: position.column });
-      emit("eye-look-down-grid", [position], { targetColumn: position.column });
-      state.eyeSlots = [...state.eyeSlots, selected].slice(-10);
-      emit("eye-slot-fill", [position], { selected, slot: state.eyeSlots.length - 1 });
+      emit("eye-look-left", [position], { variant: eye.variant, targetColumn: Math.max(0, position.column - 1) });
+      emit("eye-look-right", [position], { variant: eye.variant, targetColumn: Math.min(ALLAH_REELS - 1, position.column + 1) });
+      emit("eye-look-up", [position], { variant: eye.variant, targetColumn: position.column });
+      emit("eye-look-down-grid", [position], { variant: eye.variant, targetColumn: position.column });
+      if (!state.eyeSlots.includes(selected)) state.eyeSlots = [...state.eyeSlots, selected];
+      emit("eye-slot-fill", [position], {
+        variant: eye.variant,
+        selected,
+        slot: ALLAH_EYE_SYMBOL_ROSTER.indexOf(selected),
+      });
 
-      const candidates = positionsOf(grid, (cell) => cell.kind === "symbol");
-      const targetMin = Math.max(
-        1,
-        Math.floor(request.bonus ? tuning.bonusEyeTargetsMin : tuning.eyeTargetsMin),
-      );
-      const targetMax = Math.max(
-        targetMin,
-        Math.floor(request.bonus ? tuning.bonusEyeTargetsMax : tuning.eyeTargetsMax),
-      );
-      const seedCount = Math.min(
-        candidates.length,
-        targetMin + Math.floor(boundedRandom(random) * (targetMax - targetMin + 1)),
-      );
-      const seeded = shufflePositions(candidates, random).slice(0, seedCount);
-      for (let index = 0; index < seeded.length; index += 1) {
-        const target = seeded[index];
-        emit("eye-ray", [position, target], {
-          selected,
-          targetColumn: target.column,
-          targetRow: target.row,
-          index: index + 1,
-          total: seeded.length,
-        });
-        grid[target.row][target.column] = {
-          id: `${runId}-eye-mystery-${serial.value++}`,
-          kind: "mystery",
-          source: "eye",
-        };
-        emit("mystery-seed", [target], {
-          source: "eye",
-          selected,
-          index: index + 1,
-          total: seeded.length,
-        });
-      }
-      revealMysteries(seeded, "eye", { selected });
+      const seeded = seedEyeMatches(selected, position);
+      revealMysteries(seeded, "eye", { selected, variant: eye.variant });
       captureLineWins();
     }
 
@@ -1015,6 +1082,14 @@ export function runAllahSpin(
       ).filter(
         (cell) => Math.abs(cell.row - position.row) <= 1 && Math.abs(cell.column - position.column) <= 1,
       ));
+      emit("board-multiplier-anticipation", [position], {
+        affected: affected.length,
+      });
+      revealedFeatureIds.add(multiplier.id);
+      emit("board-multiplier-reveal", [position], {
+        value: multiplier.value,
+        affected: affected.length,
+      });
       emit("board-multiplier-wake", [position], {
         value: multiplier.value,
         affected: affected.length,
@@ -1092,6 +1167,7 @@ export function runAllahSpin(
       globalKeyRounds += 1;
       const side = boundedRandom(random) < 0.5 ? "might" : "mercy";
       emit("key-flight", [position], { side, keyRound: globalKeyRounds });
+      consumedFeatureIds.add(key.id);
       emit("wheel-anticipation", [], { side, keyRound: globalKeyRounds });
       emit("key-vault-open", [], { side, slots: 3, keyRound: globalKeyRounds });
       let roundTotal = 0;
@@ -1115,11 +1191,22 @@ export function runAllahSpin(
         total: keyTotal,
         keyRound: globalKeyRounds,
       });
-      state.globalMultiplier = Math.min(
+      const previousGlobalMultiplier = state.globalMultiplier;
+      const nextGlobalMultiplier = Math.min(
         Math.max(1, tuning.globalMultiplierCap),
         Math.max(1, keyTotal),
       );
       emit("global-merge", [], {
+        before: previousGlobalMultiplier,
+        value: nextGlobalMultiplier,
+        added: roundTotal,
+        total: keyTotal,
+        side,
+        keyRound: globalKeyRounds,
+      });
+      state.globalMultiplier = nextGlobalMultiplier;
+      emit("global-merge-apply", [], {
+        before: previousGlobalMultiplier,
         value: state.globalMultiplier,
         added: roundTotal,
         total: keyTotal,
@@ -1264,8 +1351,15 @@ export function runAllahSpin(
     }
   }
 
-  const scatterPositions = positionsOf(grid, (cell) => cell.kind === "scatter");
-  if (scatterPositions.length) emit("scatter-lock", scatterPositions, { count: scatterPositions.length });
+  const scatterPositions = readingOrder(positionsOf(grid, (cell) => cell.kind === "scatter"));
+  scatterPositions.forEach((position, index) => emit("scatter-lock", [position], {
+    count: scatterPositions.length,
+    index: index + 1,
+  }));
+  const maxCoinPositions = readingOrder(positionsOf(grid, (cell) => cell.kind === "max-coin"));
+  if (maxCoinPositions.length) emit("max-coin-award", maxCoinPositions, {
+    payout: roundMoney(Math.max(0, request.wager) * valueCapX),
+  });
   const naturalTier = scatterPatternTier(grid);
   let triggeredBonus = naturalTier;
   let bonusUpgrade: AllahBonusTier | undefined;
@@ -1345,6 +1439,15 @@ export function runAllahSpin(
       emit("global-row-apply", cells, payload);
     }
   }
+  if (state.globalMultiplier > 1 && !maxCoin) {
+    const baseMultiplier = roundX(lineWinX + coinWinX + collectorWinX);
+    emit("global-final", [], {
+      baseMultiplier,
+      basePayout: roundMoney(Math.max(0, request.wager) * baseMultiplier),
+      multiplier: state.globalMultiplier,
+      finalPayout: payout,
+    });
+  }
   emit("payout-count", [], {
     lineWinX,
     coinWinX,
@@ -1352,8 +1455,16 @@ export function runAllahSpin(
     globalMultiplier: state.globalMultiplier,
     grossMultiplier,
   });
-  if (grossMultiplier >= 10) {
-    const tier = grossMultiplier >= 10_000 ? "divine" : grossMultiplier >= 1_000 ? "insane" : grossMultiplier >= 100 ? "epic" : "nice";
+  if (grossMultiplier >= 5) {
+    const tier = grossMultiplier >= 1_000
+      ? "divine"
+      : grossMultiplier >= 500
+        ? "insane"
+        : grossMultiplier >= 100
+          ? "epic"
+          : grossMultiplier >= 25
+            ? "great"
+            : "nice";
     emit("win-tier", [], { tier, grossMultiplier, payout });
   }
   emit("settlement", [], { payout, grossMultiplier, maxWin: grossMultiplier >= valueCapX });

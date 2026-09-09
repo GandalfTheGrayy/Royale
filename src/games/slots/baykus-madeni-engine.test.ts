@@ -101,7 +101,7 @@ describe("Baykuş Madeni motoru", () => {
     expect(new Set(hits.map((event) => event.wave))).toEqual(new Set([1, 2, 3, 4, 5, 6, 7]));
   });
 
-  it("aynı turda açılan sandıkları blok kazancına sırayla çarpar", () => {
+  it("aynı turda açılan sandıkları tek global çarpanda toplar", () => {
     const tuning = structuredClone(DEFAULT_MINE_DROP_TUNING);
     tuning.symbolWeights.base = { tool: 1, eye: 0, tnt: 0, book: 0, maxBook: 0, empty: 0 };
     tuning.toolWeights.base = { bronze: 1, iron: 0, gold: 0, diamond: 0, obsidian: 0 };
@@ -115,8 +115,8 @@ describe("Baykuş Madeni motoru", () => {
     const result = runMineSpin({ mine, mode: "base", random: () => 0, tuning });
     expect(result.openedChests).toHaveLength(5);
     expect(result.blockWinX).toBe(10);
-    expect(result.chestMultiplierX).toBe(243);
-    expect(result.totalWinX).toBe(2_430);
+    expect(result.chestMultiplierX).toBe(15);
+    expect(result.totalWinX).toBe(150);
   });
 
   it("premium dönüşler için sandıklara yaklaşan önceden kazılmış saha kurar", () => {
@@ -151,6 +151,16 @@ describe("Baykuş Madeni motoru", () => {
     expect(credits).toEqual([0, 0, 0, 0]);
     expect(progress).toMatchObject({ blockWinX: 17, chestMultiplierX: 5, totalWinX: 0 });
     expect(settleMineBonusFinal(progress)).toMatchObject({ totalWinX: 85, creditWinX: 85 });
+  });
+
+  it("2× ve 5× sandığı gizli başlangıç değeri eklemeden 7× yapar", () => {
+    const first = accrueMineBonusSpin(
+      { blockWinX: 0, chestMultiplierX: 0, totalWinX: 0 },
+      { blockWinX: 4, chestAddX: 2 },
+    );
+    const second = accrueMineBonusSpin(first, { blockWinX: 6, chestAddX: 5 });
+    expect(second).toMatchObject({ blockWinX: 10, chestMultiplierX: 7, totalWinX: 0, creditWinX: 0 });
+    expect(settleMineBonusFinal(second)).toMatchObject({ chestMultiplierX: 7, totalWinX: 70, creditWinX: 70 });
   });
 
   it("bonus ve Gizem ödeme ölçeklerini finaldeki ham kazanca bir kez uygular", () => {

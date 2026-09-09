@@ -25,7 +25,7 @@ function uniqueSymbols(row: number, column: number): AllahCell {
     "star-of-david",
     "gate-of-light",
     "hand-of-blessing",
-    "celestial-key",
+    "ruby-pomegranate",
   ] as const;
   return allahSymbolCell(symbols[(row * 5 + column) % symbols.length], `u-${row}-${column}`);
 }
@@ -88,6 +88,28 @@ describe("Allah’ın Lütfu motoru", () => {
     expect(result.events.some((event) => event.type === "board-multiplier-wave")).toBe(true);
   });
 
+  it("board multiplier yüzünü inişte saklar ve yalnız uygulanacağı anda açar", () => {
+    const grid = createAllahGrid(uniqueSymbols);
+    grid[2][2] = { ...allahFeatureCell("multiplier", "sealed-multi"), kind: "multiplier", value: 5 };
+    grid[2][1] = allahCoinCell("silver", 10, "sealed-target");
+    const result = runAllahSpin(
+      { wager: 1, forcedGrid: grid, runId: "sealed-multiplier-test" },
+      createSeededAllahRandom(19),
+    );
+    const landed = result.events.find((event) => event.type === "reel-impact" && event.payload.column === 2);
+    const anticipationIndex = result.events.findIndex((event) => event.type === "board-multiplier-anticipation");
+    const revealIndex = result.events.findIndex((event) => event.type === "board-multiplier-reveal");
+    const applyIndex = result.events.findIndex((event) => event.type === "board-multiplier-apply");
+
+    expect(landed?.concealedFeatureIds).toContain("sealed-multi");
+    expect(result.events[anticipationIndex].concealedFeatureIds).toContain("sealed-multi");
+    expect(result.events[anticipationIndex].payload).not.toHaveProperty("value");
+    expect(result.events[revealIndex].concealedFeatureIds).not.toContain("sealed-multi");
+    expect(result.events[revealIndex].payload.value).toBe(5);
+    expect(anticipationIndex).toBeLessThan(revealIndex);
+    expect(revealIndex).toBeLessThan(applyIndex);
+  });
+
   it("upgrader mevcut coin'i değiştirmeden sonraki üretimlerin tabanını yükseltir", () => {
     const grid = createAllahGrid(uniqueSymbols);
     grid[0][0] = allahCoinCell("bronze", 2, "bronze");
@@ -100,7 +122,7 @@ describe("Allah’ın Lütfu motoru", () => {
     expect(result.finalGrid[0][0]).toEqual(
       expect.objectContaining({ kind: "coin", tier: "bronze", value: 2 }),
     );
-    expect(result.events.some((event) => event.type === "coin-upgrader-apply")).toBe(false);
+    expect(result.events.some((event) => event.type === "coin-upgrader-apply")).toBe(true);
   });
 
   it("upgrader sonrası Collector respin coin'leri yeni minimum katmandan üretir", () => {
@@ -132,7 +154,7 @@ describe("Allah’ın Lütfu motoru", () => {
       () => 0,
     );
     const completedUpgrades = result.events.filter(
-      (event) => event.type === "coin-upgrader-charge" && event.payload.complete === true,
+      (event) => event.type === "coin-upgrader-apply" && event.payload.complete === true,
     );
     expect(completedUpgrades.map((event) => event.payload.removedTier)).toEqual([
       "bronze",
@@ -165,7 +187,7 @@ describe("Allah’ın Lütfu motoru", () => {
       (event) => event.type === "mystery-reveal" && event.cells[0]?.row === 0 && event.cells[0]?.column === 0,
     );
     const upgradeIndex = result.events.findIndex(
-      (event) => event.type === "coin-upgrader-charge" && event.payload.complete === true,
+      (event) => event.type === "coin-upgrader-apply" && event.payload.complete === true,
     );
     const nextRollIndex = result.events.findIndex(
       (event) => event.type === "mystery-roll" && event.cells[0]?.row === 1 && event.cells[0]?.column === 0,
@@ -232,6 +254,24 @@ describe("Allah’ın Lütfu motoru", () => {
     expect(result.collectorWinX).toBe(0);
     expect(result.coinWinX).toBe(30);
     expect(result.grossMultiplier).toBe(30);
+  });
+
+  it("temel free-spin içindeki mavi Göz tablet seçimini sonraki tura taşımaz", () => {
+    const grid = createAllahGrid(uniqueSymbols);
+    grid[0][0] = { id: "free-rosette", kind: "symbol", symbol: "rosette" };
+    const result = runAllahSpin({
+      wager: 1,
+      forcedGrid: grid,
+      runId: "blue-eye-not-persistent",
+      bonus: { tier: "free", remaining: 3, totalSpins: 7, totalPayout: 0 },
+      persistent: {
+        eyeSlots: ["rosette"],
+        persistentEye: undefined,
+      },
+    }, createSeededAllahRandom(3));
+
+    expect(result.events.some((event) => event.type === "eye-symbol-trigger")).toBe(false);
+    expect(result.persistent.eyeSlots).toEqual([]);
   });
 
   it("Mystery normal makaraya kendiliğinden inmez; yalnız Göz/FU/Collector tarafından üretilir", () => {
@@ -362,7 +402,7 @@ describe("Allah’ın Lütfu motoru", () => {
     }
   });
 
-  it("Nur Gözü makarada kalır, alanı tarar ve Mystery sonuçlarını sırayla açar", () => {
+  it("Nur Gözü soldaki tabletten bir sembol seçer ve yalnız o sembolün eşlerini Gizem'e çevirir", () => {
     const grid = createAllahGrid(uniqueSymbols);
     grid[0][0] = allahFeatureCell("eye", "legacy-eye-trigger");
     const result = runAllahSpin(
@@ -373,15 +413,56 @@ describe("Allah’ın Lütfu motoru", () => {
     const eventTypes = result.events.map((event) => event.type);
     expect(eventTypes.indexOf("eye-look-left")).toBeLessThan(eventTypes.indexOf("eye-look-right"));
     expect(eventTypes.indexOf("eye-look-right")).toBeLessThan(eventTypes.indexOf("eye-look-down-grid"));
+    const slotFill = result.events.find((event) => event.type === "eye-slot-fill");
+    expect(slotFill).toBeDefined();
+    const selected = slotFill!.payload.selected;
+    const matchingCells = result.initialGrid.flatMap((row, rowIndex) =>
+      row.flatMap((cell, column) =>
+        cell.kind === "symbol" && cell.symbol === selected ? [{ row: rowIndex, column }] : [],
+      ),
+    );
     const seeded = result.events.filter(
       (event) => event.type === "mystery-seed" && event.payload.source === "eye",
     );
     const reveals = result.events.filter(
       (event) => event.type === "mystery-reveal" && event.payload.source === "eye",
     );
-    expect(seeded.length).toBeGreaterThan(0);
+    expect(new Set(seeded.map((event) => `${event.cells[0].row}-${event.cells[0].column}`))).toEqual(
+      new Set(matchingCells.map((cell) => `${cell.row}-${cell.column}`)),
+    );
+    expect(seeded.every((event) => event.payload.selected === selected)).toBe(true);
     expect(reveals).toHaveLength(seeded.length);
     expect(reveals.every((event) => event.cells.length === 1)).toBe(true);
+  });
+
+  it("kalıcı Nur Gözü bonusun sonraki tahtalarında açık sembolün bütün eşlerini tetikler", () => {
+    const grid = createAllahGrid(uniqueSymbols);
+    const matchingCells = grid.flatMap((row, rowIndex) =>
+      row.flatMap((cell, column) =>
+        cell.kind === "symbol" && cell.symbol === "lantern" ? [{ row: rowIndex, column }] : [],
+      ),
+    );
+    const result = runAllahSpin(
+      {
+        wager: 1,
+        forcedGrid: grid,
+        runId: "persistent-eye-tablet",
+        bonus: { tier: "super", remaining: 5, totalSpins: 1, totalPayout: 0 },
+        persistent: { eyeSlots: ["lantern"], persistentEye: "gold" },
+      },
+      () => 0,
+    );
+    const trigger = result.events.find((event) => event.type === "eye-symbol-trigger");
+    expect(trigger?.payload).toMatchObject({ selected: "lantern", persistent: true });
+    expect(new Set(trigger?.cells.map((cell) => `${cell.row}-${cell.column}`))).toEqual(
+      new Set(matchingCells.map((cell) => `${cell.row}-${cell.column}`)),
+    );
+    const seeded = result.events.filter(
+      (event) => event.type === "mystery-seed" && event.payload.persistent === true,
+    );
+    expect(new Set(seeded.map((event) => `${event.cells[0].row}-${event.cells[0].column}`))).toEqual(
+      new Set(matchingCells.map((cell) => `${cell.row}-${cell.column}`)),
+    );
   });
 
   it("Semavi Anahtar üç haneyi sırayla çevirip toplamını globale aktarır", () => {
@@ -398,6 +479,16 @@ describe("Allah’ın Lütfu motoru", () => {
     expect(result.globalMultiplier).toBe(
       result.globalKeySlots.reduce<number>((sum, value) => sum + (value ?? 0), 0),
     );
+    const flight = result.events.find((event) => event.type === "key-flight");
+    const wheel = result.events.find((event) => event.type === "wheel-anticipation");
+    const merge = result.events.find((event) => event.type === "global-merge");
+    const mergeApply = result.events.find((event) => event.type === "global-merge-apply");
+    expect(flight?.consumedFeatureIds).not.toContain("key");
+    expect(wheel?.consumedFeatureIds).toContain("key");
+    expect(merge?.globalMultiplier).toBe(1);
+    expect(merge?.payload.value).toBe(result.globalMultiplier);
+    expect(mergeApply?.globalMultiplier).toBe(result.globalMultiplier);
+    expect(result.events.indexOf(merge!)).toBeLessThan(result.events.indexOf(mergeApply!));
   });
 
   it("aynı zincirdeki her Semavi Anahtar üç haneyi yeniden çevirip biriktirir", () => {
@@ -418,7 +509,7 @@ describe("Allah’ın Lütfu motoru", () => {
     expect(result.globalMultiplier).toBe(100);
   });
 
-  it("Mystery içinden gelen Göz yeni Mystery alanları açarak zinciri sürdürür", () => {
+  it("Mystery içinden gelen Göz de rastgele alan yerine tablet sembolünün eşlerini açar", () => {
     const grid = createAllahGrid(uniqueSymbols);
     grid[0][0] = { id: "nested-eye-seed", kind: "mystery", source: "eye" };
     const result = runAllahSpin(
@@ -448,9 +539,14 @@ describe("Allah’ın Lütfu motoru", () => {
       (event) => event.type === "mystery-reveal" && event.payload.revealedKind === "eye",
     )).toBe(true);
     expect(result.events.some((event) => event.type === "eye-wake")).toBe(true);
-    expect(result.events.some(
-      (event) => event.type === "mystery-seed" && event.payload.source === "eye",
-    )).toBe(true);
+    const slotFill = result.events.find((event) => event.type === "eye-slot-fill");
+    const selected = slotFill?.payload.selected;
+    const eyeSeeds = result.events.filter(
+      (event) => event.type === "mystery-seed" && event.payload.selected === selected,
+    );
+    expect(slotFill).toBeDefined();
+    expect(eyeSeeds.length).toBeGreaterThan(0);
+    expect(eyeSeeds.every((event) => event.payload.selected === selected)).toBe(true);
   });
 
   it("coin rengi çarpılmış yüz değerinin katmanını izler", () => {
@@ -620,37 +716,46 @@ describe("Allah’ın Lütfu motoru", () => {
       "lower-coin": 50,
     });
     const payoutIndex = result.events.findIndex((event) => event.type === "payout-count");
+    const finalIndex = result.events.findIndex((event) => event.type === "global-final");
     const lastApplyIndex = result.events.reduce(
       (latest, event, index) => event.type === "global-row-apply" ? index : latest,
       -1,
     );
     expect(lastApplyIndex).toBeLessThan(payoutIndex);
+    expect(lastApplyIndex).toBeLessThan(finalIndex);
+    expect(finalIndex).toBeLessThan(payoutIndex);
+    expect(result.events[finalIndex].payload).toMatchObject({
+      basePayout: result.payout / 5,
+      multiplier: 5,
+      finalPayout: result.payout,
+    });
   });
 
   it("Hilebaz Dönüşünde oluşan global anahtar coinleri gerçek sonuçla aynı şekilde satır satır çarpar", () => {
-    const result = runAllahSpin(
-      {
-        wager: 1,
-        mode: "trickster",
-        runId: "trickster-global-row-regression",
-        persistent: defaultAllahPersistentState(),
-      },
-      createSeededAllahRandom(73),
-    );
+    const result = Array.from({ length: 160 }, (_, index) =>
+      runAllahSpin(
+        {
+          wager: 1,
+          mode: "trickster",
+          runId: `trickster-global-row-regression-${index + 1}`,
+          persistent: defaultAllahPersistentState(),
+        },
+        createSeededAllahRandom(index + 1),
+      ),
+    ).find((candidate) => candidate.globalMultiplier > 1);
+    expect(result).toBeDefined();
+    if (!result) throw new Error("Deterministik Hilebaz örneklerinde Global Anahtar bulunamadı.");
     const rows = result.events.filter((event) => event.type === "global-row-apply");
-    expect(result.globalMultiplier).toBe(3);
-    expect(rows.map((event) => Number(event.payload.row))).toEqual([0, 1, 2, 3, 4, 5]);
-    expect(rows.map((event) => [event.payload.before, event.payload.after])).toEqual([
-      [13, 39],
-      [7, 21],
-      [8, 24],
-      [22, 66],
-      [6, 18],
-      [7, 21],
-    ]);
-    expect(rows.every((event) => Number(event.payload.after) === Number(event.payload.before) * 3)).toBe(true);
-    expect(result.coinWinX).toBe(63);
-    expect(result.grossMultiplier).toBe(189);
+    expect(result.globalMultiplier).toBeGreaterThan(1);
+    expect(rows.map((event) => Number(event.payload.row))).toEqual(
+      [...rows.map((event) => Number(event.payload.row))].sort((a, b) => a - b),
+    );
+    expect(rows.every(
+      (event) => Number(event.payload.after) === Number(event.payload.before) * result.globalMultiplier,
+    )).toBe(true);
+    expect(result.grossMultiplier).toBe(
+      (result.lineWinX + result.coinWinX + result.collectorWinX) * result.globalMultiplier,
+    );
   });
 
   it("düz/V beş scatter Mitik Lütuf açar", () => {

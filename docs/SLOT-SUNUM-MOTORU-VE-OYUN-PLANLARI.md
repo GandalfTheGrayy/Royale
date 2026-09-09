@@ -60,6 +60,12 @@ Bu maddeler oyun temasından bağımsızdır; her oyunun motoru ve gerçek sonuc
 9. **Para ve çarpan ayrımı:** Bakiye, bahis, blok/coin kazancı, ara kasa, tur toplamı ve final ödeme her zaman doğrudan `PR` olarak gösterilir. `×` yalnızca gerçek bir çarpanın kendisi için kullanılır. Oyuncuya `38× × 2×` gibi hesap yaptıran ara değerler gösterilmez; bunun yerine `380 PR × 2× → 760 PR` gibi, paranın sonucu anlaşılır biçimde sunulur.
 10. **Büyük kazanım sayacı:** Bir tur, oyunun büyük kazanım eşiğine ulaştığında (örneğin Güzel/Büyük/Muhteşem/Efsanevi kademe), kesin ödeme tutarı ekrana tek karede düşmez. Final para sayacı `0 PR`dan gerçek son `PR` tutarına hızlı fakat okunabilir şekilde yükselir; kademe başlığı sayım sırasında ilgili eşiğe gelince değişir. Sayım ve başlık yalnız kesinleşmiş ödeme üzerinden üretilir; ekranda en az kısa bir onay anı kalır.
 11. **Tek tip autoplay menüsü:** Tüm slotlarda Allah’ın Lütfu’ndaki menü kullanılır: `Turbo Spin`, `Quick Spin`, `Ekranları Atla`; 1–1.000 tur sürgüsü, 10/25/50/100/250/500/1.000 hazır seçimleri, toplam `PR` önizlemesi ve belirgin başlat/durdur durumu bulunur. Otomatik tur yetersiz bakiyede veya bonus tetiklenince güvenle durur.
+12. **Özellik sonucu vaktinden önce açılmaz:** Kapalı sandık, çarpan madalyonu, gizem sembolü, çark veya benzeri özellikler inişte yalnız kapalı/dormant görselini gösterir. İçindeki değer DOM’da, etikette, başlıkta veya yan sayaçta kendi açılma animasyonundan önce görünmez. Akış `iniş → gerilim → açılma → hedefe taşıma → uygulama` sırasındadır.
+13. **Tüketilen özellik geri belirmez:** Anahtar, kitap, sandık ya da tek kullanımlık sembol kaynağından ayrılıp hedefe uçtuğunda kaynak hücre tüketilmiş sayılır. Sonraki ara karede eski yerine bir anlığına geri gelmez; kimliği motor olayları boyunca korunur ve dönüşecekse ayrı, görünür bir dönüşüm olayı kullanılır.
+14. **Tek ekranlık duyarlı oyun kabuğu:** Slot ekranı üst bilgi, esnek oyun sahnesi ve sabit kontrol iskelesi olmak üzere üç banttır; sayfa kaydırması üretmez. Oyun alanı yalnız genişliğe göre değil ekranın kısa kenarı ve kullanılabilir yüksekliğine göre ölçeklenir. Yarım genişlikli büyük monitörde ana oyun gereksiz küçülmez; 15 inç laptopta satır/hücre kaybolmaz; telefonda alt kontroller içeriği aşağı doğru uzatmaz.
+15. **Dekor yerleşimi yönetmez:** Sunucu, muhafız veya karakter görseli masaüstünde oranı korunan bağımsız bir sahne kartıdır. Tahtayı daraltacak ya da yüksekliği belirleyecek kadar büyüyemez; tablet ve telefonda gizlenebilir. Şeffaf olmayan damalı arka planlar asla şeffaf görsel gibi kullanılmaz.
+16. **Ortak sağlayıcı tipi alt iskele:** Temel bahis tutarı ile `− / + / …`, seçili oyun/mod, ana DÖNDÜR/ATLA ve hızlı eylemler tek alt iskelede kalır. Masaüstünde tek satır; orta genişlikte iki kompakt satır; telefonda ana spin sağda sabitken üç ince işlev satırı; kısa yatay ekranda yeniden tek satır kullanılır. `…` bahis ayrıntılarını, Auto Bet kendi penceresini açar; dar ekranda MİN/MAKS gizlenebilir ama işlevleri bahis penceresinde korunur.
+17. **Duyarlı kabul matrisi:** Her slot kabuğu en az `1792×1900` yarım büyük monitör, `1366×768` laptop, `1024×768` tablet, `390×844` telefon, `360×640` kısa telefon ve `812×375` yatay telefon boyutlarında tarayıcıda doğrulanır. Belge genişliği/yüksekliği görünüm alanını aşmaz, kontrol iskelesi ekrandan çıkmaz, bütün oyun hücreleri kendi tahtasının içinde kalır ve ana özellik göstergesi tamamen kaybolmaz.
 
 ## Oyun bazlı planlar
 
@@ -103,6 +109,20 @@ Balıkların tek tek uzun gecikmeyle toplanması yerine kısa dalgalar ve kaptan
 ### Allah’ın Lütfu
 
 Zengin olay sırasını koru. Tekrarlanan küçük olaylar özetlenir; anahtar, toplayıcı ve küresel çarpan tam sahne olarak kalır.
+
+**Allah’ın Lütfu uygulama kuralları:**
+
+1. Nur Gözü rastgele hücre seçmez. Soldaki sabit dokuz normal/premium sembol tabletinden bir tür açar; yalnız tahtadaki aynı tür semboller gerçek hedef olur. Altın/Zümrüt Göz seçimi bonus boyunca saklar ve sonraki tahtalarda yeni eşlerini tetikler.
+2. Collector coin’leri ve daha önce değer taşımış diğer Collector’ları sütun okuma sırasıyla toplar. Coin uçuşu ile kese-keseye uçuşu görsel olarak ayrılır; ikinci kese önceki kesenin birikimini gerçek kaynak olarak alır.
+3. Global kapanış dört okunabilir sahnedir: ana `PR` bankası → Global `×` gelişi → çarpma darbesi → `0 PR`dan kesin son ödemeye sayaç. Bu, turun en hızlı geçilen kısmı olamaz.
+4. 5× ve üzeri büyük kazanımlarda sayaçla birlikte `Güzel / Büyük / Muhteşem / Efsanevi / Akılalmaz / Tarihi Kazanç` unvanı eşik geçildikçe değişir. Son tutar `PR` olarak görünür; kullanıcı ödeme için `×` hesabı yapmaz.
+5. Boş oyun alanına tıklama, aktif animasyonu ve bütün sayaçları tek hamlede gerçek final değerine taşır. Etkileşim düğmeleri bu genel atlama alanını yanlışlıkla tetiklemez.
+6. Bahis ana ekranda `MİN / − / yazılabilir PR / + / MAKS / …` kapsülüdür. Yarım, iki kat ve artış adımı `…` penceresindedir; autoplay mevcut ortak Allah’ın Lütfu düzenini korur.
+7. Sol Göz tableti masaüstünde dikey, dar mobilde grid üstünde yataydır; hiçbir ekran genişliğinde oyunun ana özelliği tamamen gizlenmez. Kısa yatay ekranlarda grid, panel ve alt kontroller beraber ölçeklenir.
+8. Çarpan Madalyonu inişte kapalı teal/altın mühürlü yüz taşır. `×` değeri yalnız çarpacağı anda kepenk açılışıyla görünür; ardından rozet gerçek coin/kese hedeflerine gider. Sonucun önceden görünmesi yasaktır.
+9. Global anahtar hattı başlangıçta kilitlidir. Anahtar hücreden bara uçar, kaynak hücre kaybolur, mühür kırılır, üç hane tek tek döner; eski global değer gerilim boyunca korunur ve yeni toplam yalnız birleşme darbesinde yazılır.
+10. Coin, Collector ve Max Coin yüzleri para tutarını doğrudan `PR` gösterir. Board/Global çarpan yüzleri `×` gösterir. Aynı görsel sayı iki farklı matematik türüymüş gibi kullanılmaz.
+11. Nur Muhafızı masaüstünde oyun tahtasının sağındaki canlı sahne eşidir; küçük ekranda tahtayı daraltmamak için gizlenebilir. Bonus portalı, bonus yükseltme, Max Coin ve scatter kilitleri bir anda değişen statik metin yerine kendi geçiş sahnelerine sahiptir.
 
 ### Kiraz Kulübü 77
 

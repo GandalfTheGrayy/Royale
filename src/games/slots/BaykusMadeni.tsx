@@ -370,7 +370,7 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
     await wait(tuning.animation.bounceMs, 120);
     setPhase("dig");
     let displayedBlockWin = 0;
-    let displayedChestMultiplier = activeBonus ? 0 : 1;
+    let displayedChestMultiplier = 0;
     // Sandıklar tüm ücretli dönüş boyunca ortak/global çarpandır. Son elde
     // açılmaları bile hesabı erkene çekmez; yalnız final sahnesinde uygulanırlar.
     const deferChestSettlement = !activeBonus;
@@ -505,9 +505,7 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
         setNotice(`${chests.length} sandık kilidi açılıyor.`);
         updateDisplayMine(chests);
         for (const event of chests) {
-          displayedChestMultiplier = activeBonus
-            ? displayedChestMultiplier + (event.valueX ?? 0)
-            : displayedChestMultiplier * (event.valueX ?? 1);
+          displayedChestMultiplier += event.valueX ?? 0;
           addBurst(event, "chest");
         }
         setNotice(`${chests.length} sandık açıldı · çarpan kasaya işleniyor.`);
@@ -973,7 +971,7 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
           <h2>{finaleTier.label}</h2>
           <p>{bonusFinaleStage === "collecting" ? "SANDIK ÇARPANLARI TOPLANIYOR" : `BİRİKEN BLOK KASASI × ${money.format(bonusFinale.chestMultiplierX)}×`}</p>
           <strong aria-live="polite">{money.format(bonusFinaleAmount)} PR</strong>
-          <b>{money.format(finaleMultiplier)}× TEMEL BAHİS</b>
+          <b>TOPLAM BONUS ÖDEMESİ</b>
           <div><span><b>{bonusFinale.spins}</b> dönüş</span><span><b>{bonusFinale.chests}</b> sandık</span></div>
           <button disabled={!bonusFinaleDone} onClick={() => setBonusFinale(undefined)}>{bonusFinaleDone ? "MADENE DÖN" : "KAZANÇ HESAPLANIYOR…"}</button>
         </article>
@@ -986,7 +984,7 @@ export default function BaykusMadeni({ balance, setBalance, onBack }: Props) {
         <p>Kazmalar 5×3 panelden yalnız kendi sütunlarına düşer. Her salınım 1 hasar verir; kazma yukarı seker ve kalan dayanıklılığıyla aynı dikey hattaki bir sonraki sağlam bloğa yeniden düşer. Basamaklı yüzey nedeniyle sütun yükseklikleri farklı başlayabilir. Sütundaki altı mantıksal katman temizlenince sandık anında açılır.</p>
         <h3>Kazmalar</h3><div className="owl-rule-grid tools">{(Object.keys(tuning.toolDurability) as MineTool[]).map((tool) => <span key={tool}><img src={toolAssets[tool]} alt="" /><b>{toolNames[tool]}</b>{tuning.toolDurability[tool]} ayrı vuruş</span>)}</div>
         <h3>Bloklar</h3><div className="owl-rule-grid blocks">{(Object.keys(tuning.blockRules) as MineBlock[]).map((block) => <span key={block}><img src={blockAssets[block]} alt="" /><b>{blockNames[block]}</b>{tuning.blockRules[block].hp} vuruş · {block === "mystery" ? "2,5–100×" : `${tuning.blockRules[block].payoutX}×`}</span>)}</div>
-        <h3>Özel akış</h3><ul><li>Geliştirme kitabı bütün kazmaları en az Elmas; MAX kitap Obsidyen yapar.</li><li>TNT kazmalardan sonra düşer ve 3×3 alana 2 hasar verir.</li><li>Patlayıcı Cevher kırılınca sekiz komşusuna 1 hasar gönderir; zincirleme patlayabilir.</li><li>Bir sütun temizlenince sandık açılır. Normal, Elmas ve Obsidyen dönüşlerde sandıklar o turun blok kazancını çarpar. Blok, Süper ve Epik bonuslarda sandık çarpanları dönüşler arasında korunur ve özel oyun boyunca biriken bütün blok kazancına uygulanır. Birden fazla sandığın çarpanları birbiriyle çarpılır. Önceden ödenen tutar tekrar eklenmez; yalnız toplam kazançtaki artış bakiyeye geçer.</li><li>3/4/5 Göz, Blok/Süper/Epik bonus açar. Bonus duvarı korunur ve bonus sabit tur sayısında tamamlanır. Gizemli Dönüşten açılan bonuslar da aynı birikim kuralını kullanır. Doğal bonusta tetikleyen elin ödemesi ayrıdır; o el ve devamındaki bonus birlikte azami ödeme sınırına tabidir.</li><li>Elmas ve Obsidyen dönüşleri önceden kazılmış sahayla başlar; satır sayısı admin panelinden değişir.</li></ul>
+        <h3>Özel akış</h3><ul><li>Geliştirme kitabı bütün kazmaları en az Elmas; MAX kitap Obsidyen yapar.</li><li>TNT kazmalardan sonra düşer ve 3×3 alana 2 hasar verir.</li><li>Patlayıcı Cevher kırılınca sekiz komşusuna 1 hasar gönderir; zincirleme patlayabilir.</li><li>Bir sütun temizlenince sandık açılır. Açılan bütün sandıkların değerleri toplanarak tek global çarpanı oluşturur; örneğin 2× ve 5× sandık 7× eder. Normal, Elmas ve Obsidyen dönüşlerde bu toplam o turun blok kazancına; Blok, Süper ve Epik bonuslarda ise özel oyun boyunca biriken bütün blok kasasına finalde bir kez uygulanır.</li><li>3/4/5 Göz, Blok/Süper/Epik bonus açar. Bonus duvarı korunur ve bonus sabit tur sayısında tamamlanır. Gizemli Dönüşten açılan bonuslar da aynı birikim kuralını kullanır. Doğal bonusta tetikleyen elin ödemesi ayrıdır; o el ve devamındaki bonus birlikte azami ödeme sınırına tabidir.</li><li>Elmas ve Obsidyen dönüşleri önceden kazılmış sahayla başlar; satır sayısı admin panelinden değişir.</li></ul>
         <button className="owl-rules-close" onClick={() => setRulesOpen(false)}>Madene dön</button>
       </article></div>}
     </main>

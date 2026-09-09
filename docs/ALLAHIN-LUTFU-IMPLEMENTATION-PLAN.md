@@ -15,7 +15,8 @@ Bu belge, Valkyrie’nin **Odin’s Vault** oyunundaki doğrulanmış kuralları
 - **[2026-09-03 COIN ÖDEME DÜZELTMESİ]** Resmî sayfadaki ayrı “coin wins” tanımı ve FU oyun kaydı yeniden karşılaştırıldı. Keseye girmeden final tahtasında kalan coin’ler kendi yüz değerleriyle öder; Collector önceki değerleri hafızasına alır ve yalnız o zincirin aktif Mystery kökenli hücrelerini yeniden döndürür. Normal makara hücreleri değişmez; keseye daha önce yazılmış doğrudan coin finalde ikinci kez sayılmaz. Final ödeme `çizgi + ödenmemiş final-tahta coin + Collector` toplamıdır.
 - **[2026-09-03 MYSTERY YAŞAM DÖNGÜSÜ DENETİMİ]** Resmî özellik listesi ile gerçek FU kaydı yeniden karşılaştırıldı. Tricksterspin ayrı bir volatilite modudur; Collector normal makaraya serbestçe bırakılamaz, yalnız Mystery’den açılır. Mystery’den açılan Göz, çarpan, yükseltici, Redrop ve anahtar önce görevini tamamlar, bütün okuma sırası bittikten sonra aynı hücre yeniden dönerek coin’e yerleşir; Collector bu dönüşümlerden sonra çalışır. Yazılı resmî sayfa son coin dönüşünün zamanlamasını açıkça tarif etmediği için bu ayrıntı oyun kaydı ve gözlenen istemci akışıyla doğrulanmış uygulama çıkarımıdır.
 - **[2026-09-05 NORMAL TAMBUR + ÖZEL MENÜ DENETİMİ]** Normal tamburdan doğrudan coin tamamen kaldırıldı; açılış şeridi yalnız ödeme sembolü, Odin’s Eye karşılığı Nur Gözü ve Scatter üretir. Coin ve bütün coin modifier’ları Eye/FU/Collector kaynaklı Mystery çözüm şeridine aittir. Resmî sayfa enhancer maliyetlerini ve bunların volatilite anahtarı olduğunu açıklar fakat kapalı RNG yüzdelerini yayımlamaz; bu nedenle Eye ve Scatter olasılıkları her mod için ayrı, şeffaf admin ayarlarıdır. Hilebaz Dönüş Eye ağırlıklı; Lütuf Arttırıcı Scatter ağırlıklı varsayılan profille gelir. Altı seçenekli özel oyun menüsü resmî 3×/25×/75×/5.000×/200×/1.000× yapısını tek ekranda gösterir.
-- **[2026-09-05 ZİNCİRLİ GÖZ + ÇOKLU ANAHTAR DENETİMİ]** Mystery sonucu yeniden Nur Gözü üretebilir; yeni Göz kendi hedeflerini Mystery yaparak aynı bahis içindeki özellik zincirini sürdürür. Hilebaz Dönüş için Mystery→Göz ağırlığı ayrı admin çarpanıyla güçlendirilmiştir. Aynı zincirde birden fazla Semavi Anahtar korunur: her anahtar üç haneyi yeniden çevirir, yani iki anahtar altı çarpan sonucu üretir ve her haneye gelen değerler birikir. Collector’lar okuma sırasıyla çalışır; sonraki kese daha önce dolmuş keseyi de kaynak olarak toplar.
+- **[2026-09-08 GÖZ TABLETİ + COLLECTOR ZİNCİRİ DENETİMİ]** Resmî açıklama ve referans ekran yeniden incelendi. Nur Gözü rastgele hücre seçmez: normal/premium sembol listesinden bir tür seçip soldaki sabit dokuz yuvalı tablete ekler; tahtada yalnız seçilen türün bütün eşleri Mystery olur. Altın/Zümrüt Göz ile açılmış türler bonusun sonraki tahtalarında kalır ve yeni eşlerini tetikler. Mystery’den çıkan yeni Göz de aynı kuralı kullanır. Collector’lar okuma sırasıyla çalışır; sonraki kese coin’lerle birlikte daha önce değer taşımış keseyi de toplar. Kese-keseye uçuşu ayrı görsel kaynak olarak gösterilir.
+- **[2026-09-09 SUNUM VE BİLGİ SIZINTISI DENETİMİ]** Resmî özellik listesi, FU Spin kaydı ve oyun içi tarayıcı akışı yeniden karşılaştırıldı. Çarpan Madalyonu değerini inişte göstermez; kapalı/mühürlü yüzle bekler, yalnız hedefe uygulanacağı sırada açılır. Semavi Anahtar üst haneye uçtuktan sonra kaynak hücrede yeniden görünmez. Üst global hane kilitli başlar, ilk anahtar geldiğinde açılır; hane toplamı gerilim karesinden sonra ayrı bir uygulama karesiyle global değere yazılır. Böylece RNG sonucu hiçbir sahnede kendi animasyonundan önce görünmez.
 - **[2026-09-05 ORİJİNAL TEMPO DÜZELTMESİ]** Normal sunumda Göz bakışları, hedef ışını, Mystery’nin inişi/dikey dönüşü/açılışı, işlevin coin’e dönüşü ve Collector uçuşları artık görsel animasyon tamamlanmadan sonraki olaya geçmez. Mystery hücreleri tek tek okunabilecek tempoda ilerler. Turbo süreleri ayrı tutulduğu için hızlı oyun seçeneği etkilenmez.
 - Arama motorunda görülen 5×3 / 20 çizgi / %98 bilgileri resmî sayfayla çeliştiği için kullanılmaz.
 
@@ -52,6 +53,7 @@ Kutsal metin, Arapça hat ve gerçek bir tanrı/peygamber portresi kullanılmaz.
   - Davut Yıldızı: 1 / 2 / 4
   - nur kapısı: 1 / 2 / 5
   - bereket eli: 2 / 3 / 10
+  - yakut nar: 2,2 / 5 / 15
   - semavi anahtar: 2,5 / 10 / 25 (normal sembol olarak geldiği durumda)
 - Son tahtada görünen bütün coin yüz değerleri, Collector gelmemiş olsa bile doğrudan `coin win` olarak öder.
 - Daha önce Collector’a uçmuş coin’ler final tahtadan silindiği için yalnız kesenin sakladığı `collector win` kalemine girer; yeni tahtadaki coin’lerle çakışmaz.
@@ -61,8 +63,8 @@ Kutsal metin, Arapça hat ve gerçek bir tanrı/peygamber portresi kullanılmaz.
 
 - Mystery normal makaraya bağımsız bir sonuç olarak inmez; yalnız Göz, FU Spin veya Collector yeniden dağıtımı tarafından üretilir.
 - Normal makaraya coin, Collector, Global Key, Board Multiplier, Coin Upgrader, Redrop veya Max Coin doğrudan inmez. Bunlar yalnız Mystery sonuç şeridine aittir; normal şerit normal sembol, Göz ve Scatter ile sınırlıdır. Bu kural Hilebaz Dönüş dahil bütün ücretli modlarda aynıdır.
-- Mystery hiçbir zaman rozet, kandil, hilal, ağaç, baykuş, Davut Yıldızı, kapı, el veya normal semavi-anahtar ödeme sembolüne açılamaz. Yalnız coin, Göz, Collector, Super Collector, Upgrader, Redrop, Board Multiplier, Scatter, Global Key veya Max Coin üretebilir.
-- Mystery’den açılmış hücre `fromMystery` kökenini özellik zinciri boyunca korur. Arayüz bu hücreleri turkuaz/lacivert ayrı zemin ve köşe `M` mührüyle gösterir.
+- Mystery hiçbir zaman rozet, kandil, hilal, ağaç, baykuş, Davut Yıldızı, kapı, el, yakut nar veya normal semavi-anahtar ödeme sembolüne açılamaz. Yalnız coin, Göz, Collector, Super Collector, Upgrader, Redrop, Board Multiplier, Scatter, Global Key veya Max Coin üretebilir.
+- Mystery’den açılmış hücre `fromMystery` kökenini özellik zinciri boyunca korur. Arayüz bu hücreleri turkuaz/lacivert ayrı zemin ve köşede metinsiz, soyut bir köken rünüyle gösterir.
 - Mystery’den açılan geçici işlevler okuma sırasındaki görevlerini tamamlar. Göz, Board Multiplier, Upgrader, Redrop ve Global Key hücreleri daha sonra yeniden dikey dönerek geçerli minimum katmandan coin olur; Collector/Super Collector yerinde kalır ve bu dönüşümler tamamlandıktan sonra toplar. Scatter ve Max Coin kendi kapanış kurallarını korur.
 - Bronz: 1×, 2×, 3×, 4×
 - Gümüş: 5×, 10×, 15×
@@ -82,19 +84,20 @@ Kutsal metin, Arapça hat ve gerçek bir tanrı/peygamber portresi kullanılmaz.
 
 ### Nur Gözü ve sol panel
 
-- Gridde duran Göz uyanır; sağ/sol bakışlarından sonra rastgele hedeflere tek tek `M` yollar. Hedefler Mystery olur ve coin, anahtar, collector/kese, çarpan, upgrader, redrop veya başka bir Göz açabilir.
-- Seçilen türler gridin solundaki altı göz yuvasına yerleşir.
+- Gridde duran Göz uyanır; sağ/sol bakışlarından sonra normal/premium sembol tabletinden henüz açılmamış bir tür seçer. Öncelik o an tahtada eşi bulunan türe verilir; yalnız seçilen türün bütün eşleri Mystery olur ve coin, anahtar, collector/kese, çarpan, upgrader, redrop veya başka bir Göz açabilir.
+- Sol panel rastgele hedef listesi değil, dokuz normal/premium sembolün sabit tabletidir. Kapalı türler silik; seçilen tür kendi sabit yuvasında renkli ve parlayan hâle gelir.
 - Mavi Göz normal tur sonunda temizlenebilir.
-- Altın ve Zümrüt Göz Super, Legendary ve Mythic bonus boyunca seçilmiş türleri kalıcı tutar.
-- Bakış animasyonu `look-left` → `look-right` → `look-up` → `look-down-grid` sırasını izler; ardından göz bebeği parlaması ve her hedefe ayrı `M` uçuşu çalışır.
+- Altın ve Zümrüt Göz Super, Legendary ve Mythic bonus boyunca seçilmiş türleri kalıcı tutar; her yeni bonus tahtasında açılmış türlerin yeni eşleri topluca tetiklenir.
+- Bakış animasyonu `look-left` → `look-right` → `look-up` → `look-down-grid` sırasını izler; ardından seçilen sembol görseli her gerçek eşleşme hücresine ayrı uçar. Bağımsız/rastgele `M` hedefi üretilmez.
 
 ### Global Multiplier
 
+- Üçlü global hane oyun başında mühürlüdür. İlk Semavi Anahtar hücreden üst bara uçar, kaynak hücre tüketilir ve mühür kırılmadan haneler dönmez.
 - Semavi Anahtar üstteki üç ayrı çarpan hanesini açar. Haneler 1 → 2 → 3 sırasında dikey slot gibi döner ve tek tek kilitlenir.
 - Aynı özellik zincirinde birden fazla Semavi Anahtar çok düşük ihtimalle bulunabilir. Her anahtar üç hanenin tamamını yeniden çevirir; yeni üç değer mevcut hanelere eklenir. Örneğin iki anahtar altı çarpan sonucu üretir. Hane toplamı (varsayılan 100× tavanıyla) ekranda görülen Global Multiplier olur.
 - Kudret (sol/kırmızı karşılığı) ve Rahmet (sağ/beyaz karşılığı) çarkları ayrı dönüş olayı üretir.
 - Çark sonucu global değere eklenir/uygulanır; aktif değer hem çizgi hem coin kazançlarını çarpar.
-- Çarpan sonucu ödeme sayımından önce görünür ve sayı birleştirme animasyonuyla üst bara yazılır.
+- Çarpan sonucu ödeme sayımından önce görünür. `global-merge` gerilim karesinde üst bar eski değeri korur; yalnız sonraki `global-merge-apply` karesinde yeni toplam sayı birleştirme animasyonuyla yazılır.
 
 ### Free-spin modları
 
@@ -130,7 +133,7 @@ LineEvaluation
       ↓
 FeatureQueue[]
       ↓
-EyeLook → MFlights → MysteryRoll/Reveal (sütun-okuma sırası)
+EyeLook → TabletSymbolUnlock → MatchingSymbolFlights → MysteryRoll/Reveal (sütun-okuma sırası)
     → KeySlots(1→2→3) → BoardMultiplierCast/Apply
     → CoinUpgrade → RedropColumns
     → CompletedModifierRerollToCoin
@@ -166,43 +169,45 @@ Her olay `id`, `type`, `durationNormal`, `durationTurbo`, `cells`, `payload` ta�
 6. `symbol-pulse`: kazanan semboller sıralı nefes alır.
 7. `eye-wake`: Göz kapağı açılır, iris parlar.
 8. `eye-look-*`: hedef konumuna bakış; 150 ms overshoot + merkezleme.
-9. `eye-ray`: gözden hedef hücre/sol yuva arasına ışık köprüsü.
-10. `eye-slot-fill`: seçilen sembol sol panele yukarıdan kayar.
-11. `mystery-seed`: Gizem Küreleri hedef hücrelere dalga halinde yerleşir.
-12. `mystery-roll`: hücre içindeki yalnız coin/özellik şeridi dikey akar. Hücreler sütun okuma sırasını izler; normal ödeme sembolleri bu şeritte bulunmaz.
-13. `mystery-reveal`: yalnız o anki tek hücre kilitlenir, coin/özellik sonucunu açar ve hücreye kalıcı `fromMystery` kökeni yazar.
-14. `key-flight` → `key-vault-open`: Semavi Anahtar üst bara uçar ve üç haneyi açar.
-15. `key-slot-spin` → `key-slot-lock`: haneler soldan sağa dikey döner ve değerleri tek tek kilitler.
-16. `wheel-anticipation` → `wheel-spin` → `global-merge`: çark ve üç hane toplamı görünür Global Multiplier’a birleşir.
-17. `board-multiplier-wake`: çarpan sembolü hedef listesini belirler.
-18. `board-multiplier-cast`: `×N` rozeti kaynaktan her coin/dolu keseye ayrı uçar.
-19. `board-multiplier-apply` → `board-multiplier-wave`: hedef değeri ve coin katman rengi güncellenir; son halka yayılır.
-20. `coin-upgrader-charge`: mevcut coin’ler değişmeden kalır; üretici minimumu bir katman yükselir ve sol panelde yeni taban gösterilir.
-21. `redrop-clear`: yalnız normal/premium semboller nur parçacığına dönüşür.
-22. `redrop-fall`: korunmuş feature hücreleri sabit kalır; her sütun ayrı olayla yukarıdan doldurulur.
-23. `modifier-coin-roll`: Mystery’den açılmış ve görevini bitirmiş geçici işlev hücresi yeniden dikey döner.
-24. `modifier-coin-land`: aynı hücre, o andaki Upgrader tabanına uyan yeni coin’e yerleşir.
-25. `collector-wake`: çanta/collector bütün geçici işlevlerin coin dönüşü bittikten sonra açılır, sayaç büyür.
-26. `coin-flight`: her kaynak üzerindeki gerçek `X` değeri sütun okuma sırasıyla keseye uçar.
-27. `collector-merge`: her uçuş sonrasında kese sayacı anında artar; son olay birleşme vurgusudur.
-28. `super-collector-reset`: kısa geri tepme ve ikinci çekim halkası.
-29. `feature-respin`: Yalnız aktif Mystery kökenli, Collector olmayan hücreler Mystery’ye dönüp aynı sırayla yeniden açılır; normal makara hücreleri korunur, upgrader tabanı saklanır ve özellik kuyruğuna geri dönülür.
-30. `scatter-lock`: scatter’lar sırayla kilitlenir, 3/4/5 gerilim katmanı.
-31. `bonus-portal`: seçilen bonus görseli açılır; grid/sol panel durumuna göre geçiş.
-32. `bonus-upgrade`: mevcut bonus kartı parçalanıp bir üst kartla birleşir.
-33. `payout-count`: çizgi + coin + collector × global hesabı ayrı satırlar halinde sayılır.
-34. `win-tier`: Nice / Great / Epic / Insane / Divine win katmanı; büyük başlık gridin tamamını kalıcı kapatmaz.
-35. `settlement`: net sonuç, bakiye, geçmiş ve telemetri tek atomik adımda yazılır.
-36. `return-idle`: bütün geçici sınıflar ve sesler temizlenir.
+9. `eye-slot-fill`: seçilen sembol dokuzlu tablette kendi sabit yuvasında açılır.
+10. `eye-ray`: seçilen sembol görseli Göz’den yalnız tahtadaki gerçek eşlerine uçar.
+11. `eye-symbol-trigger`: bonus boyunca kalıcı tablette açık olan sembol, yeni tahtadaki bütün eşlerini tek dalgada tetikler.
+12. `mystery-seed`: Gizem Küreleri yalnız bu eşleşen hedef hücrelere dalga halinde yerleşir.
+13. `mystery-roll`: hücre içindeki yalnız coin/özellik şeridi dikey akar. Hücreler sütun okuma sırasını izler; normal ödeme sembolleri bu şeritte bulunmaz.
+14. `mystery-reveal`: yalnız o anki tek hücre kilitlenir, coin/özellik sonucunu açar ve hücreye kalıcı `fromMystery` kökeni yazar.
+15. `key-flight` → `key-vault-open`: Semavi Anahtar üst bara uçar ve üç haneyi açar.
+16. `key-slot-spin` → `key-slot-lock`: haneler soldan sağa dikey döner ve değerleri tek tek kilitler.
+17. `wheel-anticipation` → `wheel-spin` → `global-merge` → `global-merge-apply`: çark ve üç hane toplamı önce bekletilir, sonra görünür Global Multiplier’a birleşir; yeni değer erken karede sızmaz.
+18. `board-multiplier-anticipation`: madalyon mühürlü yüzle titrer; gerçek `×` değeri DOM’da/görselde henüz açılmaz.
+19. `board-multiplier-reveal` → `board-multiplier-wake`: mühür iki yana açılır, gerçek çarpan görünür ve hedef listesi belirlenir.
+20. `board-multiplier-cast`: `×N` rozeti kaynaktan her coin/dolu keseye ayrı uçar.
+21. `board-multiplier-apply` → `board-multiplier-wave`: hedef değeri ve coin katman rengi güncellenir; son halka yayılır.
+22. `coin-upgrader-charge` → `coin-upgrader-apply`: mevcut coin’ler değişmeden kalır; üretici minimumu bir katman yükselir ve sol panelde yeni taban gösterilir.
+23. `redrop-clear`: yalnız normal/premium semboller nur parçacığına dönüşür.
+24. `redrop-fall`: korunmuş feature hücreleri sabit kalır; her sütun ayrı olayla yukarıdan doldurulur.
+25. `modifier-coin-roll`: Mystery’den açılmış ve görevini bitirmiş geçici işlev hücresi yeniden dikey döner.
+26. `modifier-coin-land`: aynı hücre, o andaki Upgrader tabanına uyan yeni coin’e yerleşir.
+27. `collector-wake`: çanta/collector bütün geçici işlevlerin coin dönüşü bittikten sonra açılır, sayaç büyür.
+28. `coin-flight`: her kaynak üzerindeki gerçek para tutarı `PR` olarak sütun okuma sırasıyla keseye uçar; yalnız gerçek çarpanlar `×` ile yazılır.
+29. `collector-merge`: her uçuş sonrasında kese sayacı anında artar; son olay birleşme vurgusudur.
+30. `super-collector-reset`: kısa geri tepme ve ikinci çekim halkası.
+31. `feature-respin`: Yalnız aktif Mystery kökenli, Collector olmayan hücreler Mystery’ye dönüp aynı sırayla yeniden açılır; normal makara hücreleri korunur, upgrader tabanı saklanır ve özellik kuyruğuna geri dönülür.
+32. `scatter-lock`: scatter’lar sırayla kilitlenir, 3/4/5 gerilim katmanı.
+33. `bonus-portal`: seçilen bonus görseli açılır; grid/sol panel durumuna göre geçiş.
+34. `bonus-upgrade`: mevcut bonus kartı parçalanıp bir üst kartla birleşir.
+35. `payout-count`: çizgi + coin + collector × global hesabı ayrı satırlar halinde sayılır.
+36. `win-tier`: Nice / Great / Epic / Insane / Divine win katmanı; büyük başlık gridin tamamını kalıcı kapatmaz.
+37. `settlement`: net sonuç, bakiye, geçmiş ve telemetri tek atomik adımda yazılır.
+38. `return-idle`: bütün geçici sınıflar ve sesler temizlenir.
 
 Erişilebilirlik: `prefers-reduced-motion` açıkken kaymalar cross-fade’e, sayaçlar tek adıma iner; sonuç sırası değişmez.
 
 ## 6. UI yerleşimi
 
-- Sol: dikey uzun Nur Gözü kulesi + on seçili sembol yuvası + asa kademesi.
+- Sol: dikey uzun Nur Gözü kulesi + dokuz sembollü sabit seçim tableti + asa kademesi; dar mobilde bu alan gizlenmez, grid üstünde yatay şeride dönüşür.
 - Orta: ekranın açık ara en büyük bölümü olan 5×6 oyun alanı; üstünde Global Multiplier hattı ve iki küçük çark.
 - Sağ: daraltılmış Nur Muhafızı v3; mobilde gridin arkasına değil, görünüm dışındaki yardımcı panele taşınır.
-- Alt: doğrudan yazılabilir bahis, seçilebilir artış adımı, ±adım, ½, 2×, mod seçimi, Auto Bet, Turbo, spin/stop.
+- Alt: merkezde doğrudan yazılabilir kompakt `PR` bahis kapsülü, `MİN / − / + / MAKS / …`; `…` penceresinde artış adımı, ½ ve 2×; yanında mod seçimi, Auto Bet, Turbo ve spin/atla.
 - Sonuç özeti: “Bu el”, “Toplam coin”, “Global ×”, “Ödeme”, “Net” açıkça görünür.
 - Bilgi/rules paneli oyun ekranını kalıcı sıkıştırmaz; katman olarak açılır.
 
@@ -245,21 +250,25 @@ Erişilebilirlik: `prefers-reduced-motion` açıkken kaymalar cross-fade’e, sa
 ## 9. Uygulama durumu
 
 - [x] 33 özgün oyun varlığı üretildi.
+- [x] Nur Gözü tabletinin dokuzuncu gerçek normal sembolü olarak şeffaf zeminli `Yakut Nar` üretildi; Global Anahtarın sahte normal sembol olarak tekrar kullanımı kaldırıldı.
 - [x] Nur Muhafızı İslami kaftan/sarık/sakal, belirgin baykuş ve tek Davut Yıldızıyla v3’e yükseltildi.
 - [x] Resmî kurallar, gerçek FU Spin ekranı ve bilinen uzun collector zinciri incelendi.
 - [x] `allahin-lutfu-engine.ts` + deterministik testler; ara olaylar kendi grid/çarpan/collector snapshot'ını taşıyor.
 - [x] `AllahinLutfu.tsx` + sütun sütun açılan, ara sonucu sızdırmayan olay kuyruğu oynatıcısı.
 - [x] `allahin-lutfu.css` + responsive/reduced-motion.
-- [x] Gözün grid içinde yönlü bakışı, hedefe ayrı `M` uçuşları ve Mystery’lerin soldan sağa/yukarıdan aşağıya tek-hücre açılışı.
+- [x] Nur Gözü için sabit dokuz sembollü tablet; yalnız seçilen sembolün gerçek grid eşlerine görselli uçuş, bonus tahtalarında kalıcı seçimin yeniden tetiklenmesi ve rastgele hedef üretiminin kaldırılması.
 - [x] Mystery sonuç havuzundan bütün normal ödeme sembolleri çıkarıldı; çoklu seed regresyon testi eklendi.
 - [x] Mystery normal makara havuzundan çıkarıldı; yalnız Göz/FU/Collector kaynaklı üretim için regresyon testi eklendi.
 - [x] Collector, Global Key, Board Multiplier, Coin Upgrader, Redrop ve Max Coin normal makara/Redrop üretiminden çıkarıldı; yalnız Mystery sonuçlarına bağlandı.
 - [x] `weighted-feature-queue-v5-active-mystery-respin` ile kese yeniden dönüşü aktif Mystery hücreleriyle sınırlandı; final tahta coin ödemesi Collector birikiminden ayrıldı.
 - [x] Mitik garantili Upgrader normal ilk düşüşten çıkarıldı; ilk gerçek Mystery açılışına taşındı.
-- [x] Mystery ve Mystery’den açılmış hücrelere ayrı zemin, çerçeve ve küçük `M` köken mührü eklendi.
+- [x] Mystery ve Mystery’den açılmış hücrelere ayrı zemin, çerçeve ve açıklama yazısı gibi görünmeyen küçük soyut köken rünü eklendi.
 - [x] Üç sıralı anahtar hanesi; her anahtarda üç yeni sonuç, çoklu anahtarda hane bazında birikim ve hane toplamıyla Global Multiplier.
 - [x] Board Multiplier’ın hedefe görünür `×N` atışı; coin/kese değer ve coin-renk güncellemesi.
+- [x] Board Multiplier için özgün şeffaf kapalı madalyon varlığı; iniş/gerilim sırasında değeri saklayan çift kepenk ve yalnız uygulama anında açılan yüz.
+- [x] Semavi Anahtar hanesinin mühürlü başlangıcı, anahtar uçuşundan sonra kaynak hücrenin tüketilmesi ve global toplamın gerilim/uygulama olarak iki ayrı karede gösterilmesi.
 - [x] Coin/collector değerlerinin okuma sırasıyla keseye uçması ve kesenin her uçuşta canlı `K` sayımı.
+- [x] Sonraki Collector’ın daha önce dolmuş Collector’ı toplaması için motor regresyonu ve coin uçuşundan ayırt edilen kese-keseye görsel uçuş.
 - [x] Her Upgrader’ın ayrı kademe biriktirerek bronze → silver → gold → sapphire → ruby → diamond tabanına ilerlemesi; Mystery sırasında anında uygulanıp sıradaki hücrenin üretim tabanını değiştirmesi ve mevcut coin’lere dokunmaması.
 - [x] Collector sonrasında yalnız aktif Mystery kökenli hücrelerin yeniden dönmesi; normal makara alanlarının yerinde kalması ve yükseltilmiş tabanın korunması.
 - [x] Mystery kökenli Göz/çarpan/yükseltici/Redrop/anahtarın görev sonrasında sırayla coin’e dönmesi; Collector’ın bütün bu dönüşümlerden sonra çalışması.
@@ -268,11 +277,20 @@ Erişilebilirlik: `prefers-reduced-motion` açıkken kaymalar cross-fade’e, sa
 - [x] Yan paneller daraltıldı; 5×6 oyun tahtası masaüstü görünümün baskın/ana bölümü yapıldı.
 - [x] Mevcut şeffaf/koyu Nur Muhafızı kaynağı masaüstü sağ paneline yeniden oturtuldu; damalı türev kullanılmıyor.
 - [x] `ATLA` tek tıkla kalan olay kuyruğunu final duruma geçiriyor.
+- [x] Boş oyun alanına tıklama da sayaçlar dahil bütün sunumu gerçek final kareye taşıyor; 5× üstü sahnelerde `PR` sayacı ve kazanım unvanı ortak eşiklerle ilerliyor.
+- [x] Global çarpan kapanışı `ana PR bankası → gerçek × → darbe → 0'dan kesin PR` sırasıyla ayrı, uzun sahne olarak çalışıyor.
+- [x] Masaüstünde sabit panel, telefonda yatay sembol tableti, 380 px altı sıkı düzen ve kısa-yatay ekran ölçeği için responsive kurallar eklendi.
+- [x] Ortak `slot-game-shell` altyapısı eklendi: tek görünüm yüksekliğinde üst bar + esnek sahne + sağlayıcı tipi kontrol iskelesi; masaüstü, orta genişlik, portre telefon, kısa portre ve kısa yatay yerleşimleri ayrı sözleşmelere bağlandı.
+- [x] `1793×1902`, `1366×768`, `390×844`, `360×640` ve `812×375` görünümleri gerçek tarayıcıda ölçüldü; 5×6 hücrelerin tahta içinde kaldığı, belgenin kaydırma üretmediği ve alt iskelenin görünüm alanında bittiği doğrulandı.
+- [x] Nur Muhafızı panelinin yüksekliği oyunu belirleyen uzun şeritten 2:3 oranlı sahne kartına çevrildi. Piksellerine dama deseni gömülü sahte şeffaf türev kaldırıldı; temiz koyu arka planlı kaynak kullanıldı ve küçük ekranlarda tahta lehine gizlendi.
+- [x] Kısa yatay ekranda Nur Gözü + Global çarpan + kazanç bilgisi sol sütuna, 5×6 tahta sağ sütuna taşındı; kontroller tek alt satırda tutuldu. Böylece tahta okunamaz bir küçük resme dönüşmeden ana özellik tablosu görünür kaldı.
+- [x] Mobil yatay Göz tabletinde Upgrader’ın minimum coin katmanı kaybolmadan kompakt üçüncü sütunda korunuyor.
+- [x] Coin ve kese uçuşlarında kaynak/hedef ayrımı; Collector final birleşmesi ve Super Collector ikinci geçişi için ayrı okunabilir vurgu eklendi.
 - [x] Normal tambur coin’den arındırıldı; Eye/Scatter her mod için ayrı oranlandı, Hilebaz Eye ağırlıklı yapıldı ve altı kartlı özel oyun menüsü eklendi.
 - [x] lobi, admin, veritabanı ve müzik entegrasyonu.
 - [x] Mixkit tabanlı yeni sihir/coin/makara FX paketi, Pixabay sinematik Orta Doğu müziği, ayrı müzik/FX seviyesi ve ses yaşam döngüsü.
 - [x] Masaüstü ve mobil tarayıcıda normal/Fate akışı, Mystery açılışı, collector zinciri ve kontroller doğrulandı.
-- [x] tam test/build temizliği (33 dosya, 184 test); tarayıcıda FU final ödemesi, `COIN + KESE`, tur/bonus/çıkış özetleri doğrulandı.
+- [x] tam test/build temizliği (44 dosya, 250 test); tarayıcıda FU final ödemesi, oyun alanına tıklayarak anında atlama, `PR` yüz değerleri ve sonuç özetinin kullanıcı kapatana kadar görünür kalması doğrulandı; konsol hata/uyarı üretmedi.
 
 ## 10. Devam protokolü
 

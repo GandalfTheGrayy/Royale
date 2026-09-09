@@ -1,0 +1,391 @@
+/*
+ * Shared responsive slot shell.
+ * Games keep their own colours and artwork; these classes define only the
+ * viewport contract, stage sizing and provider-style control dock.
+ */
+
+.slot-game-shell {
+  --slot-shell-topbar: clamp(52px, 4vw, 68px);
+  --slot-shell-dock: clamp(72px, 5.5vw, 90px);
+  --slot-shell-gap: clamp(6px, .8vw, 14px);
+  container-name: slot-game-shell;
+  container-type: size;
+  display: grid;
+  grid-template-rows: var(--slot-shell-topbar) minmax(0, 1fr) var(--slot-shell-dock);
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+.slot-game-topbar {
+  height: var(--slot-shell-topbar);
+  min-height: 0;
+}
+
+.slot-game-stage {
+  align-items: center;
+  container-name: slot-game-stage;
+  container-type: size;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.slot-game-machine {
+  align-content: center;
+  align-self: center;
+  height: fit-content;
+  max-height: 100%;
+  min-height: 0;
+}
+
+.slot-shell-reels {
+  width: min(
+    100%,
+    900px,
+    calc((100cqh - 128px) * .9009),
+    calc(100cqw - 184px)
+  );
+}
+
+.slot-game-character {
+  align-self: center;
+  aspect-ratio: 2 / 3;
+  height: auto;
+  justify-self: center;
+  max-height: min(76cqh, 720px);
+  width: 100%;
+}
+
+.slot-game-dock {
+  box-sizing: border-box;
+  height: var(--slot-shell-dock);
+  min-height: 0;
+  padding-bottom: max(5px, env(safe-area-inset-bottom));
+}
+
+/* The bet title is also a label. Keep its generic first-column rule from
+   collapsing the actual writable amount capsule into that same column. */
+.slot-game-dock__bet > .slot-game-dock__amount {
+  grid-column: 4;
+  grid-row: 1;
+}
+
+@container slot-game-shell (min-width: 1181px) {
+  .slot-game-stage {
+    grid-template-columns: minmax(0, 1fr) clamp(205px, 16cqw, 285px);
+    max-width: 1600px;
+  }
+
+  .slot-game-machine { width: min(100%, 1280px); }
+  .slot-game-dock__spin { min-height: 68px; min-width: 68px; }
+}
+
+@container slot-game-shell (min-width: 701px) and (max-width: 1180px) {
+  .slot-game-topbar {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+  }
+  .slot-game-audio {
+    display: flex;
+    flex: 0 0 auto;
+    min-width: 0;
+    order: 0;
+    width: auto;
+  }
+  .slot-game-stage { grid-template-columns: minmax(0, 1fr); }
+  .slot-game-character { display: none; }
+  .slot-shell-reels { width: min(720px, calc((100cqh - 124px) * .9009), calc(100cqw - 180px)); }
+  .slot-game-dock {
+    grid-template-columns: minmax(0, 1fr) minmax(210px, .72fr) 82px;
+    grid-template-rows: 46px 46px;
+  }
+  .slot-game-dock__bet { grid-column: 1 / 3; grid-row: 1; }
+  .slot-game-dock__mode { grid-column: 1; grid-row: 2; }
+  .slot-game-dock__actions { grid-column: 2; grid-row: 2; }
+  .slot-game-dock__spin { grid-column: 3; grid-row: 1 / span 2; min-height: 82px; min-width: 82px; }
+}
+
+@container slot-game-shell (max-width: 700px) {
+  .slot-game-topbar {
+    display: grid;
+    gap: 6px;
+    grid-template-columns: 38px minmax(0, 1fr) 64px auto;
+    padding: 3px 7px;
+  }
+
+  .slot-game-brand {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .slot-game-brand small { display: none; }
+  .slot-game-brand strong {
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .slot-game-audio {
+    display: flex;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    min-width: 0;
+    order: 0;
+    width: auto;
+  }
+
+  .slot-game-shell .slot-game-audio .game-music-control {
+    flex: 0 0 64px !important;
+    gap: 3px;
+    max-width: 64px !important;
+    min-width: 64px;
+    padding: 3px !important;
+    transform: none;
+    width: 64px !important;
+  }
+
+  .slot-game-shell .slot-game-audio .game-music-control > div,
+  .slot-game-shell .slot-game-audio .game-sfx-control input { display: none !important; }
+  .slot-game-shell .slot-game-audio .game-sfx-control {
+    border: 0;
+    display: block !important;
+    flex: 0 0 24px;
+    margin: 0;
+    padding: 0;
+  }
+
+  .slot-game-stage { padding: 4px; }
+  .slot-game-machine { align-self: start; width: 100%; }
+  .slot-game-character { display: none; }
+  .slot-shell-reels {
+    width: min(100%, calc((100cqh - 140px) * .9009));
+  }
+
+  .slot-game-dock {
+    display: grid;
+    gap: 3px;
+    grid-template-columns: minmax(0, 1fr) 76px;
+    grid-template-rows: 35px 39px 32px;
+    padding: 4px 5px max(4px, env(safe-area-inset-bottom));
+    position: relative;
+  }
+
+  .slot-game-dock__bet { grid-column: 1; grid-row: 1; min-height: 0; }
+  .slot-game-dock__mode { grid-column: 1; grid-row: 2; min-height: 0; }
+  .slot-game-dock__actions { grid-column: 1; grid-row: 3; min-height: 0; }
+  .slot-game-dock__spin {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    min-height: 72px;
+    min-width: 72px;
+  }
+
+  .slot-game-dock__bet {
+    gap: 3px;
+    grid-template-columns: 32px minmax(74px, 1fr) 32px 32px;
+    padding: 2px 3px;
+  }
+  .slot-game-dock__bet > label:first-child,
+  .slot-game-dock__min,
+  .slot-game-dock__max { display: none !important; }
+  .slot-game-dock__decrease { grid-column: 1 !important; grid-row: 1 !important; }
+  .slot-game-dock__amount { grid-column: 2 !important; grid-row: 1 !important; min-height: 29px; }
+  .slot-game-dock__increase { grid-column: 3 !important; grid-row: 1 !important; }
+  .slot-game-dock__more { grid-column: 4 !important; grid-row: 1 !important; }
+  .slot-game-dock__bet button { min-height: 29px; }
+
+  .slot-game-dock__mode { gap: 0; padding: 2px 3px; }
+  .slot-game-dock__mode > label { display: none; }
+  .slot-game-dock__mode .allah-mode-opener { min-height: 33px; padding-block: 2px; }
+  .slot-game-dock__mode .allah-mode-opener > img { height: 25px; width: 25px; }
+
+  .slot-game-dock__actions { gap: 3px; min-height: 0; padding: 2px 3px; }
+  .slot-game-dock__actions button { min-height: 26px; }
+  .slot-game-dock__actions button span { display: inline; margin: 0 0 0 2px; }
+}
+
+.allah-guardian-panel.slot-game-character .allah-guardian {
+  border-radius: inherit;
+  bottom: auto;
+  filter: saturate(.96) contrast(1.03);
+  height: 100%;
+  inset: 0;
+  max-height: none;
+  object-fit: cover;
+  object-position: center center;
+  width: 100%;
+}
+
+.allah-guardian-panel.slot-game-character .allah-guardian-halo { display: none; }
+
+@container slot-game-shell (max-width: 700px) and (max-height: 680px) {
+  .slot-shell-reels { width: min(100%, calc((100cqh - 143px) * .9009)); }
+  .slot-game-dock { grid-template-rows: 32px 35px 29px; }
+}
+
+@media (min-width: 701px) and (max-width: 1180px) {
+  .slot-game-shell {
+    --slot-shell-topbar: 52px;
+    --slot-shell-dock: 106px;
+  }
+}
+
+@media (max-width: 700px) {
+  .slot-game-shell {
+    --slot-shell-topbar: 48px;
+    --slot-shell-dock: calc(116px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 700px) and (max-height: 680px) {
+  .slot-game-shell {
+    --slot-shell-topbar: 44px;
+    --slot-shell-dock: calc(106px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Phone/tablet landscape: put the feature readout beside the reels and keep
+   the provider controls on one bottom row. The grid never has to shrink into
+   an unreadable thumbnail just to preserve portrait stacking. */
+@media (min-width: 701px) and (max-height: 520px) {
+  .slot-game-shell {
+    --slot-shell-topbar: 44px;
+    --slot-shell-dock: 66px;
+  }
+
+  .slot-game-topbar { min-height: 0; }
+  .slot-game-topbar .slot-game-brand small { display: none; }
+  .slot-game-topbar .slot-game-brand strong { font-size: 18px; margin-top: 0; }
+  .slot-game-stage { padding: 4px 6px; }
+
+  .slot-game-machine {
+    align-items: stretch;
+    display: grid;
+    gap: 4px 7px;
+    grid-template-columns: minmax(205px, 265px) minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    height: 100%;
+    justify-content: center;
+    max-width: 760px;
+    padding: 5px;
+  }
+
+  .slot-game-machine .allah-global-bar {
+    grid-column: 1;
+    grid-row: 1;
+    grid-template-columns: 38px minmax(0, 1fr) 38px;
+    margin: 0;
+    min-height: 48px;
+    width: 100%;
+  }
+  .slot-game-machine .allah-global-bar::before { top: 15px; }
+  .slot-game-machine .allah-wheel img { height: 34px; width: 34px; }
+  .slot-game-machine .allah-wheel span { display: none; }
+  .slot-game-machine .allah-global-core { gap: 3px; grid-template-columns: minmax(82px, 1fr) 66px; }
+  .slot-game-machine .allah-global-value { min-width: 66px; padding: 3px 5px; }
+
+  .slot-game-machine .allah-win-meter {
+    grid-column: 1;
+    grid-row: 2;
+    margin: 0;
+    min-height: 40px;
+    padding: 4px 8px;
+    width: 100%;
+  }
+  .slot-game-machine .allah-win-meter > strong { font-size: 22px; }
+  .slot-game-machine .allah-win-meter > em { display: none; }
+
+  .slot-game-machine .allah-eye-console {
+    align-items: center;
+    border-radius: 12px;
+    display: grid;
+    gap: 5px;
+    grid-column: 1;
+    grid-row: 3;
+    grid-template-columns: 42px minmax(0, 1fr);
+    left: auto;
+    min-height: 0;
+    padding: 5px 7px;
+    position: relative;
+    top: auto;
+    transform: none;
+    width: 100%;
+  }
+  .slot-game-machine .allah-eye-console .allah-eye-orbit { height: 38px; width: 38px; }
+  .slot-game-machine .allah-eye-console-copy {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .slot-game-machine .allah-eye-console-copy > strong { align-self: center; font-size: 8px; padding-right: 5px; }
+  .slot-game-machine .allah-eye-console-copy > small { display: none; }
+  .slot-game-machine .allah-eye-console .allah-eye-slots {
+    align-self: center;
+    display: grid;
+    gap: 2px;
+    grid-column: 2;
+    grid-row: 1;
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+    margin: 0;
+  }
+  .slot-game-machine .allah-eye-console .allah-eye-slots > span,
+  .slot-game-machine .allah-eye-console .allah-eye-slots > span:last-child {
+    aspect-ratio: 1;
+    border-radius: 3px;
+    grid-column: auto;
+    width: auto;
+  }
+  .slot-game-machine .allah-eye-console .allah-min-tier {
+    align-items: center;
+    border: 0;
+    display: flex;
+    flex-direction: column;
+    grid-column: 3;
+    grid-row: 1;
+    justify-content: center;
+    margin: 0;
+    padding: 0 0 0 4px;
+  }
+  .slot-game-machine .allah-eye-console .allah-min-tier small { display: none; }
+  .slot-game-machine .allah-eye-console .allah-min-tier b { font-size: 7px; margin: 0; }
+  .slot-game-machine .allah-eye-console .allah-min-tier em { font-size: 6px; margin-top: 2px; white-space: nowrap; }
+
+  .slot-shell-reels {
+    align-self: center;
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    max-height: 100%;
+    width: min(100%, calc((100dvh - 120px) * .9009));
+  }
+
+  .slot-game-dock {
+    display: grid;
+    gap: 5px;
+    grid-template-columns: minmax(180px, .8fr) minmax(180px, .8fr) 58px minmax(220px, 1fr);
+    grid-template-rows: 56px;
+    padding: 5px 7px;
+  }
+  .slot-game-dock__bet { grid-column: 1; grid-row: 1; }
+  .slot-game-dock__mode { grid-column: 2; grid-row: 1; }
+  .slot-game-dock__spin { grid-column: 3; grid-row: 1; min-height: 56px; min-width: 56px; }
+  .slot-game-dock__actions { grid-column: 4; grid-row: 1; }
+
+  .slot-game-dock__bet {
+    gap: 3px;
+    grid-template-columns: 30px minmax(62px, 1fr) 30px 30px;
+    padding: 3px;
+  }
+  .slot-game-dock__bet > label:first-child,
+  .slot-game-dock__min,
+  .slot-game-dock__max { display: none !important; }
+  .slot-game-dock__decrease { grid-column: 1 !important; grid-row: 1 !important; }
+  .slot-game-dock__amount { grid-column: 2 !important; grid-row: 1 !important; }
+  .slot-game-dock__increase { grid-column: 3 !important; grid-row: 1 !important; }
+  .slot-game-dock__more { grid-column: 4 !important; grid-row: 1 !important; }
+  .slot-game-dock__mode { gap: 0; padding: 3px 5px; }
+  .slot-game-dock__mode > label { display: none; }
+  .slot-game-dock__mode .allah-mode-opener { min-height: 48px; }
+  .slot-game-dock__actions { min-height: 0; padding: 3px; }
+}
