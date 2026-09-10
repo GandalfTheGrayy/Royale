@@ -69,3 +69,9 @@
 .sim-selection-preview { border-top: 1px solid #426048; margin-top: 24px; }
 .sim-reading-guide, .sim-iteration-list { padding: 16px; background: #132219; border-radius: 8px; margin: 16px 0; line-height: 1.7; }
 .sim-iteration-list article { border-left: 3px solid #b8a154; padding-left: 15px; margin: 16px 0; }
+.sim-smart-search { margin: 16px 0; padding: 16px 18px; border: 1px solid #546557; border-radius: 8px; background: #111c16; line-height: 1.6; }
+.sim-smart-search.validated { border-color: #4c8b68; }
+.sim-smart-search.validated b { color: #8de0ae; }
+.sim-smart-search.not-validated b { color: #e8cb72; }
+.sim-no-prescription { padding: 22px; border: 1px dashed #776c42; border-radius: 10px; background: #161a12; }
+.sim-no-prescription p { max-width: 95ch; line-height: 1.7; color: #b9c6bd; }

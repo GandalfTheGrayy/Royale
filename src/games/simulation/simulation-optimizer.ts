@@ -10,6 +10,7 @@ export type SimulationOptimizationGoal = {
   allowPayoutChanges: boolean;
   batchRuns: number;
   maxIterations?: number;
+  maxCandidates?: number;
 };
 export type OptimizationChange = {
   path: string; label: string; before: number; after: number;
@@ -50,6 +51,11 @@ export type SimulationResearch = {
   protectedSettings: Array<{ path: string; value: number }>;
   limitations: string[]; interactions: string[];
   iterations: Array<{ step: number; accepted: boolean; label: string; comparison: ResearchComparison; changes: OptimizationChange[] }>;
+  searchSummary: {
+    candidatesGenerated: number; candidatesValidated: number;
+    automaticEscalations: number; maxValidationRunsPerSeed: number;
+    outcome: "validated" | "not-validated" | "no-candidate";
+  };
 };
 export type ResearchProgress = { phase: string; completed: number; simulatedRounds: number };
 type Knob = { path: string; label: string; mechanism: string; unit: OptimizationChange["unit"]; max: number; global: boolean };
@@ -204,7 +210,12 @@ export async function researchSimulation(
   progress: (value: ResearchProgress) => void = () => {},
 ): Promise<SimulationResearch> {
   const started = performance.now(), request = report.request, game = settings.games[request.gameId];
-  const goal = { ...rawGoal, batchRuns: Math.max(100, Math.min(10_000, Math.round(rawGoal.batchRuns))), maxIterations: Math.max(0, Math.min(5, Math.round(rawGoal.maxIterations ?? 3))) };
+  const goal = {
+    ...rawGoal,
+    batchRuns: Math.max(100, Math.min(10_000, Math.round(rawGoal.batchRuns))),
+    maxIterations: Math.max(0, Math.min(5, Math.round(rawGoal.maxIterations ?? 3))),
+    maxCandidates: Math.max(0, Math.min(8, Math.round(rawGoal.maxCandidates ?? 6))),
+  };
   const knobs = researchKnobs(game, request.mode, goal.allowPayoutChanges);
   const experiments: ResearchExperiment[] = [], interactions: string[] = [];
   const iterations: SimulationResearch["iterations"] = [];
@@ -213,7 +224,7 @@ export async function researchSimulation(
   // Separate deterministic seed domains for search and untouched validation.
   const seeds = (domain: number, count: number) => Array.from({ length: count }, (_, i) =>
     (Math.imul(request.seed ^ domain, 1664525) + Math.imul(i + 1, 1013904223)) >>> 0);
-  const searchSeeds = seeds(0x51a23, 3), validationSeeds = seeds(0x78ca9, 6);
+  const searchSeeds = seeds(0x51a23, 3), validationSeeds = seeds(0x78ca9, 10);
   const simulate = async (profile: AdminGameSettings, batchSeeds: number[], runs: number, phase: string, mode = request.mode, parameter = request.parameter) => {
     const reports: CasinoSimulationReport[] = [];
     for (const seed of batchSeeds) {
@@ -231,7 +242,9 @@ export async function researchSimulation(
     const bonusDeficit = comparison.before.bonusFrequency > 0
       ? Math.max(0, goal.minBonusRetention - comparison.after.bonusFrequency / comparison.before.bonusFrequency) : 0;
     const rhythmWeight = goal.priority === "engagement" ? 4 : goal.priority === "house" ? 1 : 2;
+    const uncertainty = Math.max(0, comparison.improvement95[1] - comparison.improvement95[0]);
     return Math.abs(comparison.after.rtp - goal.targetRtp) / goal.targetRtp
+      + uncertainty / Math.max(1, goal.targetRtp) * .15
       + deficit * rhythmWeight * 10 + bonusDeficit * 10 + changes.length * .002;
   };
   const makeChange = (knob: Knob, after: number): OptimizationChange => ({
@@ -247,109 +260,166 @@ export async function researchSimulation(
   };
   for (const knob of knobs) {
     const before = readPath(game, knob.path);
-    const values = knob.path === "targetRtp" ? [goal.targetRtp] : [before * .5, before * .8, before * 1.2];
+    // Strong as well as subtle interventions are required: changing a small
+    // relative weight by 20% is often invisible under a long-tailed slot.
+    const values = knob.path === "targetRtp" ? [goal.targetRtp] : [before * .1, before * .35, before * .7, before * 1.5];
     for (const value of [...new Set(values.map(round))]) {
       const change = makeChange(knob, value);
       if (change.after !== change.before)
         await evaluate([change], knob.label + ": " + tr(change.before) + " → " + tr(change.after), "single", knob.mechanism);
     }
   }
-  const baseComparison = compare(baseline, baseline, goal.targetRtp);
-  const baseScore = score(baseComparison, []);
   const ranked = () => experiments.filter(e => e.kind !== "scenario").sort((a, b) => a.score - b.score);
-  let best = ranked()[0];
+  const searchPromising = (experiment: ResearchExperiment) => mean(experiment.comparison.improvements) > 0
+    && Math.abs(experiment.comparison.after.rtp - goal.targetRtp) < Math.abs(experiment.comparison.before.rtp - goal.targetRtp);
+  let best = ranked().find(searchPromising) ?? ranked()[0];
   // Refine the most promising actual measurement, rather than inventing a
   // correction from observed RTP. A factor that did nothing is never extrapolated.
-  if (best && best.score < baseScore && best.changes.length === 1 && best.changes[0].path !== "targetRtp") {
+  if (best && searchPromising(best) && best.changes.length === 1 && best.changes[0].path !== "targetRtp") {
     const chosen = best.changes[0], knob = knobs.find(k => k.path === chosen.path)!;
     for (const value of [chosen.after * .5, (chosen.after + chosen.before) / 2])
       await evaluate([makeChange(knob, value)], knob.label + " · ince arama " + tr(value), "refinement", knob.mechanism);
   }
-  const distinct = ranked().filter((e, i, all) => e.score < baseScore && all.findIndex(a => a.changes[0].path === e.changes[0].path) === i).slice(0, 2);
-  if (distinct.length === 2) {
-    const combined = await evaluate(distinct.flatMap(e => e.changes), "En etkili iki ayarın birlikte denemesi", "combination", "Tekil etkilerin birlikte çalışınca değişip değişmediği ölçülür.");
-    const additive = distinct.reduce((s, e) => s + e.comparison.after.rtp - e.comparison.before.rtp, 0);
+  const distinct = ranked().filter(searchPromising).filter((e, i, all) => all.findIndex(a => a.changes[0].path === e.changes[0].path) === i).slice(0, 3);
+  for (const group of distinct.length >= 2 ? [distinct.slice(0, 2), ...(distinct.length >= 3 ? [distinct] : [])] : []) {
+    const combined = await evaluate(group.flatMap(e => e.changes), "En etkili " + group.length + " ayarın birlikte denemesi", "combination", "Tekil etkilerin birlikte çalışınca değişip değişmediği ölçülür.");
+    const additive = group.reduce((s, e) => s + e.comparison.after.rtp - e.comparison.before.rtp, 0);
     const actual = combined.comparison.after.rtp - combined.comparison.before.rtp;
-    interactions.push("İki tekil deneyin RTP etkileri toplamı " + tr(additive) + " puan; birlikte ölçülen " + tr(actual) + " puan. Fark " + tr(actual - additive) + " puan; etkileşim ve örnek değişkenliği içerir.");
+    interactions.push(group.length + " tekil deneyin RTP etkileri toplamı " + tr(additive) + " puan; birlikte ölçülen " + tr(actual) + " puan. Fark " + tr(actual - additive) + " puan; etkileşim ve örnek değişkenliği içerir.");
   }
-  best = ranked()[0];
+  best = ranked().find(searchPromising) ?? ranked()[0];
   // Coordinate search continues on the best measured temporary profile. Every
   // cumulative candidate is still compared with the same untouched live baseline.
-  for (let step = 1; best && best.score < baseScore && step <= goal.maxIterations; step += 1) {
+  for (let step = 1; best && searchPromising(best) && step <= goal.maxIterations; step += 1) {
     const previous = best;
-    const paths = [...new Set(ranked().filter(e => e.kind !== "combination").flatMap(e => e.changes.map(c => c.path)))].filter(path => path !== "targetRtp").slice(0, 3);
+    const paths = [...new Set(ranked().filter(e => e.kind !== "combination").flatMap(e => e.changes.map(c => c.path)))].filter(path => path !== "targetRtp").slice(0, 5);
     if (!paths.length) break;
     for (const path of paths) {
       const knob = knobs.find(k => k.path === path)!;
       const center = previous.changes.find(c => c.path === path)?.after ?? readPath(game, path);
-      for (const factor of [.7, 1.15]) {
+      for (const factor of [.5, .8, 1.25]) {
         const next = makeChange(knob, center * factor);
         const changes = [...previous.changes.filter(c => c.path !== path), next].filter(c => c.before !== c.after);
         if (!changes.length) continue;
         await evaluate(changes, "Deney adımı " + step + " · " + knob.label + " " + tr(next.after), "refinement", "Önceki en iyi geçici profil üzerinden " + knob.mechanism);
       }
     }
-    best = ranked()[0];
+    best = ranked().find(searchPromising) ?? ranked()[0];
     const accepted = best.score < previous.score - .0001;
     iterations.push({ step, accepted, label: accepted ? "Bu geçici profil daha iyi; sonraki deney buradan devam etti." : "Ek denemeler iyileştirmedi; önceki geçici profil korundu.", comparison: best.comparison, changes: best.changes });
     if (!accepted) break;
   }
   const diagnosis = buildSimulationDiagnosis(report, game, goal);
-  diagnosis.evidence.push("Arama " + searchSeeds.length + " tohumla; seçilen aday ayrı 6 tohumla sınanır. Birim, ana tur / satın alım oturumudur.");
+  diagnosis.evidence.push("Arama " + searchSeeds.length + " tohumla yapıldı. Motor tek bir adaya bağlanmak yerine en iyi farklı profilleri bağımsız tohumlarda sırayla sınar; belirsiz ama umut veren ölçümü otomatik büyütür.");
   const crossModes: SimulationResearch["crossModes"] = [];
+  let candidatesValidated = 0, automaticEscalations = 0, maxValidationRunsPerSeed = 0;
+  let outcome: SimulationResearch["searchSummary"]["outcome"] = "no-candidate";
   const limitations = [
     "Sonuçlar seçilen motor adaptörü, mod, bahis ve örnek hacmi için geçerlidir. Teorik RTP sertifikası değildir.",
     "Güven aralıkları tohum grupları arasındaki eşleştirilmiş farklardan hesaplanır. Dal değişince rastgele sayı tüketimi değişebilir; tek tek spinler eşleşmiş kabul edilmez.",
     "Nadir jackpot görülmemesi, jackpot yolunun yokluğu veya uzun dönem riskinin ölçüldüğü anlamına gelmez. Tavan korunur; gerçekleşme sıklığı aynı kalacağı garanti edilmez.",
   ];
   if (game.slot && game.id !== "kiraz-77") limitations.push("Slot hit, dağılım ve RTP ölçümleri ücretli spin + doğal bonus toplamı veya satın alınmış bonus oturumu bazındadır. Oturumlar arasında motorun akış durumu korunur.");
-  if (best && best.score < baseScore) {
-    const candidate = applyChanges(game, best.changes);
-    const before = await simulate(game, validationSeeds, goal.batchRuns * 2, "Bağımsız doğrulama · mevcut profil");
-    const after = await simulate(candidate, validationSeeds, goal.batchRuns * 2, "Bağımsız doğrulama · seçilen aday");
-    const validation = compare(before, after, goal.targetRtp);
+  type CandidateValidation = { experiment: ResearchExperiment; validation: ResearchComparison };
+  const signature = (experiment: ResearchExperiment) => experiment.changes.map(c => c.path + "=" + c.after).sort().join("|");
+  const rankedCandidates = ranked();
+  const diverse = rankedCandidates.filter((experiment, index, all) => {
+    const primaryPath = experiment.changes[0]?.path;
+    return !!primaryPath && all.findIndex(other => other.changes[0]?.path === primaryPath) === index;
+  });
+  // A noisy screening pass may make a genuinely useful mechanism look neutral.
+  // Fill the shortlist with the best candidate from different mechanisms so the
+  // independent validation, not the cheap screen, makes the final decision.
+  const candidatePool = [...rankedCandidates.filter(searchPromising), ...diverse]
+    .filter((e, i, all) => all.findIndex(other => signature(other) === signature(e)) === i).slice(0, goal.maxCandidates);
+  const validationBase = new Map<string, CasinoSimulationReport[]>();
+  const validateAt = async (experiment: ResearchExperiment, count: number, runs: number) => {
+    const key = count + ":" + runs;
+    let before = validationBase.get(key);
+    if (!before) {
+      before = await simulate(game, validationSeeds.slice(0, count), runs, "Bağımsız doğrulama · mevcut profil · " + runs + " tur");
+      validationBase.set(key, before);
+    }
+    const after = await simulate(applyChanges(game, experiment.changes), validationSeeds.slice(0, count), runs, "Aday " + (candidatesValidated + 1) + " doğrulanıyor · " + runs + " tur");
+    maxValidationRunsPerSeed = Math.max(maxValidationRunsPerSeed, runs);
+    return compare(before, after, goal.targetRtp);
+  };
+  const corePasses = (validation: ResearchComparison) => {
+    const startingGap = Math.abs(validation.before.rtp - goal.targetRtp);
+    const materialImprovement = mean(validation.improvements) >= Math.max(.5, startingGap * .05);
+    return validation.improvement95[0] > 0 && materialImprovement
+    && validation.after.hitRate >= validation.before.hitRate * goal.minHitRetention
+    && validation.after.bonusFrequency >= validation.before.bonusFrequency * goal.minBonusRetention
+    && validation.before.incompleteSessions + validation.after.incompleteSessions === 0;
+  };
+  const validated: CandidateValidation[] = [];
+  const initialRuns = Math.max(500, Math.min(20_000, goal.batchRuns * 2));
+  const deepRuns = Math.max(initialRuns, Math.min(20_000, Math.max(5_000, goal.batchRuns * 6)));
+  for (const experiment of candidatePool) {
+    candidatesValidated += 1;
+    let validation = await validateAt(experiment, 6, initialRuns);
+    const meanImprovement = mean(validation.improvements);
+    const closer = Math.abs(validation.after.rtp - goal.targetRtp) < Math.abs(validation.before.rtp - goal.targetRtp);
+    if (!corePasses(validation) && meanImprovement > 0 && closer && deepRuns > initialRuns) {
+      automaticEscalations += 1;
+      validation = await validateAt(experiment, 10, deepRuns);
+    }
+    if (corePasses(validation)) validated.push({ experiment, validation });
+  }
+  validated.sort((a, b) => score(a.validation, a.experiment.changes) - score(b.validation, b.experiment.changes));
+  let winner: CandidateValidation | undefined;
+  let winnerRegressions: string[] = [];
+  for (const candidateResult of validated) {
+    const trialModes: SimulationResearch["crossModes"] = [];
     const regressions: string[] = [];
-    if (best.changes.some(c => knobs.find(k => k.path === c.path)?.global)) {
+    if (candidateResult.experiment.changes.some(c => knobs.find(k => k.path === c.path)?.global)) {
       const definition = SIMULATION_GAMES.find(d => d.id === game.id)!;
       for (const mode of definition.modes.filter(m => m.id !== request.mode && !(game.id === "baykus-madeni" && m.id === "bonus-epic"))) {
-        const b = await simulate(game, validationSeeds.slice(0, 3), goal.batchRuns, "Diğer mod kontrolü · " + mode.label, mode.id);
-        const a = await simulate(candidate, validationSeeds.slice(0, 3), goal.batchRuns, "Aday diğer mod · " + mode.label, mode.id);
-        const comparison = compare(b, a, goal.targetRtp);
+        const modeSeeds = validationSeeds.slice(0, 3);
+        const modeRuns = Math.max(goal.batchRuns, Math.min(5_000, initialRuns));
+        const before = await simulate(game, modeSeeds, modeRuns, "Diğer mod kontrolü · " + mode.label, mode.id);
+        const after = await simulate(applyChanges(game, candidateResult.experiment.changes), modeSeeds, modeRuns, "Aday diğer mod · " + mode.label, mode.id);
+        const comparison = compare(before, after, goal.targetRtp);
         const regression = comparison.improvement95[1] < -3 || comparison.after.hitRate < comparison.before.hitRate * goal.minHitRetention
           || comparison.after.bonusFrequency < comparison.before.bonusFrequency * goal.minBonusRetention;
-        crossModes.push({ mode: mode.label, comparison, regression });
+        trialModes.push({ mode: mode.label, comparison, regression });
         if (regression) regressions.push(mode.label);
       }
     }
-    const enough = validation.improvement95[0] > 0;
-    const retainsHit = validation.after.hitRate >= validation.before.hitRate * goal.minHitRetention;
-    const retainsBonus = validation.after.bonusFrequency >= validation.before.bonusFrequency * goal.minBonusRetention;
-    const incomplete = validation.before.incompleteSessions + validation.after.incompleteSessions
-      + crossModes.reduce((sum, m) => sum + m.comparison.before.incompleteSessions + m.comparison.after.incompleteSessions, 0);
-    const conditionalOnly = game.id === "baykus-madeni" && request.mode === "bonus-epic";
-    const applyable = enough && retainsHit && retainsBonus && !regressions.length && !incomplete && !conditionalOnly;
-    const blockedReason = conditionalOnly ? "Epik koşullu senaryodur. Uygulanabilir öneri için Gizemli dönüş satın al modunu araştırın."
-      : incomplete ? "Simülasyonun işlem sınırında tamamlanamayan bonus oturumları var. Eksik ödemeyle ayar önerilemez."
-      : !enough ? "Bağımsız örnekte iyileşme yeterince kesin değil; daha büyük deney gerekli."
-      : !retainsHit ? "Seçtiğiniz ödeme sıklığını koruma sınırı aşıldı."
-      : !retainsBonus ? "Seçtiğiniz bonus sıklığını koruma sınırı aşıldı."
-      : regressions.length ? "Diğer modlarda gerileme: " + regressions.join(", ") : undefined;
+    if (!regressions.length) {
+      winner = candidateResult; crossModes.push(...trialModes); break;
+    }
+    winnerRegressions = regressions;
+  }
+  const conditionalOnly = game.id === "baykus-madeni" && request.mode === "bonus-epic";
+  if (winner && !conditionalOnly) {
+    outcome = "validated";
+    best = winner.experiment;
+    const validation = winner.validation;
     const changedCause = Object.entries(validation.before.causes)
       .map(([label, value]) => ({ label, before: value, after: validation.after.causes[label] ?? 0 }))
       .filter(c => Math.abs(c.before - c.after) > .001)
       .sort((a, b) => Math.abs(b.before - b.after) - Math.abs(a.before - a.after)).slice(0, 5);
     diagnosis.evidence.push(...changedCause.map(c => c.label + ": ana tur başına " + tr(c.before) + " → " + tr(c.after) + " olay."));
-    diagnosis.verdict = applyable ? "Ölçülmüş iyileştirme bulundu" : "Aday bulundu; doğrulama yetersiz";
-    diagnosis.status = applyable ? "healthy" : "uncertain";
-    diagnosis.explanation = "En iyi aday " + best.label + ". Bağımsız ölçümde RTP %" + tr(validation.before.rtp) + " → %" + tr(validation.after.rtp) + ". " + (blockedReason ?? "Hedefe yaklaşma ve seçtiğiniz ödeme sıklığı koşulu doğrulandı.");
+    diagnosis.verdict = "Doğrulanmış ayar profili bulundu";
+    diagnosis.status = "healthy";
+    diagnosis.explanation = candidatesValidated + " farklı aday bağımsız tohumlarda sınandı. Seçilen profil RTP’yi %" + tr(validation.before.rtp) + " → %" + tr(validation.after.rtp) + " taşıdı ve hedefe yaklaşma aralığının tamamı sıfırın üzerinde kaldı.";
     diagnosis.recommendations.push({
       id: best.id, priority: "important", title: best.label, summary: best.mechanism,
-      confidence: applyable ? "orta" : "düşük", changes: best.changes, applyable, blockedReason,
+      confidence: "orta", changes: best.changes, applyable: true,
       sourceFingerprint: fingerprint, validation,
       expectedEffect: "Yeni tohumlarda ölçülen RTP farkı aralığı " + tr(validation.rtpDelta95[0]) + "–" + tr(validation.rtpDelta95[1]) + " yüzde puan; ödeme sıklığı %" + tr(validation.before.hitRate * 100) + " → %" + tr(validation.after.hitRate * 100) + ".",
     });
-    if (validation.after.rtp > goal.targetRtp + 3) diagnosis.tooHigh.push("Aday sonrasında da RTP hedefin üzerinde; bu aday tam dengeye ulaştığı iddiası taşımaz.");
-    if (validation.after.rtp < goal.targetRtp - 3) diagnosis.tooLow.push("Aday sonrasında RTP hedefin altında; kalan fark raporda korunuyor.");
+    if (validation.after.rtp > goal.targetRtp + 3) diagnosis.tooHigh.push("Doğrulanan profil hedefin hâlâ üzerinde; motor bunu tam denge değil, kanıtlanmış bir yaklaşma olarak sunuyor.");
+    if (validation.after.rtp < goal.targetRtp - 3) diagnosis.tooLow.push("Doğrulanan profil hedefin altında kaldı; motor bunu tam denge değil, kanıtlanmış bir yaklaşma olarak sunuyor.");
+  } else if (candidatePool.length) {
+    best = candidatePool[0];
+    outcome = "not-validated";
+    const deepest = maxValidationRunsPerSeed || initialRuns;
+    diagnosis.status = "uncertain";
+    diagnosis.verdict = "Henüz kaydedilebilir ayar bulunamadı";
+    diagnosis.explanation = candidatesValidated + " farklı geçici profil bağımsız tohumlarda sınandı" + (automaticEscalations ? "; " + automaticEscalations + " belirsiz ölçüm otomatik olarak " + deepest.toLocaleString("tr-TR") + " tur/tohum seviyesine büyütüldü" : "") + ". Hiçbiri hedefe yaklaşmayı güvenilir biçimde kanıtlamadı; etkisiz adayı reçete olarak göstermiyorum.";
+    if (winnerRegressions.length) diagnosis.tooLow.push("Hedef modda iyi görünen adayların diğer modlarda gerilettiği alanlar: " + winnerRegressions.join(", ") + ".");
   } else {
     diagnosis.status = "uncertain";
     diagnosis.verdict = knobs.length ? "Denenen ayarlarda uygun iyileştirme bulunamadı" : "Bu profil için düzenlenebilir uygun ayar yok";
@@ -376,6 +446,7 @@ export async function researchSimulation(
     goal, sourceFingerprint: fingerprint, experiments, diagnosis, selectedId: best?.id, crossModes,
     totalSimulatedRounds, durationMs: performance.now() - started, protectedSettings: protectedGameSettings(game),
     limitations, interactions, iterations,
+    searchSummary: { candidatesGenerated: candidatePool.length, candidatesValidated, automaticEscalations, maxValidationRunsPerSeed, outcome },
   };
 }
 
@@ -398,10 +469,10 @@ export async function validateSimulationSelection(
   if (!changes.length) throw new Error("Seçili değerler zaten canlı ayarlarda kayıtlı.");
   if (new Set(changes.map(c => c.path)).size !== changes.length) throw new Error("Aynı ayar iki kez seçilemez.");
   const candidate = applyChanges(game, changes);
-  const seeds = Array.from({ length: 6 }, (_, i) => (Math.imul(request.seed ^ 0x934b7, 1664525) + Math.imul(i + 1, 1013904223)) >>> 0);
-  const runs = Math.max(100, Math.min(20_000, goal.batchRuns * 2));
+  const seeds = Array.from({ length: 10 }, (_, i) => (Math.imul(request.seed ^ 0x934b7, 1664525) + Math.imul(i + 1, 1013904223)) >>> 0);
+  const initialRuns = Math.max(500, Math.min(20_000, goal.batchRuns * 2));
   let completed = 0;
-  const simulate = async (profile: AdminGameSettings, mode: string, count = 6) => {
+  const simulate = async (profile: AdminGameSettings, mode: string, count = 6, runs = initialRuns) => {
     const reports: CasinoSimulationReport[] = [];
     for (const seed of seeds.slice(0, count)) {
       reports.push(runCasinoSimulation({ ...request, mode, seed, runs }, { ...settings, games: { ...settings.games, [game.id]: profile } }));
@@ -410,22 +481,32 @@ export async function validateSimulationSelection(
     }
     return reports;
   };
-  const before = await simulate(game, request.mode);
-  const after = await simulate(candidate, request.mode);
-  const validation = compare(before, after, goal.targetRtp);
+  let before = await simulate(game, request.mode);
+  let after = await simulate(candidate, request.mode);
+  let validation = compare(before, after, goal.targetRtp);
+  const deepRuns = Math.max(initialRuns, Math.min(20_000, Math.max(5_000, goal.batchRuns * 6)));
+  const promising = mean(validation.improvements) > 0
+    && Math.abs(validation.after.rtp - goal.targetRtp) < Math.abs(validation.before.rtp - goal.targetRtp);
+  if (validation.improvement95[0] <= 0 && promising && deepRuns > initialRuns) {
+    before = await simulate(game, request.mode, 10, deepRuns);
+    after = await simulate(candidate, request.mode, 10, deepRuns);
+    validation = compare(before, after, goal.targetRtp);
+  }
   const regressions: string[] = [];
   let incomplete = validation.before.incompleteSessions + validation.after.incompleteSessions;
   if (changes.some(c => knobs.find(k => k.path === c.path)?.global)) {
     for (const mode of SIMULATION_GAMES.find(g => g.id === game.id)!.modes.filter(m => m.id !== request.mode && !(game.id === "baykus-madeni" && m.id === "bonus-epic"))) {
-      const comparison = compare(await simulate(game, mode.id, 3), await simulate(candidate, mode.id, 3), goal.targetRtp);
+      const comparison = compare(await simulate(game, mode.id, 3, Math.min(5_000, deepRuns)), await simulate(candidate, mode.id, 3, Math.min(5_000, deepRuns)), goal.targetRtp);
       incomplete += comparison.before.incompleteSessions + comparison.after.incompleteSessions;
       if (comparison.improvement95[1] < -3 || comparison.after.hitRate < comparison.before.hitRate * goal.minHitRetention || comparison.after.bonusFrequency < comparison.before.bonusFrequency * goal.minBonusRetention)
         regressions.push(mode.label);
     }
   }
+  const materialImprovement = mean(validation.improvements) >= Math.max(.5, Math.abs(validation.before.rtp - goal.targetRtp) * .05);
   const blockedReason = game.id === "baykus-madeni" && request.mode === "bonus-epic" ? "Koşullu epik inceleme canlı satın alımı temsil etmez."
     : incomplete ? "Bazı bonus oturumları tamamlanamadı."
-    : validation.improvement95[0] <= 0 ? "Bu seçimin hedefe yaklaştırdığı bağımsız örnekte kesinleşmedi."
+    : validation.improvement95[0] <= 0 ? "Motor örnek hacmini otomatik büyüttü; bu ayarın hedefe yaklaştırdığı yine de kanıtlanmadı. Etkisiz ayar kaydedilemez."
+    : !materialImprovement ? "Etki istatistiksel olarak görüldü ama hedef farkına göre anlamlı büyüklükte değil. Önemsiz ayar değişikliği kaydedilemez."
     : validation.after.hitRate < validation.before.hitRate * goal.minHitRetention ? "Ödeme sıklığı belirlediğiniz sınırın altına düşüyor."
     : validation.after.bonusFrequency < validation.before.bonusFrequency * goal.minBonusRetention ? "Bonus sıklığı belirlediğiniz sınırın altına düşüyor."
     : regressions.length ? "Diğer modlarda gerileme: " + regressions.join(", ") : undefined;

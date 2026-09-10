@@ -59,7 +59,7 @@ export default function OwnerSimulationLab({ gameId, onGameChange, onOpenSetting
   const goalRtp = goalOverride ?? settings.games[gameId].targetRtp;
   const [minHitRetention, setMinHitRetention] = useState(.8);
   const [minBonusRetention, setMinBonusRetention] = useState(.5);
-  const [allowPayoutChanges, setAllowPayoutChanges] = useState(false);
+  const [allowPayoutChanges, setAllowPayoutChanges] = useState(true);
   const [batchRuns, setBatchRuns] = useState(500);
   const [autoResearch, setAutoResearch] = useState(true);
   const [progress, setProgress] = useState<ResearchProgress>();
@@ -91,7 +91,7 @@ export default function OwnerSimulationLab({ gameId, onGameChange, onOpenSetting
     onGameChange(next);
   };
 
-  const run = (researchOnly = false, repeatReport = false) => {
+  const run = (researchOnly = false, repeatReport = false, batchOverride?: number) => {
     worker.current?.terminate();
     setBusy(true);
     setError("");
@@ -123,7 +123,7 @@ export default function OwnerSimulationLab({ gameId, onGameChange, onOpenSetting
     activeWorker.onerror = event => { setError(event.message); setBusy(false); setProgress(undefined); activeWorker.terminate(); worker.current = null; };
     activeWorker.postMessage({
       request, settings: settingsSnapshot,
-      goal: autoResearch || researchOnly ? { targetRtp: goalRtp, priority: optimizationPriority, minHitRetention, minBonusRetention, allowPayoutChanges, batchRuns } : undefined,
+      goal: autoResearch || researchOnly ? { targetRtp: goalRtp, priority: optimizationPriority, minHitRetention, minBonusRetention, allowPayoutChanges, batchRuns: batchOverride ?? batchRuns } : undefined,
     });
   };
   const cancel = () => {
@@ -199,7 +199,7 @@ export default function OwnerSimulationLab({ gameId, onGameChange, onOpenSetting
           <div>
             <label><span>Araştırma derinliği</span><select value={batchRuns} onChange={event => setBatchRuns(Number(event.target.value))}><option value={500}>Keşif · deney başına 500 tur / tohum</option><option value={2000}>Ayrıntılı · 2.000 tur / tohum</option><option value={10000}>Derin · 10.000 tur / tohum</option></select></label>
             <label><span>Mevcut bonus sıklığını en az koru</span><select value={minBonusRetention} onChange={event => setMinBonusRetention(Number(event.target.value))}><option value={.8}>%80'ini koru</option><option value={.5}>%50'sini koru</option><option value={0}>Alt sınır koyma</option></select></label>
-            <label><span>Değiştirilebilecek ayarlar</span><select value={String(allowPayoutChanges)} onChange={event => setAllowPayoutChanges(event.target.value === "true")}><option value="false">Özellik sıklıkları ve olasılıklar</option><option value="true">Ödeme ölçekleri de araştırılsın</option></select></label>
+            <label><span>Değiştirilebilecek ayarlar</span><select value={String(allowPayoutChanges)} onChange={event => setAllowPayoutChanges(event.target.value === "true")}><option value="true">Tüm ayarlanabilir matematik · ödeme ölçekleri dahil</option><option value="false">Yalnız özellik sıklıkları ve olasılıklar</option></select><small>Kazanç tavanı, bonus bedeli ve jackpot tutarı her iki durumda da kilitlidir.</small></label>
             <label><span>Çalıştırma kapsamı</span><select value={String(autoResearch)} onChange={event => setAutoResearch(event.target.value === "true")}><option value="true">Simülasyon + neden araştırması</option><option value="false">Yalnız simülasyon</option></select></label>
           </div>
           <p className="sim-protected">Oyun kimliği korunur: kazanç tavanı, satın alım bedelleri ve jackpot ödül ayarları değiştirilemez. {protectedGameSettings(settings.games[gameId]).filter(item => item.path.endsWith("maxWinX")).map(item => <b key={item.path}>Mevcut tavan {x(item.value)} · kilitli </b>)}</p>
@@ -237,6 +237,7 @@ export default function OwnerSimulationLab({ gameId, onGameChange, onOpenSetting
           <header><div><small>UYGULANABİLİR REÇETELER</small><h4>Önce gör, sonra siz onaylarsanız uygula</h4></div>{rollback && <button type="button" className="sim-undo" onClick={undoOptimization}>↶ SON DEĞİŞİKLİKLERİ GERİ AL</button>}</header>
           {needsVerification && <div className="sim-verify"><b>Profil değişti.</b><span>Güncel profille aynı senaryonun yeni raporunu alın.</span><button type="button" disabled={busy} onClick={() => run(false, true)}>YENİDEN SİMÜLE ET</button></div>}
           {research && diagnosis.recommendations.map(recommendation => <SimulationProposalReview key={recommendation.id + research.durationMs} recommendation={recommendation} request={report.request} goal={research.goal} disabled={busy} onBusy={setBusy} onApply={applyRecommendation} />)}
+          {research && !diagnosis.recommendations.length && <article className="sim-no-prescription"><h4>Canlıya yazılacak ayar yok</h4><p>Motor denediği fakat bağımsız ölçümde işe yaradığı kanıtlanmayan ayarı reçete olarak göstermedi. Yukarıdaki deney defterinde hangi değerleri elediğini görebilirsiniz. Daha fazla ödeme ölçeğine izin vermek hedefe ulaşabilecek alanı genişletebilir; tasarım tavanları yine kilitli kalır.</p><button type="button" disabled={busy || batchRuns >= 10_000} onClick={() => { const next = batchRuns < 2_000 ? 2_000 : 10_000; setBatchRuns(next); run(true, false, next); }}>{batchRuns >= 10_000 ? "EN DERİN ARAŞTIRMA TAMAMLANDI" : "DAHA DERİN OTOMATİK ARAŞTIR"}</button></article>}
         </section>
       </div>}
 

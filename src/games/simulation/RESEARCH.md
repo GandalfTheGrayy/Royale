@@ -9,14 +9,19 @@ belirlemez.
 
 1. Raporun oyun profili ve hedefleri sabitlenir.
 2. Üç ayrı tohum grubunda referans ölçülür.
-3. Her uygun ayarın daha düşük ve daha yüksek değerleri ayrı çalıştırılır.
-4. Ölçülen en iyi tekil adayın çevresi daraltılır. Farklı iki ayar iyileştirdiyse
-   birlikte de ölçülür; birleşik etki ile tekil etkiler toplamı raporlanır.
+3. Her uygun ayarın %10, %35, %70 ve %150 değerleri ayrı çalıştırılır. Böylece
+   küçük değişimde gürültüye karışan bir mekanizma güçlü müdahaleyle de sınanır.
+4. Ölçülen en iyi tekil adayın çevresi daraltılır. Farklı ayarlar iyileştirdiyse
+   iki ve üç ayarlı birleşimler de ölçülür; birleşik etki ile tekil etkiler
+   toplamı raporlanır. Sıralama, hedef hatasının yanında güven aralığı genişliğini
+   de cezalandırır; yüksek oynaklıktaki tesadüfi sonuçlar daha geride kalır.
    En iyi geçici profilden en fazla üç ek koordinat arama adımıyla devam edilir;
    ilerleme yoksa durulur. Bu adımlar canlı kayıt yapmaz.
-5. Seçilen tek aday, aramada kullanılmayan altı tohum grubunda iki kat örnekle
-   doğrulanır. Tohum grubu başına eşleştirilmiş RTP farkı ve mutlak hedef hatası
-   iyileşmesinin yaklaşık Student-t aralıkları hesaplanır.
+5. Aramada öne çıkan altı farklı profil, aramada kullanılmayan altı tohum
+   grubunda sırayla doğrulanır. Umut verici fakat belirsiz profil otomatik olarak
+   on tohuma ve en az 5.000 tur/tohum seviyesine büyütülür. Tohum grubu başına
+   eşleştirilmiş RTP farkı ve mutlak hedef hatası iyileşmesinin yaklaşık Student-t
+   aralıkları hesaplanır. Geçmeyen aday reçete alanına çıkarılmaz.
 6. Ortak ayarlar diğer modlarda da karşılaştırılır. Hedefe uzaklaşma, ödeme
    sıklığı veya bonus sıklığı gerilemesi raporlanır.
 7. Yalnız bağımsız doğrulamanın alt sınırı pozitif olan, kullanıcının ödeme ve

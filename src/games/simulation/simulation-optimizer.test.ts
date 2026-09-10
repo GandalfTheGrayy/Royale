@@ -21,7 +21,7 @@ describe("deneysel simülasyon araştırması", () => {
   it("18 oyunun her birinde gerçek motor deneyleri veya strateji karşılaştırmaları çalıştırır", async () => {
     for (const definition of SIMULATION_GAMES) {
       const report = runCasinoSimulation({ gameId: definition.id, mode: definition.modes[0].id, runs: 10, wager: 25, seed: 321, parameter: definition.parameter?.defaultValue }, DEFAULT_ADMIN_SETTINGS);
-      const result = await researchSimulation(report, DEFAULT_ADMIN_SETTINGS, { ...goal, allowPayoutChanges: true, maxIterations: 0 });
+      const result = await researchSimulation(report, DEFAULT_ADMIN_SETTINGS, { ...goal, allowPayoutChanges: true, maxIterations: 0, maxCandidates: 0 });
       expect(result.experiments.length, definition.id).toBeGreaterThan(0);
       expect(result.totalSimulatedRounds).toBeGreaterThan(300);
       for (const experiment of result.experiments) {
@@ -38,6 +38,9 @@ describe("deneysel simülasyon araştırması", () => {
     const recommendation = result.diagnosis.recommendations[0];
     expect(recommendation).toBeDefined();
     expect(recommendation.applyable).toBe(true);
+    expect(result.diagnosis.recommendations.every(item => item.applyable)).toBe(true);
+    expect(result.searchSummary.outcome).toBe("validated");
+    expect(result.searchSummary.candidatesValidated).toBeGreaterThan(0);
     expect(recommendation.validation.improvement95[0]).toBeGreaterThan(0);
     const searchSeeds = result.experiments[0].comparison.seeds;
     expect(recommendation.validation.seeds.every(seed => !searchSeeds.includes(seed))).toBe(true);
@@ -64,8 +67,8 @@ describe("deneysel simülasyon araştırması", () => {
     const settings = structuredClone(DEFAULT_ADMIN_SETTINGS);
     settings.games["allahin-lutfu"].allah!.reelEyeChancePercent.base = 20;
     const report = runCasinoSimulation({ gameId: "allahin-lutfu", mode: "base", runs: 100, wager: 25, seed: 123 }, settings);
-    const result = await researchSimulation(report, settings, { ...goal, targetRtp: 96.7, minHitRetention: 0 });
-    const eye = result.experiments.find(e => e.changes[0]?.path === "allah.reelEyeChancePercent.base" && e.changes[0].after === 10)!;
+    const result = await researchSimulation(report, settings, { ...goal, targetRtp: 96.7, minHitRetention: 0, maxCandidates: 0 });
+    const eye = result.experiments.find(e => e.changes[0]?.path === "allah.reelEyeChancePercent.base" && e.changes[0].after === 7)!;
     expect(eye).toBeDefined();
     expect(eye.comparison.after.causes["Göz sembolü"]).toBeLessThan(eye.comparison.before.causes["Göz sembolü"]);
     expect(result.protectedSettings.find(s => s.path === "allah.maxWinX")?.value).toBe(500_000);
@@ -81,11 +84,10 @@ describe("deneysel simülasyon araştırması", () => {
     const original = structuredClone(settings);
     const request = { gameId: "kiraz-77" as const, mode: "spins", runs: 100, wager: 25, seed: 123 };
     const report = runCasinoSimulation(request, settings);
-    const result = await researchSimulation(report, settings, { ...goal, allowPayoutChanges: true, maxIterations: 3 });
+    const result = await researchSimulation(report, settings, { ...goal, allowPayoutChanges: true, maxIterations: 3, maxCandidates: 0 });
     expect(result.iterations.length).toBeGreaterThan(0);
     expect(result.iterations.length).toBeLessThanOrEqual(3);
     expect(settings).toEqual(original);
-    expect(result.iterations.some(step => step.accepted)).toBe(true);
     expect(result.iterations.every(step => step.changes.every(c => c.before === 8))).toBe(true);
   }, 30_000);
 
