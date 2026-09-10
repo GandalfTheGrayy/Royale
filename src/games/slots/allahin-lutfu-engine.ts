@@ -1511,6 +1511,20 @@ export function runAllahSpin(
     featureCycles,
   };
 }
+
+/** Shared live/lab boundary: only bonus eye state survives a spin. */
+export function prepareAllahSpinPersistent(
+  persistent: AllahPersistentState,
+  bonus?: AllahBonusState,
+): AllahPersistentState {
+  return {
+    ...persistent,
+    minimumCoinTier: 0,
+    globalMultiplier: 1,
+    eyeSlots: bonus && persistent.persistentEye ? [...persistent.eyeSlots] : [],
+    persistentEye: bonus ? persistent.persistentEye : undefined,
+  };
+}
 import {
   DEFAULT_ALLAH_TUNING,
   type AllahTuningSettings,

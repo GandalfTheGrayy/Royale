@@ -50,23 +50,42 @@ export type SlotSimulationReport = {
   averageBonusLength: number;
   maxBonusLength: number;
   cappedSessions: number;
+  truncatedSessions: number;
   visiblePotentialEvents: number;
   wins10x: number;
   wins25x: number;
   wins50x: number;
   wins100x: number;
   maxWinX: number;
+  payoutBands: Record<"zero" | "under1" | "oneTo2" | "twoTo5" | "fiveTo10" | "tenTo50" | "fiftyTo100" | "hundredPlus", number>;
+  p50WinX: number;
+  p90WinX: number;
+  p95WinX: number;
+  p99WinX: number;
+  standardDeviationX: number;
+  maxLossStreak: number;
   durationMs: number;
 };
 
 type MutableReport = Omit<
   SlotSimulationReport,
-  "rtp" | "hitRate" | "bonusRate" | "averageBonusLength" | "durationMs"
+  "rtp" | "hitRate" | "bonusRate" | "averageBonusLength" | "durationMs" |
+  "payoutBands" | "p50WinX" | "p90WinX" | "p95WinX" | "p99WinX" | "standardDeviationX"
 > & {
   hits: number;
   measuredSpins: number;
   bonusLengths: number[];
+  payoutMultiples: number[];
+  currentLossStreak: number;
+  onSession?: (session: SlotSessionObservation) => void;
 };
+
+export type SlotSessionObservation = { stake: number; payout: number; bonusRounds: number; bonusSessions: number; retriggers: number; potentialEvents: number };
+const sessionStart = (report: MutableReport) => ({ payout: report.totalPayout, free: report.freeSpins, bonus: report.bonusSessions, retrigger: report.retriggerEvents, potential: report.visiblePotentialEvents });
+function sessionEnd(report: MutableReport, before: ReturnType<typeof sessionStart>, stake: number) {
+  report.onSession?.({ stake, payout: report.totalPayout - before.payout, bonusRounds: report.freeSpins - before.free,
+    bonusSessions: report.bonusSessions - before.bonus, retriggers: report.retriggerEvents - before.retrigger, potentialEvents: report.visiblePotentialEvents - before.potential });
+}
 
 function seeded(seed = 0x4d455243) {
   let value = seed >>> 0;
@@ -95,15 +114,19 @@ function blank(request: SlotSimulationRequest): MutableReport {
     extraSpins: 0,
     maxBonusLength: 0,
     cappedSessions: 0,
+    truncatedSessions: 0,
     visiblePotentialEvents: 0,
     wins10x: 0,
     wins25x: 0,
     wins50x: 0,
     wins100x: 0,
     maxWinX: 0,
+    maxLossStreak: 0,
     hits: 0,
     measuredSpins: 0,
     bonusLengths: [],
+    payoutMultiples: [],
+    currentLossStreak: 0,
   };
 }
 
@@ -111,7 +134,12 @@ function measure(report: MutableReport, payout: number, wager: number) {
   const multiple = wager > 0 ? payout / wager : 0;
   report.totalPayout += payout;
   report.measuredSpins += 1;
+  report.payoutMultiples.push(multiple);
   if (payout > 0) report.hits += 1;
+  if (multiple < 1) {
+    report.currentLossStreak += 1;
+    report.maxLossStreak = Math.max(report.maxLossStreak, report.currentLossStreak);
+  } else report.currentLossStreak = 0;
   if (multiple >= 10) report.wins10x += 1;
   if (multiple >= 25) report.wins25x += 1;
   if (multiple >= 50) report.wins50x += 1;
@@ -150,12 +178,12 @@ function fisherSimulation(
   const tuning = { ...slot.math, valueWeights: slot.valueWeights };
   let flowState = createSlotFlowState();
 
-  const playBonus = () => {
+  const playBonus = (initial = slot.math.bonusBuySpins || 15, source: "natural" | "buy" = "buy") => {
     report.bonusSessions += 1;
     let state = createFisherBonus(
       `sim-${report.bonusSessions}`,
-      slot.math.bonusBuySpins || 15,
-      "buy",
+      initial,
+      source,
       {},
       tuning,
     );
@@ -200,6 +228,7 @@ function fisherSimulation(
       );
     }
     if (state.spinsRemaining > 0 || sessionCapped) report.cappedSessions += 1;
+    if (state.spinsRemaining > 0) report.truncatedSessions += 1;
     report.bonusLengths.push(sessionSpins);
     report.maxBonusLength = Math.max(report.maxBonusLength, sessionSpins);
   };
@@ -207,11 +236,15 @@ function fisherSimulation(
   if (request.mode === "bonus-sessions") {
     report.totalStake =
       request.runs * request.wager * Math.max(1, slot.math.bonusBuyX);
-    for (let run = 0; run < request.runs; run += 1) playBonus();
+    for (let run = 0; run < request.runs; run += 1) {
+      const start = sessionStart(report); playBonus();
+      sessionEnd(report, start, request.wager * Math.max(1, slot.math.bonusBuyX));
+    }
     return;
   }
 
   for (let run = 0; run < request.runs; run += 1) {
+    const start = sessionStart(report);
     const before = flowState;
     const decision = planSlotFlow(
       before,
@@ -239,7 +272,8 @@ function fisherSimulation(
       result.grossPayout > 0 || result.fishValues.length > 0,
       game,
     );
-    if (result.bonusSpins > 0) playBonus();
+    if (result.bonusSpins > 0) playBonus(result.bonusSpins, "natural");
+    sessionEnd(report, start, request.wager);
   }
 }
 
@@ -284,15 +318,20 @@ function sekerhaneSimulation(
       flowState = settle(before, decision, result.grossReturn, request.wager, awarded > 0, result.cascades.length > 0, game);
     }
     if (remaining > 0) report.cappedSessions += 1;
+    if (remaining > 0) report.truncatedSessions += 1;
     report.bonusLengths.push(length);
     report.maxBonusLength = Math.max(report.maxBonusLength, length);
   };
   if (request.mode === "bonus-sessions") {
     report.totalStake = request.runs * request.wager * Math.max(1, slot.math.bonusBuyX);
-    for (let run = 0; run < request.runs; run += 1) playBonus();
+    for (let run = 0; run < request.runs; run += 1) {
+      const start = sessionStart(report); playBonus();
+      sessionEnd(report, start, request.wager * Math.max(1, slot.math.bonusBuyX));
+    }
     return;
   }
   for (let run = 0; run < request.runs; run += 1) {
+    const start = sessionStart(report);
     const before = flowState;
     const decision = planSlotFlow(before, slot.flow, slot.potential, {}, random.unit);
     const result = runSekerhaneSpin(request.wager, random.index, { profile, flow: decision, potential: slot.potential });
@@ -302,6 +341,7 @@ function sekerhaneSimulation(
     report.visiblePotentialEvents += result.potentialCells?.length ? 1 : 0;
     flowState = settle(before, decision, result.grossReturn, request.wager, result.freeSpinsAwarded > 0, result.cascades.length > 0, game);
     if (result.freeSpinsAwarded > 0) playBonus(result.freeSpinsAwarded);
+    sessionEnd(report, start, request.wager);
   }
 }
 
@@ -345,15 +385,20 @@ function neonSimulation(
       flowState = settle(before, decision, result.grossReturn, request.wager, result.freeSpinsAwarded > 0, result.cascades.length > 0, game);
     }
     if (remaining > 0) report.cappedSessions += 1;
+    if (remaining > 0) report.truncatedSessions += 1;
     report.bonusLengths.push(length);
     report.maxBonusLength = Math.max(report.maxBonusLength, length);
   };
   if (request.mode === "bonus-sessions") {
     report.totalStake = request.runs * request.wager * Math.max(1, slot.math.bonusBuyX);
-    for (let run = 0; run < request.runs; run += 1) playBonus();
+    for (let run = 0; run < request.runs; run += 1) {
+      const start = sessionStart(report); playBonus();
+      sessionEnd(report, start, request.wager * Math.max(1, slot.math.bonusBuyX));
+    }
     return;
   }
   for (let run = 0; run < request.runs; run += 1) {
+    const start = sessionStart(report);
     const before = flowState;
     const decision = planSlotFlow(before, slot.flow, slot.potential, {}, random.unit);
     const result = runNeonSpin(request.wager, random.index, { tuning, flow: decision, potential: slot.potential });
@@ -363,12 +408,14 @@ function neonSimulation(
     report.visiblePotentialEvents += result.potentialCells?.length ? 1 : 0;
     flowState = settle(before, decision, result.grossReturn, request.wager, result.freeSpinsAwarded > 0, result.cascades.length > 0, game);
     if (result.freeSpinsAwarded > 0) playBonus(result.freeSpinsAwarded);
+    sessionEnd(report, start, request.wager);
   }
 }
 
 export function runSlotSimulation(
   request: SlotSimulationRequest,
   game: AdminGameSettings,
+  onSession?: (session: SlotSessionObservation) => void,
 ): SlotSimulationReport {
   const started = performance.now();
   const normalized: SlotSimulationRequest = {
@@ -378,6 +425,7 @@ export function runSlotSimulation(
   };
   if (!game.slot) throw new Error("Bu oyun slot simülasyonunu desteklemiyor.");
   const report = blank(normalized);
+  report.onSession = onSession;
   const random = seeded(normalized.seed);
   if (normalized.gameId === "kaptan-mercan") fisherSimulation(normalized, game, report, random);
   else if (normalized.gameId === "sekerhane-1024") sekerhaneSimulation(normalized, game, report, random);
@@ -385,19 +433,48 @@ export function runSlotSimulation(
   const averageBonusLength = report.bonusLengths.length
     ? report.bonusLengths.reduce((sum, value) => sum + value, 0) / report.bonusLengths.length
     : 0;
+  const sorted = [...report.payoutMultiples].sort((a, b) => a - b);
+  const percentile = (fraction: number) => sorted.length
+    ? sorted[Math.min(sorted.length - 1, Math.floor((sorted.length - 1) * fraction))]
+    : 0;
+  const payoutAverage = report.payoutMultiples.length
+    ? report.payoutMultiples.reduce((sum, value) => sum + value, 0) / report.payoutMultiples.length
+    : 0;
+  const standardDeviationX = report.payoutMultiples.length > 1
+    ? Math.sqrt(report.payoutMultiples.reduce((sum, value) => sum + (value - payoutAverage) ** 2, 0) / (report.payoutMultiples.length - 1))
+    : 0;
+  const payoutBands = {
+    zero: report.payoutMultiples.filter((value) => value === 0).length,
+    under1: report.payoutMultiples.filter((value) => value > 0 && value < 1).length,
+    oneTo2: report.payoutMultiples.filter((value) => value >= 1 && value < 2).length,
+    twoTo5: report.payoutMultiples.filter((value) => value >= 2 && value < 5).length,
+    fiveTo10: report.payoutMultiples.filter((value) => value >= 5 && value < 10).length,
+    tenTo50: report.payoutMultiples.filter((value) => value >= 10 && value < 50).length,
+    fiftyTo100: report.payoutMultiples.filter((value) => value >= 50 && value < 100).length,
+    hundredPlus: report.payoutMultiples.filter((value) => value >= 100).length,
+  };
   const {
     hits,
     measuredSpins,
     bonusLengths: _bonusLengths,
+    payoutMultiples: _payoutMultiples,
+    currentLossStreak: _currentLossStreak,
+    onSession: _onSession,
     ...publicReport
   } = report;
-  void _bonusLengths;
+  void _bonusLengths; void _payoutMultiples; void _currentLossStreak;
   return {
     ...publicReport,
     rtp: report.totalStake ? report.totalPayout / report.totalStake : 0,
     hitRate: measuredSpins ? hits / measuredSpins : 0,
     bonusRate: report.paidSpins ? report.bonusSessions / report.paidSpins : 0,
     averageBonusLength,
+    payoutBands,
+    p50WinX: percentile(.5),
+    p90WinX: percentile(.9),
+    p95WinX: percentile(.95),
+    p99WinX: percentile(.99),
+    standardDeviationX,
     durationMs: performance.now() - started,
   };
 }

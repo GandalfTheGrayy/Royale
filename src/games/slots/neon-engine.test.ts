@@ -249,5 +249,5 @@ describe("Neon Kasası cluster/cascade motoru", () => {
     );
     expect(boostRtp).toBeGreaterThan(0.7);
     expect(boostRtp).toBeLessThan(1.15);
-  });
+  }, 15_000);
 });

@@ -34,6 +34,7 @@ import {
   allahPurchaseCost,
   createSeededAllahRandom,
   defaultAllahPersistentState,
+  prepareAllahSpinPersistent,
   runAllahSpin,
   type AllahBonusState,
   type AllahCell,
@@ -594,13 +595,7 @@ export default function AllahinLutfu({
     const balanceBefore = balance;
     if (cost) setBalance((value) => value - cost);
 
-    const spinPersistent: AllahPersistentState = {
-      ...persistent,
-      minimumCoinTier: 0,
-      globalMultiplier: 1,
-      eyeSlots: currentBonus && persistent.persistentEye ? persistent.eyeSlots : [],
-      persistentEye: currentBonus ? persistent.persistentEye : undefined,
-    };
+    const spinPersistent = prepareAllahSpinPersistent(persistent, currentBonus);
     const result = runAllahSpin({
       wager,
       mode: spinMode,

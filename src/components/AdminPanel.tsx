@@ -64,8 +64,9 @@ import {
 import SlotSimulationPanel from "./SlotSimulationPanel";
 import CompetitionAdmin from "./CompetitionAdmin";
 import OwnerActivity from "./OwnerActivity";
+import OwnerSimulationLab from "./OwnerSimulationLab";
 
-type Tab = "activity" | "dashboard" | "games" | "competition" | "users" | "wallet" | "database" | "system";
+type Tab = "activity" | "dashboard" | "games" | "simulation" | "competition" | "users" | "wallet" | "database" | "system";
 type GameEditorSection =
   | "general"
   | "math"
@@ -701,6 +702,12 @@ export default function AdminPanel({ balance, onClose }: Props) {
       label: "Oyun Yönetimi",
       note: "Kurallar ve salonlar",
     },
+    ...(user.role === "owner" ? [{
+      id: "simulation" as const,
+      icon: "∑",
+      label: "Simülasyon Lab",
+      note: "Tüm oyunlar · owner only",
+    }] : []),
     {
       id: "activity",
       icon: "◉",
@@ -803,6 +810,8 @@ export default function AdminPanel({ balance, onClose }: Props) {
         )}
 
         {tab === "activity" && <div className="admin-content"><OwnerActivity /></div>}
+
+        {tab === "simulation" && user.role === "owner" && <OwnerSimulationLab />}
 
         {tab === "dashboard" && (
           <div className="admin-content">

@@ -1,0 +1,77 @@
+import { describe, expect, it } from "vitest";
+import { DEFAULT_ADMIN_SETTINGS } from "../../data/casino-admin";
+import { SIMULATION_GAMES, runCasinoSimulation } from "./casino-simulation-engine";
+import { buildSimulationDiagnosis, patchGameWithRecommendation, profileFingerprint, protectedGameSettings, researchKnobs, researchSimulation, type SimulationOptimizationGoal } from "./simulation-optimizer";
+
+const goal: SimulationOptimizationGoal = { targetRtp: 70, priority: "balanced", minHitRetention: .8, minBonusRetention: .5, allowPayoutChanges: false, batchRuns: 100 };
+describe("deneysel simülasyon araştırması", () => {
+  it("tek koşu veya korelasyondan uygulanabilir öneri uydurmaz", () => {
+    const report = runCasinoSimulation({ gameId: "allahin-lutfu", mode: "trickster", runs: 100, wager: 25, seed: 9 }, DEFAULT_ADMIN_SETTINGS);
+    expect(buildSimulationDiagnosis(report, DEFAULT_ADMIN_SETTINGS.games["allahin-lutfu"], goal).recommendations).toEqual([]);
+  });
+
+  it("bütün oyun ve modlarda tasarım tavanlarını korur, gerçek ayarları kataloglar", () => {
+    for (const definition of SIMULATION_GAMES) for (const mode of definition.modes) {
+      const knobs = researchKnobs(DEFAULT_ADMIN_SETTINGS.games[definition.id], mode.id, true);
+      if (!["blackjack", "roulette", "poker"].includes(definition.id)) expect(knobs.length, definition.id + "/" + mode.id).toBeGreaterThan(0);
+      expect(knobs.some(k => /maxWin|maxPayout|maxMultiplier|globalMultiplierCap|modeCosts|bonusCosts|maxCoin/.test(k.path))).toBe(false);
+    }
+  });
+
+  it("18 oyunun her birinde gerçek motor deneyleri veya strateji karşılaştırmaları çalıştırır", async () => {
+    for (const definition of SIMULATION_GAMES) {
+      const report = runCasinoSimulation({ gameId: definition.id, mode: definition.modes[0].id, runs: 10, wager: 25, seed: 321, parameter: definition.parameter?.defaultValue }, DEFAULT_ADMIN_SETTINGS);
+      const result = await researchSimulation(report, DEFAULT_ADMIN_SETTINGS, { ...goal, allowPayoutChanges: true });
+      expect(result.experiments.length, definition.id).toBeGreaterThan(0);
+      expect(result.totalSimulatedRounds).toBeGreaterThan(300);
+      for (const experiment of result.experiments) {
+        expect(Number.isFinite(experiment.comparison.after.rtp)).toBe(true);
+        expect(experiment.comparison.seeds).toHaveLength(3);
+      }
+      expect(profileFingerprint(DEFAULT_ADMIN_SETTINGS.games[definition.id])).toBe(result.sourceFingerprint);
+    }
+  }, 180_000);
+
+  it("seçimi bağımsız tohumlarla sınar, gerçek ödeme değişimini doğrular ve eski raporu uygulamaz", async () => {
+    const report = runCasinoSimulation({ gameId: "plinko", mode: "dusuk", runs: 500, wager: 100, seed: 7, parameter: 8 }, DEFAULT_ADMIN_SETTINGS);
+    const result = await researchSimulation(report, DEFAULT_ADMIN_SETTINGS, { ...goal, batchRuns: 500 });
+    const recommendation = result.diagnosis.recommendations[0];
+    expect(recommendation).toBeDefined();
+    expect(recommendation.applyable).toBe(true);
+    expect(recommendation.validation.improvement95[0]).toBeGreaterThan(0);
+    const searchSeeds = result.experiments[0].comparison.seeds;
+    expect(recommendation.validation.seeds.every(seed => !searchSeeds.includes(seed))).toBe(true);
+    const game = DEFAULT_ADMIN_SETTINGS.games.plinko;
+    const patched = patchGameWithRecommendation(game, recommendation);
+    expect(patched.targetRtp).toBe(70);
+    expect(protectedGameSettings(patched)).toEqual(protectedGameSettings(game));
+    expect(() => patchGameWithRecommendation({ ...game, targetRtp: 90 }, recommendation)).toThrow("profil");
+    expect(() => patchGameWithRecommendation(game, { ...recommendation, changes: [{ path: "plinko.maxPayoutX", label: "Tavan", before: 1000, after: 10, unit: "×", reason: "" }] })).toThrow("korunuyor");
+  }, 30_000);
+
+  it("özellik içinden üretilen gözleri sayar ve ödemeyi tavan sonrası ayrıştırır", () => {
+    const settings = structuredClone(DEFAULT_ADMIN_SETTINGS);
+    const tuning = settings.games["allahin-lutfu"].allah!;
+    tuning.mysteryWeights.eye = 30;
+    tuning.maxWinX = 50;
+    const report = runCasinoSimulation({ gameId: "allahin-lutfu", mode: "trickster", runs: 100, wager: 25, seed: 123 }, settings);
+    expect(report.causes.find(c => c.label === "Mystery kaynaklı göz")?.occurrences).toBeGreaterThan(0);
+    expect(report.causes.find(c => c.label === "Etkinleşen göz (tüm kaynaklar)")?.occurrences).toBeGreaterThan(0);
+    expect(report.causes.reduce((sum, c) => sum + c.contributionShare, 0)).toBeCloseTo(1, 5);
+  });
+
+  it("tavanı düşürmeden, yüksek göz profilinde frekans müdahalesinin ölçümünü yapar", async () => {
+    const settings = structuredClone(DEFAULT_ADMIN_SETTINGS);
+    settings.games["allahin-lutfu"].allah!.reelEyeChancePercent.base = 20;
+    const report = runCasinoSimulation({ gameId: "allahin-lutfu", mode: "base", runs: 100, wager: 25, seed: 123 }, settings);
+    const result = await researchSimulation(report, settings, { ...goal, targetRtp: 96.7, minHitRetention: 0 });
+    const eye = result.experiments.find(e => e.changes[0]?.path === "allah.reelEyeChancePercent.base" && e.changes[0].after === 10)!;
+    expect(eye).toBeDefined();
+    expect(eye.comparison.after.causes["Göz sembolü"]).toBeLessThan(eye.comparison.before.causes["Göz sembolü"]);
+    expect(result.protectedSettings.find(s => s.path === "allah.maxWinX")?.value).toBe(500_000);
+    for (const rec of result.diagnosis.recommendations) {
+      expect(rec.changes.some(c => c.path.includes("maxWin"))).toBe(false);
+      if (rec.applyable) expect(rec.validation.improvement95[0]).toBeGreaterThan(0);
+    }
+  }, 120_000);
+});
