@@ -12,6 +12,8 @@ belirlemez.
 3. Her uygun ayarın daha düşük ve daha yüksek değerleri ayrı çalıştırılır.
 4. Ölçülen en iyi tekil adayın çevresi daraltılır. Farklı iki ayar iyileştirdiyse
    birlikte de ölçülür; birleşik etki ile tekil etkiler toplamı raporlanır.
+   En iyi geçici profilden en fazla üç ek koordinat arama adımıyla devam edilir;
+   ilerleme yoksa durulur. Bu adımlar canlı kayıt yapmaz.
 5. Seçilen tek aday, aramada kullanılmayan altı tohum grubunda iki kat örnekle
    doğrulanır. Tohum grubu başına eşleştirilmiş RTP farkı ve mutlak hedef hatası
    iyileşmesinin yaklaşık Student-t aralıkları hesaplanır.
@@ -24,6 +26,22 @@ belirlemez.
 Deneyler Web Worker içinde çalışır. Durdurma worker'ı sonlandırır; yarım sonuç
 uygulanabilir reçete oluşturmaz. JSON dışa aktarımı istek, profil anlık görüntüsü,
 hedefler, deneyler, tohumlar ve doğrulama sonuçlarını içerir.
+
+## Ortak ayar ve parçalı onay
+
+Oyun Yönetimi ve laboratuvar aynı `casino-admin` deposunu ve seçili oyunu
+kullanır. Ortak ayar tablosu canlı değeri, rapor başlangıcındaki değeri ve geçici
+öneriyi ayrı gösterir. Araştırma hedefi bir deney talimatıdır; kayıtlı RTP hedefi
+değildir. Yeniden araştırma her zaman güncel canlı profilin kopyasıyla başlar.
+Sekme değişiminde laboratuvar raporu korunur.
+
+Owner bir veya birkaç ayarı seçer. Seçili alt küme `validateSimulationSelection`
+ile o andaki ortak profile karşı altı ayrı tohumda tekrar ölçülür; gerekiyorsa
+diğer modlar da sınanır. Bu işlem de kayıt yapmaz. Yalnız açık son onay
+`updateAdminGame` çağırır. Onayda doğrulamanın profil parmak izi tekrar kontrol
+edilir. Seçilmemiş alanlar korunur, önceden uygulanan değerler atlanır,
+araştırmadan sonra değişmiş alanların üzerine yazılmaz. Son kayıt grubunu geri
+alma, güncel profil son uygulanan profille aynıysa mümkündür.
 
 ## Tasarım sınırları
 

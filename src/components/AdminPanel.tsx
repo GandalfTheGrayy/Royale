@@ -65,6 +65,7 @@ import SlotSimulationPanel from "./SlotSimulationPanel";
 import CompetitionAdmin from "./CompetitionAdmin";
 import OwnerActivity from "./OwnerActivity";
 import OwnerSimulationLab from "./OwnerSimulationLab";
+import GameSettingsBridge from "./GameSettingsBridge";
 
 type Tab = "activity" | "dashboard" | "games" | "simulation" | "competition" | "users" | "wallet" | "database" | "system";
 type GameEditorSection =
@@ -811,7 +812,7 @@ export default function AdminPanel({ balance, onClose }: Props) {
 
         {tab === "activity" && <div className="admin-content"><OwnerActivity /></div>}
 
-        {tab === "simulation" && user.role === "owner" && <OwnerSimulationLab />}
+        {user.role === "owner" && <div hidden={tab !== "simulation"}><OwnerSimulationLab gameId={selectedGame} onGameChange={setSelectedGame} onOpenSettings={() => { setGameEditorSection("math"); setTab("games"); }} /></div>}
 
         {tab === "dashboard" && (
           <div className="admin-content">
@@ -1028,6 +1029,8 @@ export default function AdminPanel({ balance, onClose }: Props) {
                           }
                         />
                       </header>
+                      <GameSettingsBridge gameId={game.id} editable />
+                      {user.role === "owner" && <button type="button" onClick={() => setTab("simulation")}>Bu ayarlarla simülasyon yap</button>}
                       <div className="game-live-metrics">
                         <span>
                           <small>OYUN TURU</small>

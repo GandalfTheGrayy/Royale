@@ -3,7 +3,7 @@ import type { ResearchComparison, SimulationResearch } from "../games/simulation
 
 const number = (n: number) => n.toLocaleString("tr-TR", { maximumFractionDigits: 2 });
 const rtp = (n: number) => "%" + number(n);
-function Comparison({ value }: { value: ResearchComparison }) {
+export function Comparison({ value }: { value: ResearchComparison }) {
   return <div className="sim-measured-comparison">
     <div><small>GERİ DÖNÜŞ</small><b>{rtp(value.before.rtp)} → {rtp(value.after.rtp)}</b></div>
     <div><small>ÖDEME GÖRÜLEN TUR</small><b>{rtp(value.before.hitRate * 100)} → {rtp(value.after.hitRate * 100)}</b></div>
@@ -16,11 +16,13 @@ function Comparison({ value }: { value: ResearchComparison }) {
 }
 export default function SimulationResearchResults({ research }: { research: SimulationResearch }) {
   const [showAll, setShowAll] = useState(false);
-  const experiments = [...research.experiments].sort((a, b) => a.score - b.score);
+  const experiments = [...research.experiments].sort((a, b) => Number(a.kind === "scenario") - Number(b.kind === "scenario") || a.score - b.score);
   const selected = experiments.find(e => e.id === research.selectedId);
   const validation = research.diagnosis.recommendations[0]?.validation;
   return <section className="sim-research-results">
     <header><div><small>DENEY DEFTERİ</small><h4>Hangi ayar gerçekten neyi değiştirdi?</h4></div><span>{number(research.totalSimulatedRounds)} araştırma turu · {number(research.durationMs / 1000)} sn</span></header>
+    <details className="sim-reading-guide"><summary>Bu sonuçları nasıl okumalıyım?</summary><p>RTP, toplam bahislerin ne kadarının ödeme olarak geri döndüğüdür. Örneğin %96,7: her 100 PR bahis için ortalama 96,7 PR ödeme. Tek turda garanti değildir. %100’ün üzeri bu örnekte kasanın zarar ettiğini gösterir.</p><p>Ödeme görülen tur, herhangi bir ödeme alınan ana turdur; kârlı tur ise ödemenin maliyeti aştığı turdur. Bonus sıklığı, bonusa giren ana turların oranıdır. 1 yüzde puan, örneğin %97’den %96’ya değişimdir.</p><p>Önce: araştırmanın başladığı profil. Sonra: yalnız deney ortamında değiştirilen profil. Bunlar canlı ayar değildir. Küçük veya nadir olaylı örneklerde belirsizlik yüksektir; motor kanıt yetersizse kayda izin vermez.</p></details>
+    {research.iterations.length > 0 && <details open className="sim-iteration-list"><summary>Motor kendi denemesini nasıl ilerletti? · {research.iterations.length} adım</summary><p>İlk taramadan sonra en iyi geçici ayarlarla devam edildi. Her adım ilk profille aynı arama tohumlarında kıyaslandı. Hiçbir adım canlıya kaydedilmedi.</p>{research.iterations.map(step => <article key={step.step}><b>{step.step}. adım · {step.accepted ? "Daha iyi geçici profil bulundu" : "İlerleme durdu"}</b><p>{step.label} RTP: {rtp(step.comparison.before.rtp)} → {rtp(step.comparison.after.rtp)} · {step.changes.length} ayar.</p></article>)}</details>}
     <p>Bu araştırmanın hedefi {rtp(research.goal.targetRtp)} RTP; mevcut ödeme sıklığının %{number(research.goal.minHitRetention * 100)}'ini ve bonus sıklığının %{number(research.goal.minBonusRetention * 100)}'ini korumak. Her aday gerçek motorla çalıştırıldı. Arama sonuçları aday seçmek içindir; uygulama kararı ayrı tohumların doğrulamasına dayanır.</p>
     {selected && <div className="sim-research-winner"><small>ARAMADA ÖNE ÇIKAN ADAY</small><h4>{selected.label}</h4><p>{selected.mechanism}</p></div>}
     {validation && <section className="sim-validation">

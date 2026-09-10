@@ -17,6 +17,8 @@ import {
   type SimulationRecommendation,
 } from "../games/simulation/simulation-optimizer";
 import SimulationResearchResults from "./SimulationResearchResults";
+import GameSettingsBridge from "./GameSettingsBridge";
+import SimulationProposalReview from "./SimulationProposalReview";
 import "./owner-simulation-lab.css";
 
 const number = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 });
@@ -38,10 +40,9 @@ function Metric({ label, value, note, tone = "" }: { label: string; value: strin
   return <article className={`sim-metric ${tone}`}><small>{label}</small><strong>{value}</strong>{note && <span>{note}</span>}</article>;
 }
 
-export default function OwnerSimulationLab() {
+export default function OwnerSimulationLab({ gameId, onGameChange, onOpenSettings }: { gameId: CasinoGameId; onGameChange: (id: CasinoGameId) => void; onOpenSettings: () => void }) {
   const { user } = useAuth();
   const settings = useSyncExternalStore(subscribeAdminSettings, getAdminSettings, getAdminSettings);
-  const [gameId, setGameId] = useState<CasinoGameId>("allahin-lutfu");
   const definition = SIMULATION_GAMES.find((game) => game.id === gameId)!;
   const [modeByGame, setModeByGame] = useState<Partial<Record<CasinoGameId, string>>>({});
   const [parameterByGame, setParameterByGame] = useState<Partial<Record<CasinoGameId, number>>>({});
@@ -54,7 +55,8 @@ export default function OwnerSimulationLab() {
   const [research, setResearch] = useState<SimulationResearch>();
   const [history, setHistory] = useState<Array<{ report: CasinoSimulationReport; game: AdminGameSettings; research?: SimulationResearch }>>([]);
   const [view, setView] = useState<"optimizer" | "summary" | "distribution" | "causes" | "technical">("optimizer");
-  const [goalRtp, setGoalRtp] = useState(settings.games[gameId].targetRtp);
+  const [goalOverride, setGoalOverride] = useState<number>();
+  const goalRtp = goalOverride ?? settings.games[gameId].targetRtp;
   const [minHitRetention, setMinHitRetention] = useState(.8);
   const [minBonusRetention, setMinBonusRetention] = useState(.5);
   const [allowPayoutChanges, setAllowPayoutChanges] = useState(false);
@@ -65,9 +67,14 @@ export default function OwnerSimulationLab() {
   const worker = useRef<Worker | null>(null);
   useEffect(() => () => worker.current?.terminate(), []);
   const [optimizationPriority, setOptimizationPriority] = useState<OptimizationPriority>("balanced");
-  const [appliedRecommendations, setAppliedRecommendations] = useState<string[]>([]);
   const [rollback, setRollback] = useState<{ gameId: CasinoGameId; game: AdminGameSettings; appliedFingerprint: string }>();
   const [needsVerification, setNeedsVerification] = useState(false);
+  useEffect(() => {
+    worker.current?.terminate(); worker.current = null;
+    setBusy(false); setProgress(undefined); setError("");
+    setWager(getAdminSettings().games[gameId].defaultBet); setGoalOverride(undefined);
+    setResearch(undefined); setReport(undefined); setReportGameSettings(undefined); setNeedsVerification(false);
+  }, [gameId]);
   const selectedMode = modeByGame[gameId] ?? definition.modes[0].id;
   const parameter = parameterByGame[gameId] ?? definition.parameter?.defaultValue;
   const modeInfo = definition.modes.find((entry) => entry.id === selectedMode) ?? definition.modes[0];
@@ -81,14 +88,7 @@ export default function OwnerSimulationLab() {
   if (user.role !== "owner") return null;
 
   const chooseGame = (next: CasinoGameId) => {
-    setGameId(next);
-    setWager(settings.games[next].defaultBet);
-    setGoalRtp(settings.games[next].targetRtp);
-    setResearch(undefined);
-    setReport(undefined);
-    setReportGameSettings(undefined);
-    setAppliedRecommendations([]);
-    setNeedsVerification(false);
+    onGameChange(next);
   };
 
   const run = (researchOnly = false, repeatReport = false) => {
@@ -98,7 +98,7 @@ export default function OwnerSimulationLab() {
     setResearch(undefined);
     setProgress({ phase: "Ana simülasyon çalışıyor", completed: 0, simulatedRounds: 0 });
     const request = (researchOnly || repeatReport) && report ? report.request : { gameId, mode: selectedMode, runs, wager, seed, parameter };
-    const gameSnapshot = structuredClone(researchOnly && reportGameSettings ? reportGameSettings : settings.games[request.gameId]);
+    const gameSnapshot = structuredClone(getAdminSettings().games[request.gameId]);
     const settingsSnapshot = { ...settings, games: { ...settings.games, [request.gameId]: gameSnapshot } };
     const activeWorker = new Worker(new URL("../games/simulation/simulation-worker.ts", import.meta.url), { type: "module" });
     worker.current = activeWorker;
@@ -110,7 +110,7 @@ export default function OwnerSimulationLab() {
         setReport(data.report);
         setReportGameSettings(gameSnapshot);
         setHistory(current => [{ report: data.report, game: gameSnapshot }, ...current].slice(0, 8));
-        setView("optimizer"); setAppliedRecommendations([]); setNeedsVerification(false);
+        setView("optimizer"); setNeedsVerification(false);
       } else if (data.type === "progress") setProgress(data.progress);
       else if (data.type === "research") {
         setResearch(data.research);
@@ -122,7 +122,7 @@ export default function OwnerSimulationLab() {
     };
     activeWorker.onerror = event => { setError(event.message); setBusy(false); setProgress(undefined); activeWorker.terminate(); worker.current = null; };
     activeWorker.postMessage({
-      request, settings: settingsSnapshot, report: researchOnly ? report : undefined,
+      request, settings: settingsSnapshot,
       goal: autoResearch || researchOnly ? { targetRtp: goalRtp, priority: optimizationPriority, minHitRetention, minBonusRetention, allowPayoutChanges, batchRuns } : undefined,
     });
   };
@@ -145,12 +145,11 @@ export default function OwnerSimulationLab() {
 
   const applyRecommendation = (recommendation: SimulationRecommendation) => {
     if (!recommendation.applyable || !recommendation.changes.length || !report) return;
-    const current = settings.games[report.request.gameId];
+    const current = getAdminSettings().games[report.request.gameId];
     try {
       const patched = patchGameWithRecommendation(current, recommendation);
       updateAdminGame(report.request.gameId, patched);
       setRollback({ gameId: report.request.gameId, game: structuredClone(current), appliedFingerprint: profileFingerprint(patched) });
-      setAppliedRecommendations((items) => [...new Set([...items, recommendation.id])]);
       setNeedsVerification(true); setError("");
     } catch (error) { setError(error instanceof Error ? error.message : String(error)); }
   };
@@ -164,7 +163,6 @@ export default function OwnerSimulationLab() {
     const previous = rollback.game;
     updateAdminGame(rollback.gameId, { ...current, targetRtp: previous.targetRtp, slot: previous.slot, allah: previous.allah, mineDrop: previous.mineDrop, crash: previous.crash, mines: previous.mines, countdown: previous.countdown, plinko: previous.plinko });
     setRollback(undefined);
-    setAppliedRecommendations([]);
     setNeedsVerification(true);
   };
 
@@ -194,7 +192,7 @@ export default function OwnerSimulationLab() {
         <details className="sim-goal" open>
           <summary>OPTİMİZASYON HEDEFİ <span>Motor önerileri bu hedefe göre üretir</span></summary>
           <div>
-            <label><span>İstenen RTP</span><div className="sim-unit-input"><input type="number" min="1" max="100" step="0.1" value={goalRtp} onChange={(event) => setGoalRtp(Math.max(1, Math.min(100, Number(event.target.value) || 1)))} /><em>%</em></div></label>
+            <label><span>Bu araştırmanın RTP hedefi (canlıya yazılmaz)</span><div className="sim-unit-input"><input type="number" min="1" max="100" step="0.1" value={goalRtp} onChange={(event) => setGoalOverride(Math.max(1, Math.min(100, Number(event.target.value) || 1)))} /><em>%</em></div><small>Oyun Yönetimi’nde kayıtlı: {percent(settings.games[gameId].targetRtp)}</small>{goalOverride !== undefined && <button type="button" onClick={() => setGoalOverride(undefined)}>Kayıtlı hedefi kullan</button>}</label>
             <label><span>Mevcut ödeme sıklığını en az koru</span><select value={minHitRetention} onChange={event => setMinHitRetention(Number(event.target.value))}><option value={.95}>%95'ini koru</option><option value={.8}>%80'ini koru</option><option value={.6}>%60'ını koru</option><option value={0}>Alt sınır koyma</option></select></label>
             <label><span>Önceliğiniz</span><select value={optimizationPriority} onChange={(event) => setOptimizationPriority(event.target.value as OptimizationPriority)}><option value="balanced">Dengeli deneyim</option><option value="engagement">Daha hareketli oyun</option><option value="house">Kasa güvenliği</option></select></label>
           </div>
@@ -213,9 +211,12 @@ export default function OwnerSimulationLab() {
 
     {progress && <div className="sim-research-progress" role="status"><div><b>{progress.phase}</b><span>{number.format(progress.simulatedRounds)} araştırma turu · {progress.completed} tohum grubu tamamlandı</span></div><button type="button" onClick={cancel}>DURDUR</button></div>}
     {error && <p className="sim-research-error" role="alert">{error}</p>}
-    {history.length > 0 && <section className="sim-history"><header><small>SON KOŞULAR</small><span>Aynı oturumdaki raporlar</span></header><div>{history.map((item, index) => <button type="button" disabled={busy} key={`${item.report.request.seed}-${index}`} onClick={() => { setReport(item.report); setReportGameSettings(item.game); setResearch(item.research); setAppliedRecommendations([]); setNeedsVerification(false); }}><b>{item.report.gameName}</b><span>{item.report.modeName} · {compact.format(item.report.request.runs)} tur</span><strong>{rtpMultiple(item.report.observedRtp)} geri dönüş</strong></button>)}</div></section>}
+    <div className="sim-safety-note"><b>Araştırma sırasında canlı ayarlar değişmez.</b><p>Motor Oyun Yönetimi’ndeki güncel ayarların kopyasıyla başlar, daha iyi bulduğu geçici profilden deneylere devam eder. Sonuçta istediğiniz ayarları seçip yeniden denersiniz. Yalnız son kayıt onayı Oyun Yönetimi’ni değiştirir.</p></div>
+    <GameSettingsBridge gameId={gameId} snapshot={reportGameSettings} changes={research?.diagnosis.recommendations[0]?.changes} onOpenSettings={onOpenSettings} />
+    {history.some(item => item.report.request.gameId === gameId) && <section className="sim-history"><header><small>SON KOŞULAR</small><span>Bu oyunun aynı oturumdaki raporları · geçmiş ayarların ölçümü</span></header><div>{history.filter(item => item.report.request.gameId === gameId).map((item, index) => <button type="button" disabled={busy} key={`${item.report.request.seed}-${index}`} onClick={() => { setReport(item.report); setReportGameSettings(item.game); setResearch(item.research); setNeedsVerification(false); }}><b>{item.report.gameName}</b><span>{item.report.modeName} · {compact.format(item.report.request.runs)} tur</span><strong>{rtpMultiple(item.report.observedRtp)} geri dönüş</strong></button>)}</div></section>}
 
     {report && <section className="sim-results">
+      {reportGameSettings && profileFingerprint(reportGameSettings) !== profileFingerprint(settings.games[report.request.gameId]) && <div className="sim-safety-note"><b>Bu rapor önceki ayarlarla ölçüldü.</b><p>Oyun Yönetimi sonradan değişti. Aşağıdaki sonuçlar geçmiş ölçümdür; güncel canlı sonuç olarak okunmamalı. Yeni araştırma güncel ayarlarla başlar.</p></div>}
       <header><div><small>03 · RAPOR</small><h3>{report.gameName} <i>/</i> {report.modeName}</h3><p>{report.request.runs.toLocaleString("tr-TR")} ana tur · {report.bonusRounds.toLocaleString("tr-TR")} ek/bonus tur · {number.format(report.durationMs)} ms</p></div><div><button type="button" onClick={exportCsv}>CSV</button><button type="button" onClick={exportJson}>JSON RAPOR</button></div></header>
       <nav className="sim-report-nav">{(["optimizer", "summary", "distribution", "causes", "technical"] as const).map((id) => <button type="button" key={id} className={view === id ? "active" : ""} onClick={() => setView(id)}>{id === "optimizer" ? "AKILLI TEŞHİS & ÖNERİ" : id === "summary" ? "SONUÇ ÖZETİ" : id === "distribution" ? "DAĞILIM & RİSK" : id === "causes" ? "NEDEN VERİSİ" : "TEKNİK KAYIT"}</button>)}</nav>
 
@@ -235,17 +236,7 @@ export default function OwnerSimulationLab() {
         <section className="sim-prescriptions">
           <header><div><small>UYGULANABİLİR REÇETELER</small><h4>Önce gör, sonra siz onaylarsanız uygula</h4></div>{rollback && <button type="button" className="sim-undo" onClick={undoOptimization}>↶ SON DEĞİŞİKLİKLERİ GERİ AL</button>}</header>
           {needsVerification && <div className="sim-verify"><b>Profil değişti.</b><span>Güncel profille aynı senaryonun yeni raporunu alın.</span><button type="button" disabled={busy} onClick={() => run(false, true)}>YENİDEN SİMÜLE ET</button></div>}
-          <div>{diagnosis.recommendations.map((recommendation) => {
-            const applied = appliedRecommendations.includes(recommendation.id);
-            return <article className={`${recommendation.priority} ${applied ? "applied" : ""}`} key={recommendation.id}>
-              <header><span>BAĞIMSIZ DOĞRULAMA</span><em>Kanıt gücü: {recommendation.confidence}</em></header>
-              <h5>{recommendation.title}</h5><p>{recommendation.summary}</p>
-              {recommendation.changes.length > 0 && <div className="sim-change-list">{recommendation.changes.map((item) => <div key={item.path}><span><b>{item.label}</b><small>{item.reason}</small></span><code>{number.format(item.before)}{item.unit}</code><i>→</i><code>{number.format(item.after)}{item.unit}</code></div>)}</div>}
-              <div className="sim-expected"><b>Yeni tohumlarda ölçülen etki</b><span>{recommendation.expectedEffect}</span></div>
-              <button type="button" className="sim-apply" disabled={busy || !recommendation.applyable || applied || profileFingerprint(settings.games[report.request.gameId]) !== recommendation.sourceFingerprint} onClick={() => applyRecommendation(recommendation)}>{applied ? "✓ UYGULANDI" : recommendation.applyable ? "ÖLÇÜLMÜŞ AYARLARI UYGULA" : recommendation.blockedReason}</button>
-              {profileFingerprint(settings.games[report.request.gameId]) !== recommendation.sourceFingerprint && !applied && <p>Bu rapordan sonra profil değişmiş. Güncel profille yeniden simüle edin.</p>}
-            </article>;
-          })}</div>
+          {research && diagnosis.recommendations.map(recommendation => <SimulationProposalReview key={recommendation.id + research.durationMs} recommendation={recommendation} request={report.request} goal={research.goal} disabled={busy} onBusy={setBusy} onApply={applyRecommendation} />)}
         </section>
       </div>}
 

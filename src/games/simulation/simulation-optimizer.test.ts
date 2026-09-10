@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_ADMIN_SETTINGS } from "../../data/casino-admin";
 import { SIMULATION_GAMES, runCasinoSimulation } from "./casino-simulation-engine";
-import { buildSimulationDiagnosis, patchGameWithRecommendation, profileFingerprint, protectedGameSettings, researchKnobs, researchSimulation, type SimulationOptimizationGoal } from "./simulation-optimizer";
+import { buildSimulationDiagnosis, patchGameWithRecommendation, profileFingerprint, protectedGameSettings, researchKnobs, researchSimulation, validateSimulationSelection, type SimulationOptimizationGoal } from "./simulation-optimizer";
 
 const goal: SimulationOptimizationGoal = { targetRtp: 70, priority: "balanced", minHitRetention: .8, minBonusRetention: .5, allowPayoutChanges: false, batchRuns: 100 };
 describe("deneysel simülasyon araştırması", () => {
@@ -21,7 +21,7 @@ describe("deneysel simülasyon araştırması", () => {
   it("18 oyunun her birinde gerçek motor deneyleri veya strateji karşılaştırmaları çalıştırır", async () => {
     for (const definition of SIMULATION_GAMES) {
       const report = runCasinoSimulation({ gameId: definition.id, mode: definition.modes[0].id, runs: 10, wager: 25, seed: 321, parameter: definition.parameter?.defaultValue }, DEFAULT_ADMIN_SETTINGS);
-      const result = await researchSimulation(report, DEFAULT_ADMIN_SETTINGS, { ...goal, allowPayoutChanges: true });
+      const result = await researchSimulation(report, DEFAULT_ADMIN_SETTINGS, { ...goal, allowPayoutChanges: true, maxIterations: 0 });
       expect(result.experiments.length, definition.id).toBeGreaterThan(0);
       expect(result.totalSimulatedRounds).toBeGreaterThan(300);
       for (const experiment of result.experiments) {
@@ -74,4 +74,39 @@ describe("deneysel simülasyon araştırması", () => {
       if (rec.applyable) expect(rec.validation.improvement95[0]).toBeGreaterThan(0);
     }
   }, 120_000);
+
+  it("ardışık araştırmada geçici profille ilerler ve başlangıç ayarlarını asla değiştirmez", async () => {
+    const settings = structuredClone(DEFAULT_ADMIN_SETTINGS);
+    settings.games["kiraz-77"].slot!.math.payoutScale = 8;
+    const original = structuredClone(settings);
+    const request = { gameId: "kiraz-77" as const, mode: "spins", runs: 100, wager: 25, seed: 123 };
+    const report = runCasinoSimulation(request, settings);
+    const result = await researchSimulation(report, settings, { ...goal, allowPayoutChanges: true, maxIterations: 3 });
+    expect(result.iterations.length).toBeGreaterThan(0);
+    expect(result.iterations.length).toBeLessThanOrEqual(3);
+    expect(settings).toEqual(original);
+    expect(result.iterations.some(step => step.accepted)).toBe(true);
+    expect(result.iterations.every(step => step.changes.every(c => c.before === 8))).toBe(true);
+  }, 30_000);
+
+  it("seçimi güncel profilde yeniden ölçer, yalnız seçilen alanı uygular ve geri kalan ayarları korur", async () => {
+    const settings = structuredClone(DEFAULT_ADMIN_SETTINGS);
+    settings.games.plinko.plinko!.maxPayoutX = 4321;
+    const original = structuredClone(settings);
+    const request = { gameId: "plinko" as const, mode: "dusuk", runs: 100, wager: 100, seed: 7, parameter: 8 };
+    const selection = [{ path: "targetRtp", before: settings.games.plinko.targetRtp, after: 70, label: "Hedef", unit: "%" as const, reason: "Deney" }];
+    const result = await validateSimulationSelection(request, settings, { ...goal, batchRuns: 500 }, selection);
+    expect(settings).toEqual(original);
+    expect(result.applyable).toBe(true);
+    expect(result.changes).toEqual(selection);
+    expect(result.validation.seeds).toHaveLength(6);
+    expect(result.sourceFingerprint).toBe(profileFingerprint(settings.games.plinko));
+    const patched = patchGameWithRecommendation(settings.games.plinko, result);
+    expect(patched).toEqual({ ...settings.games.plinko, targetRtp: 70 });
+    const current = { ...settings, games: { ...settings.games, plinko: patched } };
+    await expect(validateSimulationSelection(request, current, goal, selection)).rejects.toThrow("zaten");
+    await expect(validateSimulationSelection(request, settings, goal, [{ ...selection[0], before: 42 }])).rejects.toThrow("değişmiş");
+    await expect(validateSimulationSelection(request, settings, goal, [{ ...selection[0], path: "plinko.maxPayoutX" }])).rejects.toThrow("kapsamında");
+    await expect(validateSimulationSelection(request, settings, goal, [selection[0], selection[0]])).rejects.toThrow("iki kez");
+  }, 30_000);
 });

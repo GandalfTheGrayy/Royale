@@ -9,6 +9,7 @@ export type SimulationOptimizationGoal = {
   minBonusRetention: number;
   allowPayoutChanges: boolean;
   batchRuns: number;
+  maxIterations?: number;
 };
 export type OptimizationChange = {
   path: string; label: string; before: number; after: number;
@@ -48,6 +49,7 @@ export type SimulationResearch = {
   selectedId?: string; totalSimulatedRounds: number; durationMs: number;
   protectedSettings: Array<{ path: string; value: number }>;
   limitations: string[]; interactions: string[];
+  iterations: Array<{ step: number; accepted: boolean; label: string; comparison: ResearchComparison; changes: OptimizationChange[] }>;
 };
 export type ResearchProgress = { phase: string; completed: number; simulatedRounds: number };
 type Knob = { path: string; label: string; mechanism: string; unit: OptimizationChange["unit"]; max: number; global: boolean };
@@ -58,11 +60,12 @@ export const profileFingerprint = (game: AdminGameSettings) => JSON.stringify({
   id: game.id, targetRtp: game.targetRtp, slot: game.slot, allah: game.allah,
   mineDrop: game.mineDrop, crash: game.crash, mines: game.mines, countdown: game.countdown, plinko: game.plinko,
 });
-function readPath(game: AdminGameSettings, path: string): number {
+export function readGameSetting(game: AdminGameSettings, path: string): number {
   let value: unknown = game;
   for (const key of path.split(".")) value = (value as Record<string, unknown>)?.[key];
   return typeof value === "number" ? value : NaN;
 }
+const readPath = readGameSetting;
 const protectedNames = /(^|\.)(maxWinX|maxPayoutX|maxMultiplier|globalMultiplierCap|modeCosts|bonusCosts|bonusBuyX|maxCoin|maxBook)(\.|$)/;
 function applyChanges(game: AdminGameSettings, changes: OptimizationChange[]): AdminGameSettings {
   const clone = structuredClone(game);
@@ -201,9 +204,10 @@ export async function researchSimulation(
   progress: (value: ResearchProgress) => void = () => {},
 ): Promise<SimulationResearch> {
   const started = performance.now(), request = report.request, game = settings.games[request.gameId];
-  const goal = { ...rawGoal, batchRuns: Math.max(100, Math.min(10_000, Math.round(rawGoal.batchRuns))) };
+  const goal = { ...rawGoal, batchRuns: Math.max(100, Math.min(10_000, Math.round(rawGoal.batchRuns))), maxIterations: Math.max(0, Math.min(5, Math.round(rawGoal.maxIterations ?? 3))) };
   const knobs = researchKnobs(game, request.mode, goal.allowPayoutChanges);
   const experiments: ResearchExperiment[] = [], interactions: string[] = [];
+  const iterations: SimulationResearch["iterations"] = [];
   const fingerprint = profileFingerprint(game);
   let totalSimulatedRounds = 0, completed = 0;
   // Separate deterministic seed domains for search and untouched validation.
@@ -269,6 +273,27 @@ export async function researchSimulation(
     interactions.push("İki tekil deneyin RTP etkileri toplamı " + tr(additive) + " puan; birlikte ölçülen " + tr(actual) + " puan. Fark " + tr(actual - additive) + " puan; etkileşim ve örnek değişkenliği içerir.");
   }
   best = ranked()[0];
+  // Coordinate search continues on the best measured temporary profile. Every
+  // cumulative candidate is still compared with the same untouched live baseline.
+  for (let step = 1; best && best.score < baseScore && step <= goal.maxIterations; step += 1) {
+    const previous = best;
+    const paths = [...new Set(ranked().filter(e => e.kind !== "combination").flatMap(e => e.changes.map(c => c.path)))].filter(path => path !== "targetRtp").slice(0, 3);
+    if (!paths.length) break;
+    for (const path of paths) {
+      const knob = knobs.find(k => k.path === path)!;
+      const center = previous.changes.find(c => c.path === path)?.after ?? readPath(game, path);
+      for (const factor of [.7, 1.15]) {
+        const next = makeChange(knob, center * factor);
+        const changes = [...previous.changes.filter(c => c.path !== path), next].filter(c => c.before !== c.after);
+        if (!changes.length) continue;
+        await evaluate(changes, "Deney adımı " + step + " · " + knob.label + " " + tr(next.after), "refinement", "Önceki en iyi geçici profil üzerinden " + knob.mechanism);
+      }
+    }
+    best = ranked()[0];
+    const accepted = best.score < previous.score - .0001;
+    iterations.push({ step, accepted, label: accepted ? "Bu geçici profil daha iyi; sonraki deney buradan devam etti." : "Ek denemeler iyileştirmedi; önceki geçici profil korundu.", comparison: best.comparison, changes: best.changes });
+    if (!accepted) break;
+  }
   const diagnosis = buildSimulationDiagnosis(report, game, goal);
   diagnosis.evidence.push("Arama " + searchSeeds.length + " tohumla; seçilen aday ayrı 6 tohumla sınanır. Birim, ana tur / satın alım oturumudur.");
   const crossModes: SimulationResearch["crossModes"] = [];
@@ -350,6 +375,64 @@ export async function researchSimulation(
   return {
     goal, sourceFingerprint: fingerprint, experiments, diagnosis, selectedId: best?.id, crossModes,
     totalSimulatedRounds, durationMs: performance.now() - started, protectedSettings: protectedGameSettings(game),
-    limitations, interactions,
+    limitations, interactions, iterations,
+  };
+}
+
+/** Validate any selected subset on the CURRENT shared profile before approval.
+ * This function never imports or calls the settings persistence API. */
+export async function validateSimulationSelection(
+  request: CasinoSimulationReport["request"], settings: CasinoAdminSettings,
+  goal: SimulationOptimizationGoal, selectedChanges: OptimizationChange[],
+  progress: (value: ResearchProgress) => void = () => {},
+): Promise<SimulationRecommendation> {
+  const game = settings.games[request.gameId];
+  const knobs = researchKnobs(game, request.mode, goal.allowPayoutChanges);
+  const changes = selectedChanges.filter(c => readPath(game, c.path) !== c.after).map(c => {
+    const knob = knobs.find(k => k.path === c.path);
+    if (!knob || !Number.isFinite(c.after) || c.after <= 0 || c.after > knob.max)
+      throw new Error("Seçilen ayar bu araştırma kapsamında değil: " + c.label);
+    if (readPath(game, c.path) !== c.before) throw new Error(c.label + " araştırmadan sonra değişmiş. Güncel profille tekrar araştırın.");
+    return { ...c, before: readPath(game, c.path) };
+  });
+  if (!changes.length) throw new Error("Seçili değerler zaten canlı ayarlarda kayıtlı.");
+  if (new Set(changes.map(c => c.path)).size !== changes.length) throw new Error("Aynı ayar iki kez seçilemez.");
+  const candidate = applyChanges(game, changes);
+  const seeds = Array.from({ length: 6 }, (_, i) => (Math.imul(request.seed ^ 0x934b7, 1664525) + Math.imul(i + 1, 1013904223)) >>> 0);
+  const runs = Math.max(100, Math.min(20_000, goal.batchRuns * 2));
+  let completed = 0;
+  const simulate = async (profile: AdminGameSettings, mode: string, count = 6) => {
+    const reports: CasinoSimulationReport[] = [];
+    for (const seed of seeds.slice(0, count)) {
+      reports.push(runCasinoSimulation({ ...request, mode, seed, runs }, { ...settings, games: { ...settings.games, [game.id]: profile } }));
+      progress({ phase: "Seçili ayarlar deneniyor · " + mode + " · canlı kayıt yapılmıyor", completed: ++completed, simulatedRounds: completed * runs });
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
+    }
+    return reports;
+  };
+  const before = await simulate(game, request.mode);
+  const after = await simulate(candidate, request.mode);
+  const validation = compare(before, after, goal.targetRtp);
+  const regressions: string[] = [];
+  let incomplete = validation.before.incompleteSessions + validation.after.incompleteSessions;
+  if (changes.some(c => knobs.find(k => k.path === c.path)?.global)) {
+    for (const mode of SIMULATION_GAMES.find(g => g.id === game.id)!.modes.filter(m => m.id !== request.mode && !(game.id === "baykus-madeni" && m.id === "bonus-epic"))) {
+      const comparison = compare(await simulate(game, mode.id, 3), await simulate(candidate, mode.id, 3), goal.targetRtp);
+      incomplete += comparison.before.incompleteSessions + comparison.after.incompleteSessions;
+      if (comparison.improvement95[1] < -3 || comparison.after.hitRate < comparison.before.hitRate * goal.minHitRetention || comparison.after.bonusFrequency < comparison.before.bonusFrequency * goal.minBonusRetention)
+        regressions.push(mode.label);
+    }
+  }
+  const blockedReason = game.id === "baykus-madeni" && request.mode === "bonus-epic" ? "Koşullu epik inceleme canlı satın alımı temsil etmez."
+    : incomplete ? "Bazı bonus oturumları tamamlanamadı."
+    : validation.improvement95[0] <= 0 ? "Bu seçimin hedefe yaklaştırdığı bağımsız örnekte kesinleşmedi."
+    : validation.after.hitRate < validation.before.hitRate * goal.minHitRetention ? "Ödeme sıklığı belirlediğiniz sınırın altına düşüyor."
+    : validation.after.bonusFrequency < validation.before.bonusFrequency * goal.minBonusRetention ? "Bonus sıklığı belirlediğiniz sınırın altına düşüyor."
+    : regressions.length ? "Diğer modlarda gerileme: " + regressions.join(", ") : undefined;
+  return {
+    id: "selection-" + changes.map(c => c.path + "=" + c.after).join("|"),
+    priority: "important", title: changes.length + " seçili ayar", summary: "Yalnız seçtiğiniz ayarlar, şu anki Oyun Yönetimi profili üzerinde geçici olarak denendi.",
+    expectedEffect: "Geri dönüş %" + tr(validation.before.rtp) + " → %" + tr(validation.after.rtp) + "; ödeme görülen tur %" + tr(validation.before.hitRate * 100) + " → %" + tr(validation.after.hitRate * 100) + ".",
+    confidence: blockedReason ? "düşük" : "orta", changes, applyable: !blockedReason, blockedReason, validation, sourceFingerprint: profileFingerprint(game),
   };
 }
