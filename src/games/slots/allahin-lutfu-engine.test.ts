@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_ALLAH_TUNING } from "../../data/casino-admin";
 import {
   ALLAH_MAX_WIN_X,
   ALLAH_PAYLINES,
@@ -947,5 +948,22 @@ describe("Allah’ın Lütfu motoru", () => {
     expect(result.grossMultiplier).toBe(250);
     expect(result.payout).toBe(500);
     expect(result.maxWin).toBe(true);
+  });
+
+  it("mod odeme olcegini diger modlara sizdirmadan tetiklenen bonus boyunca tasir", () => {
+    const grid = createAllahGrid(uniqueSymbols);
+    grid[2][2] = allahCoinCell("silver", 10, "mode-scale-coin");
+    const tuning = {
+      modePayoutScales: { ...DEFAULT_ALLAH_TUNING.modePayoutScales, enhancer: 0.25 },
+    };
+    const normal = runAllahSpin({ wager: 1, mode: "base", forcedGrid: grid, tuning }, createSeededAllahRandom(94));
+    const enhancer = runAllahSpin({ wager: 1, mode: "enhancer", forcedGrid: grid, tuning }, createSeededAllahRandom(94));
+    const enhancerBonus = runAllahSpin({
+      wager: 1, mode: "base", forcedGrid: grid, tuning,
+      bonus: { tier: "free", payoutMode: "enhancer", remaining: 1, totalSpins: 0, totalPayout: 0 },
+    }, createSeededAllahRandom(94));
+    expect(normal.coinWinX).toBe(10);
+    expect(enhancer.coinWinX).toBe(2.5);
+    expect(enhancerBonus.coinWinX).toBe(2.5);
   });
 });

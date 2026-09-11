@@ -165,6 +165,8 @@ export type AllahPersistentState = {
 
 export type AllahBonusState = {
   tier: AllahBonusTier;
+  /** Paid mode that opened/bought this session; controls payout calibration only. */
+  payoutMode?: AllahPurchaseMode;
   remaining: number;
   totalSpins: number;
   totalPayout: number;
@@ -495,6 +497,7 @@ function resolveAllahTuning(patch?: Partial<AllahTuningSettings>): AllahTuningSe
     ...DEFAULT_ALLAH_TUNING,
     ...patch,
     modeCosts: { ...DEFAULT_ALLAH_TUNING.modeCosts, ...patch?.modeCosts },
+    modePayoutScales: { ...DEFAULT_ALLAH_TUNING.modePayoutScales, ...patch?.modePayoutScales },
     reelEyeChancePercent: {
       ...DEFAULT_ALLAH_TUNING.reelEyeChancePercent,
       ...patch?.reelEyeChancePercent,
@@ -788,6 +791,8 @@ export function runAllahSpin(
 ): AllahSpinResult {
   const mode = request.mode ?? "base";
   const tuning = resolveAllahTuning(request.tuning);
+  const payoutMode = request.bonus?.payoutMode ?? mode;
+  const modePayoutScale = Math.max(0, tuning.modePayoutScales[payoutMode] ?? 1);
   const valueCapX = Math.max(1, tuning.maxWinX);
   const runId = request.runId ?? `allah-${Date.now()}-${Math.floor(boundedRandom(random) * 1e9)}`;
   const state: AllahPersistentState = {
@@ -872,7 +877,7 @@ export function runAllahSpin(
         payline: win.payline + 1,
         symbol: win.symbol,
         multiplier: win.multiplier,
-        payout: roundMoney(Math.max(0, request.wager) * win.multiplier * tuning.linePayoutScale),
+        payout: roundMoney(Math.max(0, request.wager) * win.multiplier * tuning.linePayoutScale * modePayoutScale),
       });
       emit("symbol-pulse", win.cells, { symbol: win.symbol });
     }
@@ -1376,7 +1381,7 @@ export function runAllahSpin(
   }
 
   const lineWinX = roundX(
-    lineWins.reduce((sum, win) => sum + win.multiplier, 0) * tuning.linePayoutScale,
+    lineWins.reduce((sum, win) => sum + win.multiplier, 0) * tuning.linePayoutScale * modePayoutScale,
   );
   // A Collector extends the feature; it is not the switch that makes coins
   // payable. Coins swept on an earlier board live in collectorValues, while
@@ -1390,14 +1395,14 @@ export function runAllahSpin(
       grid.flat().reduce(
         (sum, cell) => sum + (cell.kind === "coin" && !collectedCoinIds.has(cell.id) ? cell.value : 0),
         0,
-      ) * tuning.coinPayoutScale,
+      ) * tuning.coinPayoutScale * modePayoutScale,
     ),
   );
   const collectorWinX = Math.min(
     valueCapX,
     roundX(
       Object.values(collectorValues).reduce((sum, value) => sum + value, 0) *
-        tuning.coinPayoutScale,
+        tuning.coinPayoutScale * modePayoutScale,
     ),
   );
   const maxCoin =

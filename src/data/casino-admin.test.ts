@@ -140,6 +140,7 @@ describe("casino admin settings", () => {
           ...before.reelScatterChancePercent,
           enhancer: 3.75,
         },
+        modePayoutScales: { ...before.modePayoutScales, base: 0.42 },
         mysteryWeights: { ...before.mysteryWeights, redrop: 3.5 },
       },
     });
@@ -147,6 +148,8 @@ describe("casino admin settings", () => {
     expect(after.reelEyeChancePercent.base).toBe(1.25);
     expect(after.reelEyeChancePercent.trickster).toBe(before.reelEyeChancePercent.trickster);
     expect(after.reelScatterChancePercent.enhancer).toBe(3.75);
+    expect(after.modePayoutScales.base).toBe(0.42);
+    expect(after.modePayoutScales.fate).toBe(before.modePayoutScales.fate);
     expect(after.mysteryWeights.redrop).toBe(3.5);
     expect(after.mysteryWeights.collector).toBe(before.mysteryWeights.collector);
   });

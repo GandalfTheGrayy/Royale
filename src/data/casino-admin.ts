@@ -190,6 +190,8 @@ export type AllahTuningSettings = {
   maxWinX: number;
   linePayoutScale: number;
   coinPayoutScale: number;
+  /** Session-local scale; follows the paid mode through any triggered bonus. */
+  modePayoutScales: Record<AllahAdminMode, number>;
   globalMultiplierCap: number;
   modeCosts: Record<AllahAdminMode, number>;
   reelEyeChancePercent: Record<AllahAdminMode, number>;
@@ -228,6 +230,15 @@ export const DEFAULT_ALLAH_TUNING: AllahTuningSettings = {
   maxWinX: 500_000,
   linePayoutScale: 1,
   coinPayoutScale: 1,
+  modePayoutScales: {
+    base: 1,
+    enhancer: 1,
+    degen: 1,
+    trickster: 1,
+    fate: 1,
+    "bonus-buy": 1,
+    "super-bonus-buy": 1,
+  },
   globalMultiplierCap: 100,
   modeCosts: {
     base: 1,
@@ -1377,6 +1388,7 @@ function loadSettings(): CasinoAdminSettings {
                       }
                     : {}),
                   modeCosts: { ...defaults.allah.modeCosts, ...current?.allah?.modeCosts },
+                  modePayoutScales: { ...defaults.allah.modePayoutScales, ...current?.allah?.modePayoutScales },
                   reelEyeChancePercent: {
                     ...defaults.allah.reelEyeChancePercent,
                     ...current?.allah?.reelEyeChancePercent,
@@ -1557,6 +1569,7 @@ export function updateAdminGame(
                 ...current.allah,
                 ...patch.allah,
                 modeCosts: { ...current.allah.modeCosts, ...patch.allah.modeCosts },
+                modePayoutScales: { ...current.allah.modePayoutScales, ...patch.allah.modePayoutScales },
                 reelEyeChancePercent: {
                   ...current.allah.reelEyeChancePercent,
                   ...patch.allah.reelEyeChancePercent,

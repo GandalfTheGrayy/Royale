@@ -16,6 +16,9 @@ describe("deneysel simülasyon araştırması", () => {
       if (!["blackjack", "roulette", "poker"].includes(definition.id)) expect(knobs.length, definition.id + "/" + mode.id).toBeGreaterThan(0);
       expect(knobs.some(k => /maxWin|maxPayout|maxMultiplier|globalMultiplierCap|modeCosts|bonusCosts|maxCoin/.test(k.path))).toBe(false);
     }
+    const allahBaseScale = researchKnobs(DEFAULT_ADMIN_SETTINGS.games["allahin-lutfu"], "base", true)
+      .find(knob => knob.path === "allah.modePayoutScales.base");
+    expect(allahBaseScale).toMatchObject({ global: false, unit: "×" });
   });
 
   it("18 oyunun her birinde gerçek motor deneyleri veya strateji karşılaştırmaları çalıştırır", async () => {
@@ -76,6 +79,28 @@ describe("deneysel simülasyon araştırması", () => {
       expect(rec.changes.some(c => c.path.includes("maxWin"))).toBe(false);
       if (rec.applyable) expect(rec.validation.improvement95[0]).toBeGreaterThan(0);
     }
+  }, 120_000);
+
+  it("Allah'in Lutfu %160+ RTP profilini diger modlara dokunmadan kalibre edecek ayar bulur", async () => {
+    const settings = structuredClone(DEFAULT_ADMIN_SETTINGS);
+    settings.games["allahin-lutfu"].allah!.coinPayoutScale = 0.24;
+    const request = { gameId: "allahin-lutfu" as const, mode: "base", runs: 10_000, wager: 25, seed: 20260909 };
+    const report = runCasinoSimulation(request, settings);
+    expect(report.observedRtp).toBeGreaterThan(150);
+    const result = await researchSimulation(report, settings, {
+      targetRtp: 96.7, priority: "balanced", minHitRetention: .8,
+      minBonusRetention: .5, allowPayoutChanges: true, batchRuns: 500,
+      maxIterations: 0, maxCandidates: 2,
+    });
+    const recommendation = result.diagnosis.recommendations[0];
+    expect(result.searchSummary.outcome).toBe("validated");
+    expect(recommendation?.applyable).toBe(true);
+    expect(recommendation?.changes.some(change => change.path === "allah.modePayoutScales.base")).toBe(true);
+    expect(recommendation?.changes.some(change => change.path.includes("maxWin"))).toBe(false);
+    expect(recommendation!.validation.after.rtp).toBeLessThan(recommendation!.validation.before.rtp);
+    const patched = patchGameWithRecommendation(settings.games["allahin-lutfu"], recommendation!);
+    expect(patched.allah!.modePayoutScales.fate).toBe(settings.games["allahin-lutfu"].allah!.modePayoutScales.fate);
+    expect(patched.allah!.maxWinX).toBe(500_000);
   }, 120_000);
 
   it("ardışık araştırmada geçici profille ilerler ve başlangıç ayarlarını asla değiştirmez", async () => {

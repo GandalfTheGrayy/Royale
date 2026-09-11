@@ -125,6 +125,7 @@ export function researchKnobs(game: AdminGameSettings, mode: string, allowPayout
       }
     }
     if (allowPayoutChanges) {
+      add("allah.modePayoutScales." + mode, "Seçili mod ödeme ölçeği", "Yalnız bu oynanışın ücretli turu ve onun açtığı bonus → toplam ödeme", "×", 10, false);
       add("allah.coinPayoutScale", "Coin / Collector ödeme ölçeği", "Coin ve Collector ödemelerinin parasal ölçeği", "×", 100);
       add("allah.linePayoutScale", "Çizgi ödeme ölçeği", "Normal sembol ödemelerinin parasal ölçeği", "×", 100);
     }
@@ -322,15 +323,23 @@ export async function researchSimulation(
   if (game.slot && game.id !== "kiraz-77") limitations.push("Slot hit, dağılım ve RTP ölçümleri ücretli spin + doğal bonus toplamı veya satın alınmış bonus oturumu bazındadır. Oturumlar arasında motorun akış durumu korunur.");
   type CandidateValidation = { experiment: ResearchExperiment; validation: ResearchComparison };
   const signature = (experiment: ResearchExperiment) => experiment.changes.map(c => c.path + "=" + c.after).sort().join("|");
+  const isModeLocalPayoutPath = (path: string) => path === "allah.modePayoutScales." + request.mode
+    || path === "mineDrop.payoutScales." + request.mode
+    || (path === "slot.math.payoutScale" && request.mode !== "bonus-sessions")
+    || (path === "slot.math.bonusPayoutScale" && request.mode === "bonus-sessions");
+  const scopePenalty = (experiment: ResearchExperiment) => experiment.changes.some(c => knobs.find(k => k.path === c.path)?.global) ? .05 : 0;
   const rankedCandidates = ranked();
   const diverse = rankedCandidates.filter((experiment, index, all) => {
-    const primaryPath = experiment.changes[0]?.path;
-    return !!primaryPath && all.findIndex(other => other.changes[0]?.path === primaryPath) === index;
-  });
+    const family = experiment.changes.map(c => c.path).sort().join("+");
+    return !!family && all.findIndex(other => other.changes.map(c => c.path).sort().join("+") === family) === index;
+  }).sort((a, b) => scopePenalty(a) - scopePenalty(b) || a.score - b.score);
+  const directModePayout = rankedCandidates.filter(experiment => experiment.changes.length === 1
+    && isModeLocalPayoutPath(experiment.changes[0].path));
   // A noisy screening pass may make a genuinely useful mechanism look neutral.
-  // Fill the shortlist with the best candidate from different mechanisms so the
-  // independent validation, not the cheap screen, makes the final decision.
-  const candidatePool = [...rankedCandidates.filter(searchPromising), ...diverse]
+  // Reserve the first seat for the mode-local payout control when one exists;
+  // otherwise high-scoring global candidates could consume the validation budget
+  // and force the engine to reject every result during cross-mode safety checks.
+  const candidatePool = [...directModePayout, ...diverse, ...rankedCandidates.filter(searchPromising)]
     .filter((e, i, all) => all.findIndex(other => signature(other) === signature(e)) === i).slice(0, goal.maxCandidates);
   const validationBase = new Map<string, CasinoSimulationReport[]>();
   const validateAt = async (experiment: ResearchExperiment, count: number, runs: number) => {
@@ -366,7 +375,8 @@ export async function researchSimulation(
     }
     if (corePasses(validation)) validated.push({ experiment, validation });
   }
-  validated.sort((a, b) => score(a.validation, a.experiment.changes) - score(b.validation, b.experiment.changes));
+  validated.sort((a, b) => score(a.validation, a.experiment.changes) + scopePenalty(a.experiment)
+    - score(b.validation, b.experiment.changes) - scopePenalty(b.experiment));
   let winner: CandidateValidation | undefined;
   let winnerRegressions: string[] = [];
   for (const candidateResult of validated) {

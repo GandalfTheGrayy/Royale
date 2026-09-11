@@ -1614,10 +1614,10 @@ export default function AdminPanel({ balance, onClose }: Props) {
                           <div className="allah-admin-sections">
                             <section className="allah-admin-table">
                               <header>
-                                <div><small>DÖNÜŞ TÜRLERİ</small><h4>Maliyet, Nur Gözü ve Scatter</h4></div>
-                                <p>Normal tambur coin üretmez. Eye ve Scatter oranları hücre başına ayrı uygulanır; Hilebaz Eye ağırlıklıdır.</p>
+                                <div><small>DÖNÜŞ TÜRLERİ</small><h4>Maliyet, ödeme, Nur Gözü ve Scatter</h4></div>
+                                <p>Mod ödeme ölçeği yalnız bu oynanışa ve onun açtığı bonusa uygulanır. Böylece bir mod düzeltilirken diğerinin dengesi korunur.</p>
                               </header>
-                              <div className="allah-admin-row allah-admin-row-head"><b>Tür</b><span>Maliyet</span><span>Eye</span><span>Scatter</span></div>
+                              <div className="allah-admin-row allah-admin-row-head"><b>Tür</b><span>Maliyet</span><span>Mod ödemesi</span><span>Eye</span><span>Scatter</span></div>
                               {([
                                 ["base", "Normal"],
                                 ["enhancer", "Lütuf Arttırıcı"],
@@ -1630,6 +1630,7 @@ export default function AdminPanel({ balance, onClose }: Props) {
                                 <div className="allah-admin-row" key={mode}>
                                   <b>{label}</b>
                                   <label><input type="number" min="0" step="0.1" value={allah.modeCosts[mode]} onChange={(event) => updateAdminGame(game.id, { allah: { ...allah, modeCosts: { ...allah.modeCosts, [mode]: Math.max(0, Number(event.target.value)) } } })} /><em>×</em></label>
+                                  <label><input type="number" min="0" max="10" step="0.01" value={allah.modePayoutScales[mode]} onChange={(event) => updateAdminGame(game.id, { allah: { ...allah, modePayoutScales: { ...allah.modePayoutScales, [mode]: Math.max(0, Math.min(10, Number(event.target.value))) } } })} /><em>× ödeme</em></label>
                                   <label><input type="number" min="0" max="100" step="0.01" value={allah.reelEyeChancePercent[mode]} onChange={(event) => updateAdminGame(game.id, { allah: { ...allah, reelEyeChancePercent: { ...allah.reelEyeChancePercent, [mode]: Math.max(0, Math.min(100, Number(event.target.value))) } } })} /><em>%</em></label>
                                   <label><input type="number" min="0" max="100" step="0.01" value={allah.reelScatterChancePercent[mode]} onChange={(event) => updateAdminGame(game.id, { allah: { ...allah, reelScatterChancePercent: { ...allah.reelScatterChancePercent, [mode]: Math.max(0, Math.min(100, Number(event.target.value))) } } })} /><em>%</em></label>
                                 </div>

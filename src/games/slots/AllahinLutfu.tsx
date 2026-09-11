@@ -615,6 +615,7 @@ export default function AllahinLutfu({
     if (result.triggeredBonus)
       nextBonus = {
         tier: result.triggeredBonus,
+        payoutMode: result.mode,
         remaining: tuning.bonusSpins,
         totalSpins: 0,
         totalPayout: 0,

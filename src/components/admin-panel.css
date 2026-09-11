@@ -1918,7 +1918,7 @@
   border-top: 1px solid rgba(255, 255, 255, 0.055);
   display: grid;
   gap: 8px;
-  grid-template-columns: minmax(112px, 1fr) repeat(3, minmax(86px, .62fr));
+  grid-template-columns: minmax(112px, 1fr) repeat(4, minmax(82px, .62fr));
   min-height: 43px;
   padding: 5px 0;
 }

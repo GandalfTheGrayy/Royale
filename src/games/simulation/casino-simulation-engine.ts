@@ -341,7 +341,7 @@ function simulateAllah(request: CasinoSimulationRequest, random: () => number, a
     };
     if (result) collect(result);
     const tier = purchaseTier ?? result?.triggeredBonus;
-    let bonus: AllahBonusState | undefined = tier ? { tier, remaining: tuning.bonusSpins, totalSpins: 0, totalPayout: 0 } : undefined;
+    let bonus: AllahBonusState | undefined = tier ? { tier, payoutMode: purchaseMode, remaining: tuning.bonusSpins, totalSpins: 0, totalPayout: 0 } : undefined;
     persistent = result?.persistent ?? persistent;
     let guard = 0;
     while (bonus?.remaining && guard < 100) {

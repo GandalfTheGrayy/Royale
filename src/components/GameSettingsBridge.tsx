@@ -10,6 +10,7 @@ const terms: Record<string, string> = {
   flow: "Oyun akışı", maxWinX: "Azami ödeme", maxPayoutX: "Azami ödeme", maxMultiplier: "Azami çarpan",
   globalMultiplierCap: "Global çarpan tavanı", base: "Normal", enhancer: "Lütuf Arttırıcı", degen: "Deli Cesareti", trickster: "Hilebaz",
   fate: "Kaderin Hükmü", modeCosts: "Dönüş maliyeti", bonusCosts: "Bonus maliyeti", payoutScales: "Ödeme ölçekleri",
+  modePayoutScales: "Moda özel ödeme ölçeği",
   symbolWeights: "Makara sembol ağırlıkları", toolWeights: "Kazma ağırlıkları", mysteryWeights: "Mystery içeriği",
   fateMysteryWeights: "Kaderin Hükmü içeriği", eye: "Nur Gözü", collector: "Kese", coin: "Coin", upgrader: "Yükseltici Asa",
   redrop: "Yeniden Düşür", multiplier: "Yerel Çarpan", key: "Global Anahtar", maxCoin: "Max Coin",

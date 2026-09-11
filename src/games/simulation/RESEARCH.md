@@ -21,7 +21,9 @@ belirlemez.
    grubunda sırayla doğrulanır. Umut verici fakat belirsiz profil otomatik olarak
    on tohuma ve en az 5.000 tur/tohum seviyesine büyütülür. Tohum grubu başına
    eşleştirilmiş RTP farkı ve mutlak hedef hatası iyileşmesinin yaklaşık Student-t
-   aralıkları hesaplanır. Geçmeyen aday reçete alanına çıkarılmaz.
+   aralıkları hesaplanır. Seçili moda ait doğrudan ödeme kontrolü varsa aday
+   kotasında önce ona yer ayrılır; böylece genel ayarlar güvenli yerel ayarı
+   sıranın dışına itemez. Geçmeyen aday reçete alanına çıkarılmaz.
 6. Ortak ayarlar diğer modlarda da karşılaştırılır. Hedefe uzaklaşma, ödeme
    sıklığı veya bonus sıklığı gerilemesi raporlanır.
 7. Yalnız bağımsız doğrulamanın alt sınırı pozitif olan, kullanıcının ödeme ve
@@ -58,7 +60,9 @@ Tavanı korumak jackpotun gerçekleşme olasılığını sabit tutmak demek değ
 ## Oyun kapsamı
 
 - Allah: makara göz/scatter, Mystery kaynaklı göz/collector/yeniden düşüş/
-  yükseltici/çarpan/anahtar, Trickster ve bonus girişleri; isteğe bağlı ödeme ölçekleri.
+  yükseltici/çarpan/anahtar, Trickster ve bonus girişleri; isteğe bağlı moda özel
+  ödeme ölçeği ile coin ve çizgi ölçekleri. Moda özel ölçek, o ücretli oynanıştan
+  açılan bonus boyunca da taşınır; diğer satın alım ve bonus modlarını değiştirmez.
 - Baykuş: makara özellikleri, kazma türleri, gizemli satın alım kapısı ağırlıkları,
   bonus özellikleri; isteğe bağlı ödeme ölçekleri.
 - Neon, Kaptan, Şekerhane: özellik/scatter sıklıkları, düşüş, kurtarma, akış
