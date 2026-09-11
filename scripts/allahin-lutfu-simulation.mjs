@@ -78,7 +78,17 @@ function summarizeBonus(startTier, costX) {
       ...defaultAllahPersistentState(),
       persistentEye: startTier === "free" ? undefined : "gold",
     };
-    let bonus = { tier: startTier, remaining: 10, totalSpins: 0, totalPayout: 0 };
+    let bonus = {
+      tier: startTier,
+      remaining: 10,
+      totalSpins: 0,
+      totalPayout: 0,
+      ...(startTier === "free"
+        ? { payoutMode: "bonus-buy" }
+        : startTier === "super"
+          ? { payoutMode: "super-bonus-buy" }
+          : {}),
+    };
     let total = 0;
     for (let spin = 0; spin < 10; spin += 1) {
       const result = runAllahSpin(

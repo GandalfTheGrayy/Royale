@@ -185,6 +185,8 @@ export type AllahSpinRequest = {
 export type AllahSpinResult = {
   runId: string;
   mode: AllahPurchaseMode;
+  /** Auditable spin-character selected before an unforced board is composed. */
+  scene: AllahSceneId;
   initialGrid: AllahGrid;
   finalGrid: AllahGrid;
   events: AllahFeatureEvent[];
@@ -195,6 +197,8 @@ export type AllahSpinResult = {
   /** Values already swept into Collector/Super Collector symbols. */
   collectorWinX: number;
   globalMultiplier: number;
+  /** Scale used by the presentation layer so every visible coin matches settlement. */
+  payoutDisplayScale: number;
   grossMultiplier: number;
   payout: number;
   maxWin: boolean;
@@ -493,9 +497,28 @@ export function allahPurchaseCost(
 }
 
 function resolveAllahTuning(patch?: Partial<AllahTuningSettings>): AllahTuningSettings {
+  const sceneWeights = Object.fromEntries(
+    (Object.keys(DEFAULT_ALLAH_TUNING.sceneWeights) as AllahPurchaseMode[]).map((mode) => [
+      mode,
+      {
+        ...DEFAULT_ALLAH_TUNING.sceneWeights[mode],
+        ...patch?.sceneWeights?.[mode],
+      },
+    ]),
+  ) as AllahTuningSettings["sceneWeights"];
   return {
     ...DEFAULT_ALLAH_TUNING,
     ...patch,
+    sceneWeights,
+    characterModePayoutScales: {
+      ...DEFAULT_ALLAH_TUNING.characterModePayoutScales,
+      ...patch?.characterModePayoutScales,
+    },
+    scenePayoutScales: { ...DEFAULT_ALLAH_TUNING.scenePayoutScales, ...patch?.scenePayoutScales },
+    sceneMaxCostMultipliers: {
+      ...DEFAULT_ALLAH_TUNING.sceneMaxCostMultipliers,
+      ...patch?.sceneMaxCostMultipliers,
+    },
     modeCosts: { ...DEFAULT_ALLAH_TUNING.modeCosts, ...patch?.modeCosts },
     modePayoutScales: { ...DEFAULT_ALLAH_TUNING.modePayoutScales, ...patch?.modePayoutScales },
     reelEyeChancePercent: {
@@ -547,6 +570,79 @@ function weightedPick<T>(
     if (target <= 0) return item.value;
   }
   return values[values.length - 1].value;
+}
+
+type AllahMysteryOutcome =
+  | "coin"
+  | "eye"
+  | "collector"
+  | "upgrader"
+  | "redrop"
+  | "multiplier"
+  | "scatter"
+  | "global-key"
+  | "max-coin";
+
+type AllahSceneRuntime = {
+  id: AllahSceneId;
+  featureQueue: AllahMysteryOutcome[];
+};
+
+const sceneHasFeature = (scene: AllahSceneId) => scene !== "quiet" && scene !== "line";
+
+function pickAllahScene(
+  mode: AllahPurchaseMode,
+  bonusTier: AllahBonusTier | undefined,
+  tuning: AllahTuningSettings,
+  random: AllahRandom,
+): AllahSceneId {
+  const source = tuning.sceneWeights[mode] ?? tuning.sceneWeights.base;
+  const bonusIntensity = bonusTier
+    ? ({ free: 1.25, super: 1.7, legendary: 2.25, mythic: 3 } as const)[bonusTier]
+    : 1;
+  return weightedPick(
+    (Object.entries(source) as Array<[AllahSceneId, number]>).map(([value, weight]) => ({
+      value,
+      weight: bonusTier
+        ? weight * (value === "quiet" || value === "line" ? 1 / bonusIntensity : bonusIntensity)
+        : weight,
+    })),
+    random,
+  );
+}
+
+function buildSceneFeatureQueue(scene: AllahSceneId, random: AllahRandom): AllahMysteryOutcome[] {
+  if (!sceneHasFeature(scene)) return [];
+  const queue: AllahMysteryOutcome[] = Array(30).fill("coin");
+  const variant = boundedRandom(random) < 0.5;
+  const place = (kind: AllahMysteryOutcome, ...indices: number[]) => {
+    for (const index of indices) if (index < queue.length) queue[index] = kind;
+  };
+  if (scene === "eye-spark") place("multiplier", variant ? 3 : 5);
+  if (scene === "collector-parade") place("collector", variant ? 1 : 0, variant ? 3 : 2);
+  if (scene === "multiplier-pressure") place("multiplier", variant ? 1 : 0, 3, 7);
+  if (scene === "global-tension") {
+    place("global-key", variant ? 1 : 0);
+    place("multiplier", variant ? 5 : 4);
+  }
+  if (scene === "climb") {
+    place("upgrader", variant ? 0 : 1);
+    place("redrop", variant ? 2 : 4);
+    place("collector", variant ? 4 : 5);
+  }
+  if (scene === "synergy") {
+    place("upgrader", variant ? 0 : 2);
+    place("multiplier", variant ? 2 : 1, 7);
+    place("collector", variant ? 4 : 5, 12);
+    place("global-key", variant ? 6 : 8);
+  }
+  if (scene === "dream") {
+    place("upgrader", 0, variant ? 3 : 2);
+    place("multiplier", variant ? 2 : 4, 9);
+    place("collector", variant ? 5 : 6, 13);
+    place("global-key", variant ? 7 : 8);
+  }
+  return queue;
 }
 
 function pickNormalSymbol(random: AllahRandom): AllahNormalSymbolId {
@@ -623,8 +719,10 @@ function mysteryFeatureWeights(
   return Object.fromEntries(
     Object.entries(tuning.mysteryWeights).map(([key, weight]) => [
       key,
-      key === "coin" || key === "maxCoin"
+      key === "coin"
         ? weight
+        : key === "maxCoin"
+          ? weight * (bonusTier ? 0.001 : 1)
         : weight *
           intensity *
           (mode === "trickster" && key === "eye"
@@ -643,6 +741,7 @@ function createRandomCell(
   tuning: AllahTuningSettings,
   mysteryResolution = false,
   bonusTier?: AllahBonusTier,
+  sceneRuntime?: AllahSceneRuntime,
 ): AllahCell {
   // FU Spin: the public rules and recorded gameplay both show a full Mystery board.
   if (mode === "fate" && !mysteryResolution)
@@ -678,20 +777,21 @@ function createRandomCell(
   // impossible for later weighting edits to reintroduce pay symbols or a
   // nested Mystery into a reveal by accident.
   const mysteryWeights = mysteryFeatureWeights(mode, tuning, bonusTier);
-  const kind = weightedPick<Exclude<AllahCell["kind"], "empty" | "symbol" | "mystery">>(
-    [
-      { value: "coin", weight: mysteryWeights.coin },
-      { value: "eye", weight: mysteryWeights.eye },
-      { value: "collector", weight: mysteryWeights.collector },
-      { value: "upgrader", weight: mysteryWeights.upgrader },
-      { value: "redrop", weight: mysteryWeights.redrop },
-      { value: "multiplier", weight: mysteryWeights.multiplier },
-      { value: "scatter", weight: mysteryWeights.scatter },
-      { value: "global-key", weight: mysteryWeights.key },
-      { value: "max-coin", weight: mysteryWeights.maxCoin },
-    ],
-    random,
-  );
+  const queuedKind = sceneRuntime?.featureQueue.shift();
+  const kind = queuedKind ?? weightedPick<Exclude<AllahCell["kind"], "empty" | "symbol" | "mystery">>(
+      [
+        { value: "coin", weight: mysteryWeights.coin },
+        { value: "eye", weight: mysteryWeights.eye },
+        { value: "collector", weight: mysteryWeights.collector },
+        { value: "upgrader", weight: mysteryWeights.upgrader },
+        { value: "redrop", weight: mysteryWeights.redrop },
+        { value: "multiplier", weight: mysteryWeights.multiplier },
+        { value: "scatter", weight: mysteryWeights.scatter },
+        { value: "global-key", weight: mysteryWeights.key },
+        { value: "max-coin", weight: mysteryWeights.maxCoin },
+      ],
+      random,
+    );
 
   if (kind === "coin") return pickCoin(id, persistent.minimumCoinTier, random, tuning);
   if (kind === "eye") {
@@ -716,6 +816,61 @@ function createRandomCell(
       value: pickBoardMultiplier(random),
     };
   return { id, kind } as AllahCell;
+}
+
+function shapeInitialGridForScene(
+  grid: AllahGrid,
+  scene: AllahSceneId,
+  mode: AllahPurchaseMode,
+  bonusTier: AllahBonusTier | undefined,
+  random: AllahRandom,
+  tuning: AllahTuningSettings,
+) {
+  if (mode === "fate") return;
+  const configuredEyeChance = bonusTier
+    ? tuning.bonusFeatureChancePercent[bonusTier]
+    : tuning.reelEyeChancePercent[mode];
+  // Extreme admin overrides remain exact diagnostic tools.
+  if (configuredEyeChance >= 99.999) return;
+
+  const desiredEyes = sceneHasFeature(scene) && configuredEyeChance > 0
+    ? mode === "trickster"
+      ? scene === "dream" || scene === "synergy" ? 3 : 2
+      : scene === "dream" || scene === "synergy" ? 2 : 1
+    : 0;
+  const eyePositions = readingOrder(positionsOf(grid, (cell) => cell.kind === "eye"));
+  for (const position of eyePositions.slice(desiredEyes)) {
+    const current = grid[position.row][position.column];
+    grid[position.row][position.column] = {
+      id: current.id,
+      kind: "symbol",
+      symbol: pickNormalSymbol(random),
+    };
+  }
+  const keptEyes = eyePositions.slice(0, desiredEyes);
+  while (keptEyes.length < desiredEyes) {
+    const candidates = readingOrder(positionsOf(grid, (cell) => cell.kind === "symbol"));
+    if (!candidates.length) break;
+    const target = pick(candidates, random);
+    const current = grid[target.row][target.column];
+    grid[target.row][target.column] = {
+      id: current.id,
+      kind: "eye",
+      variant: scene === "dream" ? "emerald" : scene === "synergy" ? "gold" : "blue",
+    };
+    keptEyes.push(target);
+  }
+
+  if (scene === "line") {
+    const payline = pick(ALLAH_PAYLINES, random);
+    const symbol = pick<AllahNormalSymbolId>(["rosette", "lantern", "crescent", "tree-of-life"], random);
+    for (let column = 0; column < 3; column += 1) {
+      const row = payline[column];
+      const current = grid[row][column];
+      if (current.kind === "scatter" || current.kind === "eye") continue;
+      grid[row][column] = { id: current.id, kind: "symbol", symbol };
+    }
+  }
 }
 
 function positionsOf(grid: AllahGrid, predicate: (cell: AllahCell) => boolean) {
@@ -791,9 +946,33 @@ export function runAllahSpin(
 ): AllahSpinResult {
   const mode = request.mode ?? "base";
   const tuning = resolveAllahTuning(request.tuning);
-  const payoutMode = request.bonus?.payoutMode ?? mode;
+  const payoutMode: AllahPurchaseMode = request.bonus?.payoutMode ?? (request.bonus
+    ? request.bonus.tier === "free" ? "bonus-buy" : "super-bonus-buy"
+    : mode);
+  const sceneMode: AllahPurchaseMode = mode === "fate"
+    ? "fate"
+    : request.bonus?.payoutMode ?? (request.bonus
+      ? request.bonus.tier === "free" ? "bonus-buy" : "super-bonus-buy"
+      : mode);
+  const scene: AllahSceneId = request.forcedGrid || !tuning.characterScenesEnabled
+    ? "quiet"
+    : pickAllahScene(sceneMode, request.bonus?.tier, tuning, random);
+  const sceneRuntime: AllahSceneRuntime | undefined = request.forcedGrid || !tuning.characterScenesEnabled
+    ? undefined
+    : { id: scene, featureQueue: buildSceneFeatureQueue(scene, random) };
   const modePayoutScale = Math.max(0, tuning.modePayoutScales[payoutMode] ?? 1);
+  const scenePayoutScale = sceneRuntime ? Math.max(0, tuning.scenePayoutScales[scene]) : 1;
+  const characterModePayoutScale = sceneRuntime
+    ? Math.max(0, tuning.characterModePayoutScales[sceneMode] ?? 1)
+    : 1;
+  const effectivePayoutScale = modePayoutScale * scenePayoutScale * characterModePayoutScale;
   const valueCapX = Math.max(1, tuning.maxWinX);
+  const sceneCapX = sceneRuntime
+    ? Math.min(
+        valueCapX,
+        Math.max(1, tuning.modeCosts[sceneMode] * tuning.sceneMaxCostMultipliers[scene]),
+      )
+    : valueCapX;
   const runId = request.runId ?? `allah-${Date.now()}-${Math.floor(boundedRandom(random) * 1e9)}`;
   const state: AllahPersistentState = {
     ...defaultAllahPersistentState(),
@@ -815,8 +994,11 @@ export function runAllahSpin(
           tuning,
           false,
           request.bonus?.tier,
+          sceneRuntime,
         ),
       );
+  if (!request.forcedGrid && tuning.characterScenesEnabled)
+    shapeInitialGridForScene(initialGrid, scene, mode, request.bonus?.tier, random, tuning);
 
   const grid = cloneGrid(initialGrid);
   const events: AllahFeatureEvent[] = [];
@@ -857,7 +1039,7 @@ export function runAllahSpin(
     });
   };
 
-  emit("spin-commit", [], { mode, wager: request.wager });
+  emit("spin-commit", [], { mode, wager: request.wager, scene });
   emit("guardian-ack");
   for (let column = 0; column < ALLAH_REELS; column += 1) {
     const cells = Array.from({ length: ALLAH_ROWS }, (_, row) => ({ row, column }));
@@ -877,7 +1059,7 @@ export function runAllahSpin(
         payline: win.payline + 1,
         symbol: win.symbol,
         multiplier: win.multiplier,
-        payout: roundMoney(Math.max(0, request.wager) * win.multiplier * tuning.linePayoutScale * modePayoutScale),
+        payout: roundMoney(Math.max(0, request.wager) * win.multiplier * tuning.linePayoutScale * effectivePayoutScale),
       });
       emit("symbol-pulse", win.cells, { symbol: win.symbol });
     }
@@ -899,6 +1081,7 @@ export function runAllahSpin(
       tuning,
       mysteryResolution,
       request.bonus?.tier,
+      sceneRuntime,
     );
     return candidate;
   };
@@ -1050,15 +1233,43 @@ export function runAllahSpin(
       const eye = eventPayloadCell(grid, position);
       if (eye.kind !== "eye") continue;
       processed.add(eye.id);
+      const desiredMin = Math.max(1, Math.floor(request.bonus
+        ? tuning.bonusEyeTargetsMin
+        : tuning.eyeTargetsMin));
+      const desiredMax = Math.max(desiredMin, Math.floor(request.bonus
+        ? tuning.bonusEyeTargetsMax
+        : tuning.eyeTargetsMax));
+      const visibleCounts = new Map<AllahNormalSymbolId, number>();
+      for (const cell of grid.flat())
+        if (cell.kind === "symbol") visibleCounts.set(cell.symbol, (visibleCounts.get(cell.symbol) ?? 0) + 1);
       const visibleUnopened = ALLAH_EYE_SYMBOL_ROSTER.filter(
-        (symbol) =>
-          !state.eyeSlots.includes(symbol) &&
-          grid.flat().some((cell) => cell.kind === "symbol" && cell.symbol === symbol),
+        (symbol) => !state.eyeSlots.includes(symbol) && (visibleCounts.get(symbol) ?? 0) > 0,
+      );
+      const inTargetRange = visibleUnopened.filter((symbol) => {
+        const count = visibleCounts.get(symbol) ?? 0;
+        return count >= desiredMin && count <= desiredMax;
+      });
+      const targetMiddle = (desiredMin + desiredMax) / 2;
+      const nearestDistance = visibleUnopened.reduce(
+        (best, symbol) => Math.min(best, Math.abs((visibleCounts.get(symbol) ?? 0) - targetMiddle)),
+        Number.POSITIVE_INFINITY,
+      );
+      const nearestVisible = visibleUnopened.filter(
+        (symbol) => Math.abs((visibleCounts.get(symbol) ?? 0) - targetMiddle) === nearestDistance,
       );
       const unopened = ALLAH_EYE_SYMBOL_ROSTER.filter(
         (symbol) => !state.eyeSlots.includes(symbol),
       );
-      const selected = pick(visibleUnopened.length ? visibleUnopened : unopened.length ? unopened : ALLAH_EYE_SYMBOL_ROSTER, random);
+      const selected = pick(
+        inTargetRange.length
+          ? inTargetRange
+          : nearestVisible.length
+            ? nearestVisible
+            : unopened.length
+              ? unopened
+              : ALLAH_EYE_SYMBOL_ROSTER,
+        random,
+      );
       emit("eye-wake", [position], { variant: eye.variant });
       emit("eye-look-left", [position], { variant: eye.variant, targetColumn: Math.max(0, position.column - 1) });
       emit("eye-look-right", [position], { variant: eye.variant, targetColumn: Math.min(ALLAH_REELS - 1, position.column + 1) });
@@ -1087,6 +1298,15 @@ export function runAllahSpin(
       ).filter(
         (cell) => Math.abs(cell.row - position.row) <= 1 && Math.abs(cell.column - position.column) <= 1,
       ));
+      if (!affected.length) {
+        revealedFeatureIds.add(multiplier.id);
+        emit("board-multiplier-reveal", [position], {
+          value: multiplier.value,
+          affected: 0,
+          dormant: true,
+        });
+        continue;
+      }
       emit("board-multiplier-anticipation", [position], {
         affected: affected.length,
       });
@@ -1381,7 +1601,7 @@ export function runAllahSpin(
   }
 
   const lineWinX = roundX(
-    lineWins.reduce((sum, win) => sum + win.multiplier, 0) * tuning.linePayoutScale * modePayoutScale,
+    lineWins.reduce((sum, win) => sum + win.multiplier, 0) * tuning.linePayoutScale * effectivePayoutScale,
   );
   // A Collector extends the feature; it is not the switch that makes coins
   // payable. Coins swept on an earlier board live in collectorValues, while
@@ -1395,14 +1615,14 @@ export function runAllahSpin(
       grid.flat().reduce(
         (sum, cell) => sum + (cell.kind === "coin" && !collectedCoinIds.has(cell.id) ? cell.value : 0),
         0,
-      ) * tuning.coinPayoutScale * modePayoutScale,
+      ) * tuning.coinPayoutScale * effectivePayoutScale,
     ),
   );
   const collectorWinX = Math.min(
     valueCapX,
     roundX(
       Object.values(collectorValues).reduce((sum, value) => sum + value, 0) *
-        tuning.coinPayoutScale * modePayoutScale,
+        tuning.coinPayoutScale * effectivePayoutScale,
     ),
   );
   const maxCoin =
@@ -1415,8 +1635,8 @@ export function runAllahSpin(
   const grossMultiplier = maxCoin
     ? valueCapX
     : Math.min(
-        valueCapX,
-        roundX((lineWinX + coinWinX + collectorWinX) * state.globalMultiplier),
+        sceneCapX,
+        (lineWinX + coinWinX + collectorWinX) * state.globalMultiplier,
       );
   const payout = roundMoney(Math.max(0, request.wager) * grossMultiplier);
   // The money calculation above already applies the global factor exactly once.
@@ -1458,6 +1678,7 @@ export function runAllahSpin(
     coinWinX,
     collectorWinX,
     globalMultiplier: state.globalMultiplier,
+    payoutDisplayScale: effectivePayoutScale,
     grossMultiplier,
   });
   if (grossMultiplier >= 5) {
@@ -1494,6 +1715,7 @@ export function runAllahSpin(
   return {
     runId,
     mode,
+    scene,
     initialGrid,
     finalGrid: grid,
     events,
@@ -1503,6 +1725,7 @@ export function runAllahSpin(
     collectorWinX,
     globalMultiplier: state.globalMultiplier,
     grossMultiplier,
+    payoutDisplayScale: effectivePayoutScale,
     payout,
     maxWin: grossMultiplier >= valueCapX,
     scatterCount: scatterPositions.length,
@@ -1532,5 +1755,6 @@ export function prepareAllahSpinPersistent(
 }
 import {
   DEFAULT_ALLAH_TUNING,
+  type AllahSceneId,
   type AllahTuningSettings,
 } from "../../data/casino-admin";

@@ -111,6 +111,15 @@ describe("Allah’ın Lütfu motoru", () => {
     expect(revealIndex).toBeLessThan(applyIndex);
   });
 
+  it("hedefi olmayan board multiplier uzun ve yanıltıcı bir beklenti sahnesi başlatmaz", () => {
+    const grid = createAllahGrid(uniqueSymbols);
+    grid[2][2] = { ...allahFeatureCell("multiplier", "dormant-multi"), kind: "multiplier", value: 10 };
+    const result = runAllahSpin({ wager: 1, forcedGrid: grid, runId: "dormant-multiplier" }, () => 0.5);
+    expect(result.events.some((event) => event.type === "board-multiplier-anticipation")).toBe(false);
+    expect(result.events.find((event) => event.type === "board-multiplier-reveal")?.payload)
+      .toMatchObject({ affected: 0, dormant: true });
+  });
+
   it("upgrader mevcut coin'i değiştirmeden sonraki üretimlerin tabanını yükseltir", () => {
     const grid = createAllahGrid(uniqueSymbols);
     grid[0][0] = allahCoinCell("bronze", 2, "bronze");
@@ -233,7 +242,7 @@ describe("Allah’ın Lütfu motoru", () => {
 
   it("Kaderin Hükmü ilk 5×6 alanın tamamını Mystery getirir", () => {
     const result = runAllahSpin(
-      { wager: 1, mode: "fate", runId: "fate-full-board" },
+      { wager: 1, mode: "fate", runId: "fate-full-board", tuning: { characterScenesEnabled: false } },
       () => 0,
     );
     expect(result.initialGrid.flat().every((cell) => cell.kind === "mystery")).toBe(true);
@@ -338,6 +347,27 @@ describe("Allah’ın Lütfu motoru", () => {
     }
     expect(tricksterEyes).toBeGreaterThan(baseEyes * 5);
     expect(tricksterBonuses).toBeGreaterThan(baseBonuses);
+  });
+
+  it("sahne karakteri coin yağmuru ile kese geçidini farklı ortak dağılımlarla kurar", () => {
+    const forceScene = (scene: "coin-rain" | "collector-parade") => {
+      const sceneWeights = structuredClone(DEFAULT_ALLAH_TUNING.sceneWeights);
+      for (const key of Object.keys(sceneWeights.base) as Array<keyof typeof sceneWeights.base>)
+        sceneWeights.base[key] = key === scene ? 1 : 0;
+      return runAllahSpin(
+        { wager: 1, mode: "base", runId: `scene-${scene}`, tuning: { sceneWeights } },
+        createSeededAllahRandom(20260911),
+      );
+    };
+    const coinRain = forceScene("coin-rain");
+    const collectorParade = forceScene("collector-parade");
+    const revealedKinds = (result: ReturnType<typeof runAllahSpin>) => result.events
+      .filter((event) => event.type === "mystery-reveal")
+      .map((event) => event.payload.revealedKind);
+    expect(coinRain.scene).toBe("coin-rain");
+    expect(revealedKinds(coinRain).filter((kind) => kind === "collector")).toHaveLength(0);
+    expect(collectorParade.scene).toBe("collector-parade");
+    expect(revealedKinds(collectorParade).filter((kind) => kind === "collector").length).toBeGreaterThanOrEqual(2);
   });
 
   it("Mystery'den çıkan işlev sembolü görevinden sonra yeniden dönüp coin olur", () => {
@@ -796,6 +826,7 @@ describe("Allah’ın Lütfu motoru", () => {
         runId: "mythic-no-direct-upgrader",
         bonus: { tier: "mythic", remaining: 10, totalSpins: 0, totalPayout: 0 },
         persistent: { mythicUpgraderPending: true },
+        tuning: { characterScenesEnabled: false },
       },
       () => 0.999,
     );

@@ -161,14 +161,14 @@ const mysteryFlowImages = [
 
 const mysteryFlowLoop = [...mysteryFlowImages, ...mysteryFlowImages];
 
-function cellVisual(cell: AllahCell, collectedValue = 0, maxWinX = 500_000, wager = 1) {
+function cellVisual(cell: AllahCell, collectedValue = 0, maxWinX = 500_000, wager = 1, payoutScale = 1) {
   if (cell.kind === "symbol")
     return { image: ALLAH_SYMBOLS[cell.symbol].image, label: ALLAH_SYMBOLS[cell.symbol].label };
   if (cell.kind === "coin")
     return {
       image: `/assets/slots/allahin-lutfu/symbols/coin-${cell.tier}.png`,
-      label: `${cell.tier} coin · ${money.format(cell.value * wager)} PR`,
-      value: `${money.format(cell.value * wager)} PR`,
+      label: `${cell.tier} coin · ${money.format(cell.value * wager * payoutScale)} PR`,
+      value: `${money.format(cell.value * wager * payoutScale)} PR`,
     };
   if (cell.kind === "eye")
     return { image: eyeImages[cell.variant], label: `${cell.variant} Nur Gözü` };
@@ -178,7 +178,7 @@ function cellVisual(cell: AllahCell, collectedValue = 0, maxWinX = 500_000, wage
     return {
       image: `/assets/slots/allahin-lutfu/symbols/${cell.super ? "super-collector" : "collector"}.png`,
       label: cell.super ? "Çifte Lütuf Toplayıcı" : "Lütuf Toplayıcı",
-      value: collectedValue > 0 ? `${money.format(collectedValue * wager)} PR` : undefined,
+      value: collectedValue > 0 ? `${money.format(collectedValue * wager * payoutScale)} PR` : undefined,
     };
   if (cell.kind === "upgrader")
     return { image: "/assets/slots/allahin-lutfu/symbols/coin-upgrader.png", label: "Lütuf Yükseltici" };
@@ -266,6 +266,7 @@ export default function AllahinLutfu({
   const [displayKeySlots, setDisplayKeySlots] = useState<Array<number | null>>([null, null, null]);
   const [displayMinTier, setDisplayMinTier] = useState(0);
   const [displayGlobalMultiplier, setDisplayGlobalMultiplier] = useState(1);
+  const [displayPayoutScale, setDisplayPayoutScale] = useState(1);
   const [displayCollectorValues, setDisplayCollectorValues] = useState<Record<string, number>>({});
   const [displayConcealedFeatureIds, setDisplayConcealedFeatureIds] = useState<Set<string>>(new Set());
   const [displayConsumedFeatureIds, setDisplayConsumedFeatureIds] = useState<Set<string>>(new Set());
@@ -406,6 +407,7 @@ export default function AllahinLutfu({
     setDisplayKeySlots([null, null, null]);
     setDisplayMinTier(0);
     setDisplayGlobalMultiplier(1);
+    setDisplayPayoutScale(result.payoutDisplayScale);
     setDisplayCollectorValues({});
     setDisplayConcealedFeatureIds(new Set(result.events[0]?.concealedFeatureIds ?? []));
     setDisplayConsumedFeatureIds(new Set());
@@ -436,13 +438,14 @@ export default function AllahinLutfu({
       }
       eventSound(audioRef.current, event);
       const speed = spinSpeedRef.current;
-      const baseDuration = skipPresentationRef.current
+      let baseDuration = skipPresentationRef.current
         ? 0
         : speed === "turbo"
           ? Math.max(10, Math.round(event.durationTurbo * tuning.turboAnimationScale))
           : speed === "quick"
             ? Math.max(24, Math.round(event.durationTurbo * 0.82))
             : Math.max(20, Math.round(event.durationNormal * tuning.normalAnimationScale));
+      if (event.payload.dormant === true) baseDuration = Math.min(baseDuration, 360);
       setEventDuration(baseDuration);
       if (event.type === "global-final") {
         await wait(Math.round(baseDuration * .3));
@@ -475,6 +478,7 @@ export default function AllahinLutfu({
     setDisplayKeySlots(result.globalKeySlots);
     setDisplayMinTier(result.persistent.minimumCoinTier);
     setDisplayGlobalMultiplier(result.globalMultiplier);
+    setDisplayPayoutScale(result.payoutDisplayScale);
     setDisplayCollectorValues(result.collectorValues);
     setDisplayConcealedFeatureIds(new Set());
     setDisplayConsumedFeatureIds(new Set());
@@ -520,10 +524,11 @@ export default function AllahinLutfu({
       balanceAfter: balanceBefore - cost + result.payout,
       result: {
         telemetryVersion: 1,
-        rngModel: "weighted-feature-queue-v8-chained-eye-multi-key",
+        rngModel: "character-scenes-v10-fixed-auditable",
         targetRtp: 96.7,
         referenceBet: wager,
         mode: result.mode,
+        scene: result.scene,
         initialGrid: result.initialGrid,
         finalGrid: result.finalGrid,
         lineWins: result.lineWins,
@@ -699,6 +704,7 @@ export default function AllahinLutfu({
     });
     const session: AllahBonusState = {
       tier,
+      payoutMode: purchaseMode,
       remaining: tuning.bonusSpins,
       totalSpins: 0,
       totalPayout: 0,
@@ -832,11 +838,11 @@ export default function AllahinLutfu({
           <div className="allah-grid slot-shell-reels" aria-label="5 reel 6 satır oyun alanı">
             {grid.map((row, rowIndex) =>
               row.map((cell, column) => {
-                const visual = cellVisual(cell, displayCollectorValues[cell.id] ?? 0, tuning.maxWinX, wager);
+                const visual = cellVisual(cell, displayCollectorValues[cell.id] ?? 0, tuning.maxWinX, wager, displayPayoutScale);
                 const key = `${rowIndex}-${column}`;
                 const globalTarget = activeCells.has(key) && activeEvent?.type === "global-row-apply";
                 const appliedValue = globalAppliedValues[cell.id];
-                const displayedValue = appliedValue === undefined ? visual.value : `${money.format(appliedValue * wager)} PR`;
+                const displayedValue = appliedValue === undefined ? visual.value : `${money.format(appliedValue * wager * displayPayoutScale)} PR`;
                 const mysterySequenceActive = activeEvent?.type === "mystery-roll" || activeEvent?.type === "mystery-reveal";
                 const streamsUntilResolved = mysterySequenceActive && cell.kind === "mystery";
                 const modifierIsRolling = activeEvent?.type === "modifier-coin-roll" && activeCells.has(key);
@@ -854,7 +860,7 @@ export default function AllahinLutfu({
                     className={`allah-cell kind-${cell.kind} ${cell.fromMystery ? "mystery-born" : ""} ${activeCells.has(key) ? "event-target" : ""} ${flightSource ? "coin-flight-source" : ""} ${flightTarget ? "coin-flight-target" : ""} ${appliedValue !== undefined ? "global-applied" : ""} ${featureIsConcealed ? "is-feature-concealed" : ""} ${featureIsConsumed ? "is-feature-consumed" : ""} ${featureIsOpening ? "is-feature-opening" : ""} ${visibleColumns.has(column) ? "is-visible" : "is-awaiting"}`}
                     key={cell.id}
                     style={{ "--row": rowIndex, "--column": column } as CSSProperties}
-                    title={featureIsConcealed ? "Mühürlü özellik" : appliedValue === undefined ? visual.label : `${visual.label} · Global ${displayGlobalMultiplier}× → ${money.format(appliedValue * wager)} PR`}
+                    title={featureIsConcealed ? "Mühürlü özellik" : appliedValue === undefined ? visual.label : `${visual.label} · Global ${displayGlobalMultiplier}× → ${money.format(appliedValue * wager * displayPayoutScale)} PR`}
                   >
                     {visual.image && <img className="allah-cell-face" src={visual.image} alt="" draggable={false} />}
                     {displayedValue && !featureIsConcealed && !featureIsConsumed && <b className={globalTarget && activeEvent?.type === "global-row-apply" ? "allah-global-new-value" : undefined}>{displayedValue}</b>}
@@ -906,7 +912,7 @@ export default function AllahinLutfu({
                     className={activeEvent.payload.sourceKind === "collector" ? "source-collector" : "source-coin"}
                   >
                     {activeEvent.payload.sourceKind === "collector" && <img src="/assets/slots/allahin-lutfu/symbols/collector.png" alt="" />}
-                    <b>{money.format(Number(activeEvent.payload.value ?? 0) * wager)} PR</b>
+                    <b>{money.format(Number(activeEvent.payload.value ?? 0) * wager * displayPayoutScale)} PR</b>
                   </i>
                 ))}
               </div>;

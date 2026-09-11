@@ -62,6 +62,10 @@ import { accountRequest } from "./auth/auth-api";
 import CompetitionCenter, {
   LobbyCompetitionStrip,
 } from "./components/CompetitionCenter";
+import {
+  LobbyAtmosphere,
+  LobbyDoorTransition,
+} from "./components/LobbyCinematic";
 
 type View =
   | "lobby"
@@ -380,6 +384,10 @@ export default function App() {
   const [researchOpen, setResearchOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [lobbyPassage, setLobbyPassage] = useState<{
+    target: View;
+    label: string;
+  } | null>(null);
   const veraAudioRef = useRef<HTMLAudioElement | null>(null);
   const voiceRequestRef = useRef(0);
   useEffect(()=>()=>{
@@ -402,11 +410,14 @@ export default function App() {
   );
   const blackjackActionsRef = useRef<Array<Record<string, unknown>>>([]);
   const settlementClearTimerRef = useRef<number | undefined>(undefined);
+  const lobbyPassageTimerRef = useRef<number | undefined>(undefined);
 
   useEffect(
     () => () => {
       if (settlementClearTimerRef.current !== undefined)
         window.clearTimeout(settlementClearTimerRef.current);
+      if (lobbyPassageTimerRef.current !== undefined)
+        window.clearTimeout(lobbyPassageTimerRef.current);
     },
     [],
   );
@@ -1682,6 +1693,20 @@ export default function App() {
     </button>
   );
 
+  const enterLobbyDestination = (target: View, label: string) => {
+    if (lobbyPassage) return;
+    setLobbyPassage({ target, label });
+    const transitionMs = window.matchMedia("(prefers-reduced-motion: reduce)")
+      .matches
+      ? 20
+      : 640;
+    lobbyPassageTimerRef.current = window.setTimeout(() => {
+      setView(target);
+      setLobbyPassage(null);
+      lobbyPassageTimerRef.current = undefined;
+    }, transitionMs);
+  };
+
   if (adminOpen && ["owner", "admin"].includes(user.role))
     return (
       <Suspense
@@ -1704,7 +1729,11 @@ export default function App() {
 
   if (view === "lobby")
     return (
-      <main className="app-shell lobby">
+      <main
+        className={`app-shell lobby ${lobbyPassage ? "is-transitioning" : ""}`}
+      >
+        <LobbyAtmosphere />
+        <LobbyDoorTransition label={lobbyPassage?.label ?? null} />
         <header className="topbar">
           <Brand />
           <div className="topbar-actions">
@@ -1718,7 +1747,7 @@ export default function App() {
             )}
             <button
               className="voice-toggle competition-trigger"
-              onClick={() => setView("competition")}
+              onClick={() => enterLobbyDestination("competition", "REKABET MERKEZİ")}
             >
               ♛ REKABET
             </button>
@@ -1782,7 +1811,7 @@ export default function App() {
                       !adminSettings.games.blackjack.enabled ||
                       adminSettings.general.maintenanceMode
                     }
-                    onClick={() => setView("blackjack")}
+                    onClick={() => enterLobbyDestination("blackjack", "GECE MASASI")}
                   >
                     {adminSettings.games.blackjack.enabled &&
                     !adminSettings.general.maintenanceMode
@@ -1792,7 +1821,7 @@ export default function App() {
                   </button>
                   <button
                     className="lobby-secondary-action"
-                    onClick={() => setView("competition")}
+                    onClick={() => enterLobbyDestination("competition", "SALON HESABI")}
                   >
                     SALON HESABINI AÇ
                   </button>
@@ -1804,7 +1833,9 @@ export default function App() {
               </div>
             </section>
             <div className="lobby-lower-deck">
-              <LobbyCompetitionStrip onOpen={() => setView("competition")} />
+              <LobbyCompetitionStrip
+                onOpen={() => enterLobbyDestination("competition", "REKABET MERKEZİ")}
+              />
               <div className="lobby-salon-directory">
                 <header className="lobby-section-heading">
                   <div>
@@ -1820,7 +1851,7 @@ export default function App() {
                       !adminSettings.games.blackjack.enabled ||
                       adminSettings.general.maintenanceMode
                     }
-                    onClick={() => setView("blackjack")}
+                    onClick={() => enterLobbyDestination("blackjack", "GECE MASASI")}
                   >
                     <span className="salon-number">01 · CANLI MASA</span>
                     <img
@@ -1851,7 +1882,7 @@ export default function App() {
                         !adminSettings.games["allahin-lutfu"].enabled &&
                         !adminSettings.games["baykus-madeni"].enabled)
                     }
-                    onClick={() => setView("slots")}
+                    onClick={() => enterLobbyDestination("slots", "MAKİNELER KATI")}
                   >
                     <span className="salon-number">02 · SLOT DÜNYASI</span>
                     <img
@@ -1876,7 +1907,7 @@ export default function App() {
                       !adminSettings.games.roulette.enabled ||
                       adminSettings.general.maintenanceMode
                     }
-                    onClick={() => setView("roulette")}
+                    onClick={() => enterLobbyDestination("roulette", "KIRMIZI ÇARK")}
                   >
                     <span className="salon-number">03 · CANLI ÇARK</span>
                     <img
@@ -1902,7 +1933,7 @@ export default function App() {
                       !adminSettings.games.poker.enabled ||
                       adminSettings.general.maintenanceMode
                     }
-                    onClick={() => setView("poker")}
+                    onClick={() => enterLobbyDestination("poker", "MIDNIGHT POKER")}
                   >
                     <span className="salon-number">04 · POKER KULÜBÜ</span>
                     <img
@@ -1936,7 +1967,7 @@ export default function App() {
                         !adminSettings.games["yedi-cevher"].enabled) ||
                       adminSettings.general.maintenanceMode
                     }
-                    onClick={() => setView("instant")}
+                    onClick={() => enterLobbyDestination("instant", "HIZLI OYUNLAR")}
                   >
                     <span className="salon-number">05 · ANLIK OYUNLAR</span>
                     <img

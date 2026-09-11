@@ -83,6 +83,9 @@ describe("deneysel simülasyon araştırması", () => {
 
   it("Allah'in Lutfu %160+ RTP profilini diger modlara dokunmadan kalibre edecek ayar bulur", async () => {
     const settings = structuredClone(DEFAULT_ADMIN_SETTINGS);
+    // Bu senaryo eski, bağımsız mystery dağılımını özellikle yüksek RTP'ye
+    // çekerek optimizer'ın geriye dönük kalibrasyon yolunu doğrular.
+    settings.games["allahin-lutfu"].allah!.characterScenesEnabled = false;
     settings.games["allahin-lutfu"].allah!.coinPayoutScale = 0.24;
     const request = { gameId: "allahin-lutfu" as const, mode: "base", runs: 10_000, wager: 25, seed: 20260909 };
     const report = runCasinoSimulation(request, settings);

@@ -5,27 +5,200 @@
   --lobby-brass: #c79952;
   --lobby-brass-light: #efd28f;
   --lobby-line: rgba(220, 177, 99, 0.2);
+  --lobby-scene-x: 0px;
+  --lobby-scene-y: 0px;
+  --lobby-light-x: 0px;
+  --lobby-light-y: 0px;
   min-height: 100dvh;
   background-color: #050607 !important;
+  background-image: none !important;
+  color: var(--lobby-ink);
+}
+
+.lobby-cinematic {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.lobby-scene-motion {
+  position: absolute;
+  inset: -2.5%;
   background-image:
     linear-gradient(
       90deg,
-      rgba(3, 4, 5, 0.79) 0%,
-      rgba(3, 4, 5, 0.32) 54%,
-      rgba(3, 4, 5, 0.14) 100%
+      rgba(3, 4, 5, 0.8) 0%,
+      rgba(3, 4, 5, 0.34) 52%,
+      rgba(3, 4, 5, 0.13) 100%
     ),
     linear-gradient(
       180deg,
-      rgba(2, 3, 4, 0.08) 0%,
-      rgba(3, 4, 5, 0.22) 54%,
-      #050607 97%
+      rgba(2, 3, 4, 0.04) 0%,
+      rgba(3, 4, 5, 0.2) 56%,
+      #050607 98%
     ),
-    url("/assets/lobby-premium/salon-gece-background-v3.png") !important;
-  background-attachment: fixed !important;
-  background-position: center top !important;
-  background-repeat: no-repeat !important;
-  background-size: cover !important;
-  color: var(--lobby-ink);
+    url("/assets/lobby-premium/salon-gece-background-v3.png");
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-size: cover;
+  transform: translate3d(var(--lobby-scene-x), var(--lobby-scene-y), 0)
+    scale(1.035);
+  transform-origin: 58% 28%;
+  will-change: transform;
+  animation: lobbySceneAwaken 1.45s cubic-bezier(0.18, 0.82, 0.2, 1) both;
+}
+
+.lobby-owl-presence {
+  position: absolute;
+  inset: -2.5%;
+  background-image: url("/assets/lobby-premium/salon-gece-background-v3.png");
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-size: cover;
+  clip-path: polygon(73% 2%, 100% 0, 100% 78%, 76% 72%);
+  mix-blend-mode: screen;
+  opacity: 0.08;
+  transform: translate3d(var(--lobby-scene-x), var(--lobby-scene-y), 0)
+    scale(1.035);
+  transform-origin: 86% 28%;
+  animation: lobbyOwlPresence 5.8s ease-in-out infinite alternate;
+}
+
+.lobby-light-beam {
+  position: absolute;
+  top: -24%;
+  height: 118%;
+  border-radius: 50%;
+  background: linear-gradient(
+    104deg,
+    transparent 7%,
+    rgba(238, 203, 132, 0.018) 36%,
+    rgba(247, 220, 157, 0.095) 50%,
+    rgba(218, 170, 87, 0.015) 64%,
+    transparent 88%
+  );
+  filter: blur(10px);
+  mix-blend-mode: screen;
+  transform: translate3d(var(--lobby-light-x), var(--lobby-light-y), 0)
+    rotate(8deg);
+  will-change: transform, opacity;
+}
+
+.lobby-light-beam-left {
+  left: 14%;
+  width: 18%;
+  opacity: 0.52;
+  animation: lobbyBeamBreathe 7.8s ease-in-out infinite alternate;
+}
+
+.lobby-light-beam-center {
+  left: 53%;
+  width: 12%;
+  opacity: 0.34;
+  animation: lobbyBeamBreathe 9.5s -3.2s ease-in-out infinite alternate;
+}
+
+.lobby-gold-haze {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      circle at calc(84% + var(--lobby-light-x)) calc(24% + var(--lobby-light-y)),
+      rgba(227, 169, 75, 0.1),
+      transparent 16rem
+    ),
+    radial-gradient(circle at 50% 63%, rgba(37, 102, 91, 0.075), transparent 25rem);
+  opacity: 0.8;
+  animation: lobbyHaze 8s ease-in-out infinite alternate;
+}
+
+.lobby-dust-field {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0.72;
+}
+
+.lobby-dust-field i {
+  position: absolute;
+  width: var(--dust-size);
+  height: var(--dust-size);
+  border-radius: 50%;
+  background: #e5bd72;
+  box-shadow: 0 0 7px rgba(232, 190, 112, 0.62);
+  opacity: 0;
+  animation: lobbyDustRise var(--dust-duration) var(--dust-delay) linear infinite;
+}
+
+.lobby-film-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.32), transparent 28%, transparent 76%, rgba(0, 0, 0, 0.2)),
+    linear-gradient(180deg, transparent 48%, rgba(4, 5, 6, 0.54) 76%, #050607 100%);
+  box-shadow: inset 0 0 150px rgba(0, 0, 0, 0.46);
+}
+
+@keyframes lobbySceneAwaken {
+  from {
+    filter: brightness(0.5) saturate(0.65) blur(5px);
+    opacity: 0.45;
+    transform: translate3d(var(--lobby-scene-x), calc(var(--lobby-scene-y) + 12px), 0)
+      scale(1.075);
+  }
+  to {
+    filter: brightness(1) saturate(1) blur(0);
+    opacity: 1;
+  }
+}
+
+@keyframes lobbyOwlPresence {
+  from {
+    filter: brightness(0.9) contrast(1.02);
+    opacity: 0.035;
+  }
+  to {
+    filter: brightness(1.35) contrast(1.08);
+    opacity: 0.115;
+  }
+}
+
+@keyframes lobbyBeamBreathe {
+  0% {
+    opacity: 0.18;
+  }
+  55% {
+    opacity: 0.56;
+  }
+  100% {
+    opacity: 0.28;
+  }
+}
+
+@keyframes lobbyHaze {
+  to {
+    filter: brightness(1.2);
+    opacity: 1;
+  }
+}
+
+@keyframes lobbyDustRise {
+  0% {
+    opacity: 0;
+    translate: 0 28px;
+  }
+  12% {
+    opacity: 0.32;
+  }
+  70% {
+    opacity: 0.16;
+  }
+  100% {
+    opacity: 0;
+    translate: var(--dust-drift) -88px;
+  }
 }
 
 .lobby::before {
@@ -49,6 +222,8 @@
   background: rgba(4, 5, 6, 0.78) !important;
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.24);
   backdrop-filter: blur(20px) saturate(0.8);
+  animation: lobbyTopbarArrival 0.72s 0.05s cubic-bezier(0.18, 0.82, 0.2, 1)
+    backwards;
 }
 
 .lobby .brand-mark {
@@ -67,6 +242,18 @@
   border-color: rgba(218, 174, 92, 0.16);
   background: rgba(7, 7, 8, 0.48);
   color: #ad9879;
+  transition:
+    border-color 180ms ease,
+    color 180ms ease,
+    background-color 180ms ease,
+    transform 180ms ease;
+}
+
+.lobby .voice-toggle:hover:not(:disabled) {
+  border-color: rgba(229, 190, 116, 0.4);
+  background: rgba(24, 18, 16, 0.74);
+  color: #e1c58f;
+  transform: translateY(-1px);
 }
 
 .lobby .competition-trigger {
@@ -148,6 +335,30 @@
   width: min(56%, 720px);
 }
 
+.lobby-hero-content > * {
+  animation: lobbyCopyArrival 0.82s cubic-bezier(0.18, 0.82, 0.2, 1) backwards;
+}
+
+.lobby-hero-content > :nth-child(1) {
+  animation-delay: 0.16s;
+}
+
+.lobby-hero-content > :nth-child(2) {
+  animation-delay: 0.23s;
+}
+
+.lobby-hero-content > :nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+.lobby-hero-content > :nth-child(4) {
+  animation-delay: 0.4s;
+}
+
+.lobby-hero-content > :nth-child(5) {
+  animation-delay: 0.48s;
+}
+
 .lobby .eyebrow {
   margin: 0 0 18px;
   color: #c99b54;
@@ -216,10 +427,47 @@
 }
 
 .lobby .gold-button {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   border-color: #e2bd73;
   background: linear-gradient(145deg, #d5aa61, #996229);
   color: #110a09;
   box-shadow: 0 14px 34px rgba(100, 55, 20, 0.3);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease;
+}
+
+.lobby .gold-button::before {
+  content: "";
+  position: absolute;
+  inset: -45% auto -45% -42%;
+  z-index: -1;
+  width: 34%;
+  background: linear-gradient(90deg, transparent, rgba(255, 246, 207, 0.72), transparent);
+  transform: skewX(-18deg);
+  transition: left 520ms cubic-bezier(0.18, 0.82, 0.2, 1);
+}
+
+.lobby .gold-button:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-2px);
+  box-shadow: 0 18px 42px rgba(139, 82, 28, 0.42), 0 0 0 1px rgba(255, 225, 159, 0.2);
+}
+
+.lobby .gold-button:hover:not(:disabled)::before {
+  left: 112%;
+}
+
+.lobby .gold-button span {
+  display: inline-block;
+  transition: transform 180ms ease;
+}
+
+.lobby .gold-button:hover:not(:disabled) span {
+  transform: translateX(4px);
 }
 
 .lobby-secondary-action {
@@ -228,6 +476,18 @@
   background: rgba(4, 5, 6, 0.58);
   color: #bea173;
   backdrop-filter: blur(10px);
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.lobby-secondary-action:hover {
+  border-color: rgba(230, 192, 121, 0.5);
+  background: rgba(25, 18, 16, 0.72);
+  color: #e5c88e;
+  transform: translateY(-2px);
 }
 
 .lobby-house-stamp {
@@ -241,6 +501,9 @@
   background: rgba(3, 4, 5, 0.68);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(10px);
+  animation:
+    lobbyStampArrival 0.7s 0.68s cubic-bezier(0.18, 0.82, 0.2, 1) backwards,
+    lobbyStampPulse 3.8s 1.4s ease-in-out infinite alternate;
 }
 
 .lobby-house-stamp small,
@@ -272,6 +535,8 @@
     radial-gradient(circle at 72% 0, rgba(81, 16, 29, 0.16), transparent 32rem);
   box-shadow: 0 28px 76px rgba(0, 0, 0, 0.38);
   backdrop-filter: blur(22px) saturate(0.78);
+  animation: lobbyLowerDeckArrival 0.82s 0.42s cubic-bezier(0.18, 0.82, 0.2, 1)
+    backwards;
 }
 
 .lobby-salon-directory {
@@ -314,6 +579,7 @@
   gap: 10px;
   max-width: none;
   padding: 0;
+  perspective: 1100px;
 }
 
 .lobby .salon-card {
@@ -339,9 +605,32 @@
   color: #e8dac6;
   text-align: left;
   transition:
-    transform 180ms ease,
-    border-color 180ms ease,
-    background 180ms ease;
+    transform 260ms cubic-bezier(0.18, 0.82, 0.2, 1),
+    border-color 220ms ease,
+    background 220ms ease,
+    box-shadow 220ms ease;
+  animation: lobbyCardArrival 0.68s cubic-bezier(0.18, 0.82, 0.2, 1) backwards;
+  transform-origin: 50% 84%;
+}
+
+.lobby .salon-card:nth-child(1) {
+  animation-delay: 0.58s;
+}
+
+.lobby .salon-card:nth-child(2) {
+  animation-delay: 0.66s;
+}
+
+.lobby .salon-card:nth-child(3) {
+  animation-delay: 0.74s;
+}
+
+.lobby .salon-card:nth-child(4) {
+  animation-delay: 0.82s;
+}
+
+.lobby .salon-card:nth-child(5) {
+  animation-delay: 0.9s;
 }
 
 .lobby .salon-card:nth-child(1),
@@ -354,10 +643,20 @@
   content: "";
   position: absolute;
   inset: 6px;
-  z-index: -1;
+  z-index: 2;
   border: 1px solid rgba(224, 183, 101, 0.04);
   border-radius: 5px;
-  background: none;
+  background: linear-gradient(
+    112deg,
+    transparent 18%,
+    rgba(255, 232, 180, 0.025) 38%,
+    rgba(255, 225, 159, 0.2) 49%,
+    rgba(255, 236, 190, 0.035) 59%,
+    transparent 80%
+  );
+  background-position: 160% 0;
+  background-size: 240% 100%;
+  opacity: 0;
   pointer-events: none;
 }
 
@@ -365,15 +664,24 @@
   content: "";
   position: absolute;
   inset: auto 0 0;
-  z-index: -1;
+  z-index: 1;
   height: 54%;
   background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
 }
 
 .lobby .salon-card:hover:not(:disabled) {
-  transform: translateY(-3px);
-  border-color: rgba(226, 180, 94, 0.44);
+  transform: translateY(-7px) rotateX(1.2deg) scale(1.008);
+  border-color: rgba(234, 191, 109, 0.5);
   background-color: rgba(13, 9, 11, 0.88) !important;
+  box-shadow:
+    0 22px 42px rgba(0, 0, 0, 0.38),
+    0 0 0 1px rgba(213, 164, 82, 0.055),
+    inset 0 1px rgba(255, 237, 202, 0.055);
+}
+
+.lobby .salon-card:hover:not(:disabled)::before {
+  opacity: 1;
+  animation: lobbyCardSheen 0.86s cubic-bezier(0.18, 0.82, 0.2, 1) both;
 }
 
 .lobby .blackjack-entry {
@@ -414,8 +722,26 @@
   filter: drop-shadow(0 14px 16px rgba(0, 0, 0, 0.7)) saturate(0.72)
     contrast(1.05);
   transition:
-    transform 200ms ease,
-    opacity 200ms ease;
+    transform 320ms cubic-bezier(0.18, 0.82, 0.2, 1),
+    opacity 240ms ease,
+    filter 240ms ease;
+  animation: lobbySigilIdle 4.8s ease-in-out infinite alternate;
+}
+
+.lobby .salon-card:nth-child(2) .salon-sigil {
+  animation-delay: -1.1s;
+}
+
+.lobby .salon-card:nth-child(3) .salon-sigil {
+  animation-delay: -2.3s;
+}
+
+.lobby .salon-card:nth-child(4) .salon-sigil {
+  animation-delay: -3.2s;
+}
+
+.lobby .salon-card:nth-child(5) .salon-sigil {
+  animation-delay: -0.5s;
 }
 
 .lobby .salon-card:nth-child(-n + 2) .salon-sigil {
@@ -424,8 +750,18 @@
 }
 
 .lobby .salon-card:hover .salon-sigil {
-  transform: translateY(-2px) scale(1.025);
-  opacity: 0.9;
+  transform: translateY(-3px) scale(1.075) rotate(-1deg);
+  opacity: 1;
+  filter: drop-shadow(0 18px 22px rgba(0, 0, 0, 0.76)) saturate(0.95)
+    contrast(1.06) brightness(1.08);
+}
+
+.lobby .roulette-entry:hover .salon-sigil {
+  transform: translateY(-3px) scale(1.075) rotate(3deg);
+}
+
+.lobby .instant-entry:hover .salon-sigil {
+  transform: translateY(-3px) scale(1.08) rotate(-2deg);
 }
 
 .lobby .salon-card strong,
@@ -459,6 +795,14 @@
   bottom: 12px;
   color: #b7813a;
   font-size: 15px;
+  transition:
+    color 180ms ease,
+    transform 220ms cubic-bezier(0.18, 0.82, 0.2, 1);
+}
+
+.lobby .salon-card:hover > i {
+  color: #efc777;
+  transform: translateX(4px);
 }
 
 .lobby .lobby-competition-strip {
@@ -641,11 +985,247 @@
 }
 
 .lobby .lobby-footer {
+  position: relative;
+  z-index: 2;
   width: min(1500px, calc(100% - clamp(26px, 5vw, 82px)));
   max-width: none;
   margin-top: 16px;
   padding: 0 2px 24px;
   color: #716660;
+}
+
+.lobby-passage {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: rgba(2, 3, 4, 0.44);
+  pointer-events: all;
+}
+
+.lobby-passage-door {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50.15%;
+  background:
+    linear-gradient(90deg, transparent 0 8%, rgba(211, 164, 82, 0.08) 8.2%, transparent 8.5%),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.012) 0 1px,
+      transparent 1px 14%
+    ),
+    radial-gradient(circle at 50% 38%, rgba(66, 96, 86, 0.19), transparent 35%),
+    linear-gradient(145deg, #111314, #050607 72%);
+  box-shadow: inset 0 0 80px #000, 0 0 70px rgba(0, 0, 0, 0.82);
+}
+
+.lobby-passage-door::before,
+.lobby-passage-door::after {
+  content: "";
+  position: absolute;
+  inset: 5.5%;
+  border: 1px solid rgba(210, 164, 83, 0.2);
+  box-shadow: inset 0 0 34px rgba(0, 0, 0, 0.64);
+}
+
+.lobby-passage-door::after {
+  inset: 9%;
+  border-color: rgba(210, 164, 83, 0.08);
+}
+
+.lobby-passage-door-left {
+  left: 0;
+  border-right: 1px solid rgba(238, 198, 117, 0.54);
+}
+
+.lobby-passage-door-right {
+  right: 0;
+  border-left: 1px solid rgba(238, 198, 117, 0.54);
+  transform: scaleX(-1);
+}
+
+.lobby-passage-seal {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  justify-items: center;
+  width: 172px;
+  color: #d7ad65;
+  text-align: center;
+}
+
+.lobby-passage-seal span {
+  position: relative;
+  display: grid;
+  width: 72px;
+  height: 72px;
+  place-items: center;
+  border: 1px solid #b9853d;
+  background:
+    linear-gradient(135deg, transparent 49.2%, rgba(214, 169, 89, 0.48) 50%, transparent 50.8%),
+    linear-gradient(45deg, transparent 49.2%, rgba(214, 169, 89, 0.48) 50%, transparent 50.8%),
+    rgba(6, 7, 8, 0.94);
+  box-shadow:
+    0 0 0 7px rgba(4, 5, 6, 0.9),
+    0 0 0 8px rgba(211, 164, 82, 0.18),
+    0 0 40px rgba(197, 137, 52, 0.19);
+  font-family: var(--font-display);
+  font-size: 21px;
+  letter-spacing: 0.1em;
+  transform: rotate(45deg);
+}
+
+.lobby-passage-seal span::first-letter {
+  margin-left: 0.1em;
+}
+
+.lobby-passage-seal span {
+  line-height: 1;
+}
+
+.lobby-passage-seal span::after {
+  content: "MP";
+  position: absolute;
+  display: grid;
+  width: 72px;
+  height: 72px;
+  place-items: center;
+  color: #d7ad65;
+  transform: rotate(-45deg);
+}
+
+.lobby-passage-seal span {
+  color: transparent;
+}
+
+.lobby-passage-seal small {
+  margin-top: 24px;
+  color: #b89966;
+  font-family: var(--font-data);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-shadow: 0 2px 16px #000;
+}
+
+.lobby-passage-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 1px;
+  background: linear-gradient(transparent, #e0b86c 22%, #fff1b7 50%, #e0b86c 78%, transparent);
+  box-shadow: 0 0 16px rgba(235, 187, 99, 0.62);
+  transform-origin: center;
+}
+
+.lobby.is-transitioning .topbar,
+.lobby.is-transitioning .lobby-atrium,
+.lobby.is-transitioning .lobby-footer {
+  filter: blur(2px) brightness(0.68);
+  transform: scale(0.992);
+  transition:
+    filter 420ms ease,
+    transform 420ms ease;
+}
+
+@keyframes lobbyTopbarArrival {
+  from {
+    opacity: 0;
+    translate: 0 -20px;
+  }
+}
+
+@keyframes lobbyCopyArrival {
+  from {
+    filter: blur(7px);
+    opacity: 0;
+    translate: 0 24px;
+  }
+}
+
+@keyframes lobbyStampArrival {
+  from {
+    opacity: 0;
+    translate: 26px 0;
+  }
+}
+
+@keyframes lobbyStampPulse {
+  to {
+    border-left-color: #e0b66c;
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.38), -8px 0 22px rgba(190, 126, 42, 0.08);
+  }
+}
+
+@keyframes lobbyLowerDeckArrival {
+  from {
+    filter: blur(6px);
+    opacity: 0;
+    translate: 0 34px;
+  }
+}
+
+@keyframes lobbyCardArrival {
+  from {
+    filter: blur(4px);
+    opacity: 0;
+    transform: translateY(28px) scale(0.975);
+  }
+}
+
+@keyframes lobbyCardSheen {
+  from {
+    background-position: 160% 0;
+  }
+  to {
+    background-position: -70% 0;
+  }
+}
+
+@keyframes lobbySigilIdle {
+  from {
+    translate: 0 1px;
+  }
+  to {
+    translate: 0 -4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lobby *,
+  .lobby *::before,
+  .lobby *::after {
+    scroll-behavior: auto !important;
+  }
+
+  .lobby-cinematic .lobby-dust-field,
+  .lobby-light-beam,
+  .lobby-owl-presence {
+    display: none;
+  }
+
+  .lobby-scene-motion,
+  .lobby .topbar,
+  .lobby-hero-content > *,
+  .lobby-house-stamp,
+  .lobby-lower-deck,
+  .lobby .salon-card,
+  .lobby .salon-sigil,
+  .lobby-gold-haze {
+    animation: none !important;
+  }
+
+  .lobby .salon-card,
+  .lobby .salon-sigil,
+  .lobby .gold-button,
+  .lobby-secondary-action,
+  .lobby .voice-toggle {
+    transition-duration: 0.01ms !important;
+  }
 }
 
 @media (max-width: 1100px) {
@@ -672,8 +1252,9 @@
 }
 
 @media (max-width: 900px) {
-  .lobby {
-    background-position: 61% top !important;
+  .lobby-scene-motion,
+  .lobby-owl-presence {
+    background-position: 61% top;
   }
 
   .lobby-atrium {
@@ -735,8 +1316,14 @@
 }
 
 @media (max-width: 650px) {
-  .lobby {
-    background-position: 64% top !important;
+  .lobby-scene-motion,
+  .lobby-owl-presence {
+    background-position: 64% top;
+  }
+
+  .lobby-owl-presence,
+  .lobby-light-beam-center {
+    display: none;
   }
 
   .lobby .topbar {

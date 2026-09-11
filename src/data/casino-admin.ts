@@ -184,9 +184,29 @@ export type AllahAdminMode =
 
 export type AllahAdminBonusTier = "free" | "super" | "legendary" | "mythic";
 
+export type AllahSceneId =
+  | "quiet"
+  | "line"
+  | "eye-spark"
+  | "coin-rain"
+  | "collector-parade"
+  | "multiplier-pressure"
+  | "global-tension"
+  | "climb"
+  | "synergy"
+  | "dream";
+
 /** Live math and pacing controls for Allah'ın Lütfu. Percent values are 0..100. */
 export type AllahTuningSettings = {
   profileName: string;
+  /** Selects a fixed, auditable spin character before the reels are composed. */
+  characterScenesEnabled: boolean;
+  sceneWeights: Record<AllahAdminMode, Record<AllahSceneId, number>>;
+  characterModePayoutScales: Record<AllahAdminMode, number>;
+  /** Separates visual density from monetary density for each scene family. */
+  scenePayoutScales: Record<AllahSceneId, number>;
+  /** Maximum ordinary result as a multiple of that mode's purchase cost. */
+  sceneMaxCostMultipliers: Record<AllahSceneId, number>;
   maxWinX: number;
   linePayoutScale: number;
   coinPayoutScale: number;
@@ -225,8 +245,95 @@ export type AllahTuningSettings = {
   turboAnimationScale: number;
 };
 
+const allahSceneWeights = (
+  patch: Partial<Record<AllahSceneId, number>> = {},
+): Record<AllahSceneId, number> => ({
+  quiet: 45,
+  line: 20,
+  "eye-spark": 10,
+  "coin-rain": 7,
+  "collector-parade": 5,
+  "multiplier-pressure": 4,
+  "global-tension": 3,
+  climb: 3,
+  synergy: 2.5,
+  dream: 0.5,
+  ...patch,
+});
+
 export const DEFAULT_ALLAH_TUNING: AllahTuningSettings = {
-  profileName: "allahin-lutfu-v9-original-paced-features",
+  profileName: "allahin-lutfu-v10-character-scenes",
+  characterScenesEnabled: true,
+  sceneWeights: {
+    base: allahSceneWeights({
+      quiet: 45, line: 20, "eye-spark": 15, "coin-rain": 9,
+      "collector-parade": 5, "multiplier-pressure": 3, "global-tension": 1.5,
+      climb: 1, synergy: 0.49, dream: 0.01,
+    }),
+    enhancer: allahSceneWeights({
+      quiet: 32, line: 18, "eye-spark": 12, "coin-rain": 8,
+      "collector-parade": 6, "multiplier-pressure": 5, "global-tension": 7,
+      climb: 5, synergy: 5, dream: 2,
+    }),
+    degen: allahSceneWeights({
+      quiet: 15, line: 10, "eye-spark": 12, "coin-rain": 12,
+      "collector-parade": 10, "multiplier-pressure": 10, "global-tension": 8,
+      climb: 10, synergy: 10, dream: 3,
+    }),
+    trickster: allahSceneWeights({
+      quiet: 4, line: 4, "eye-spark": 15, "coin-rain": 14,
+      "collector-parade": 12, "multiplier-pressure": 10, "global-tension": 8,
+      climb: 12, synergy: 15, dream: 6,
+    }),
+    fate: allahSceneWeights({
+      quiet: 0, line: 0, "eye-spark": 0, "coin-rain": 30,
+      "collector-parade": 25, "multiplier-pressure": 15, "global-tension": 10,
+      climb: 10, synergy: 9, dream: 1,
+    }),
+    "bonus-buy": allahSceneWeights({
+      quiet: 30, line: 20, "eye-spark": 20, "coin-rain": 15,
+      "collector-parade": 5, "multiplier-pressure": 4, "global-tension": 3,
+      climb: 2, synergy: 0.99, dream: 0.01,
+    }),
+    "super-bonus-buy": allahSceneWeights({
+      quiet: 15, line: 15, "eye-spark": 20, "coin-rain": 18,
+      "collector-parade": 10, "multiplier-pressure": 8, "global-tension": 5,
+      climb: 5, synergy: 3.9, dream: 0.1,
+    }),
+  },
+  characterModePayoutScales: {
+    base: 1.234,
+    enhancer: 0.445,
+    degen: 2.55,
+    trickster: 1.978,
+    fate: 12.56,
+    "bonus-buy": 0.05185,
+    "super-bonus-buy": 0.00292,
+  },
+  scenePayoutScales: {
+    quiet: 1,
+    line: 1,
+    "eye-spark": 0.032,
+    "coin-rain": 0.09,
+    "collector-parade": 0.044,
+    "multiplier-pressure": 0.09,
+    "global-tension": 0.034,
+    climb: 0.053,
+    synergy: 0.0043,
+    dream: 0.006,
+  },
+  sceneMaxCostMultipliers: {
+    quiet: 5,
+    line: 5,
+    "eye-spark": 3,
+    "coin-rain": 8,
+    "collector-parade": 15,
+    "multiplier-pressure": 25,
+    "global-tension": 50,
+    climb: 100,
+    synergy: 1_000,
+    dream: 5_000,
+  },
   maxWinX: 500_000,
   linePayoutScale: 1,
   coinPayoutScale: 1,
@@ -314,6 +421,16 @@ export const DEFAULT_ALLAH_TUNING: AllahTuningSettings = {
   normalAnimationScale: 1,
   turboAnimationScale: 0.28,
 };
+
+const mergeAllahSceneWeights = (
+  defaults: AllahTuningSettings["sceneWeights"],
+  current?: Partial<AllahTuningSettings["sceneWeights"]>,
+): AllahTuningSettings["sceneWeights"] => Object.fromEntries(
+  (Object.keys(defaults) as AllahAdminMode[]).map((mode) => [
+    mode,
+    { ...defaults[mode], ...current?.[mode] },
+  ]),
+) as AllahTuningSettings["sceneWeights"];
 
 export type PlinkoTuningSettings = {
   profileName: string;
@@ -1380,7 +1497,7 @@ function loadSettings(): CasinoAdminSettings {
               ? {
                   ...defaults.allah,
                   ...current?.allah,
-                  ...(["allahin-lutfu-v7-eye-mystery-reels", "allahin-lutfu-v8-chained-eye-multi-key"].includes(current?.allah?.profileName ?? "")
+                  ...(["allahin-lutfu-v7-eye-mystery-reels", "allahin-lutfu-v8-chained-eye-multi-key", "allahin-lutfu-v9-original-paced-features"].includes(current?.allah?.profileName ?? "")
                     ? {
                         profileName: defaults.allah.profileName,
                         tricksterMysteryEyeMultiplier: defaults.allah.tricksterMysteryEyeMultiplier,
@@ -1389,6 +1506,16 @@ function loadSettings(): CasinoAdminSettings {
                     : {}),
                   modeCosts: { ...defaults.allah.modeCosts, ...current?.allah?.modeCosts },
                   modePayoutScales: { ...defaults.allah.modePayoutScales, ...current?.allah?.modePayoutScales },
+                  sceneWeights: mergeAllahSceneWeights(defaults.allah.sceneWeights, current?.allah?.sceneWeights),
+                  characterModePayoutScales: {
+                    ...defaults.allah.characterModePayoutScales,
+                    ...current?.allah?.characterModePayoutScales,
+                  },
+                  scenePayoutScales: { ...defaults.allah.scenePayoutScales, ...current?.allah?.scenePayoutScales },
+                  sceneMaxCostMultipliers: {
+                    ...defaults.allah.sceneMaxCostMultipliers,
+                    ...current?.allah?.sceneMaxCostMultipliers,
+                  },
                   reelEyeChancePercent: {
                     ...defaults.allah.reelEyeChancePercent,
                     ...current?.allah?.reelEyeChancePercent,
@@ -1408,7 +1535,7 @@ function loadSettings(): CasinoAdminSettings {
                   mysteryWeights: {
                     ...defaults.allah.mysteryWeights,
                     ...current?.allah?.mysteryWeights,
-                    ...(["allahin-lutfu-v7-eye-mystery-reels", "allahin-lutfu-v8-chained-eye-multi-key"].includes(current?.allah?.profileName ?? "")
+                    ...(["allahin-lutfu-v7-eye-mystery-reels", "allahin-lutfu-v8-chained-eye-multi-key", "allahin-lutfu-v9-original-paced-features"].includes(current?.allah?.profileName ?? "")
                       ? {
                           eye: defaults.allah.mysteryWeights.eye,
                           key: defaults.allah.mysteryWeights.key,
@@ -1570,6 +1697,16 @@ export function updateAdminGame(
                 ...patch.allah,
                 modeCosts: { ...current.allah.modeCosts, ...patch.allah.modeCosts },
                 modePayoutScales: { ...current.allah.modePayoutScales, ...patch.allah.modePayoutScales },
+                sceneWeights: mergeAllahSceneWeights(current.allah.sceneWeights, patch.allah.sceneWeights),
+                characterModePayoutScales: {
+                  ...current.allah.characterModePayoutScales,
+                  ...patch.allah.characterModePayoutScales,
+                },
+                scenePayoutScales: { ...current.allah.scenePayoutScales, ...patch.allah.scenePayoutScales },
+                sceneMaxCostMultipliers: {
+                  ...current.allah.sceneMaxCostMultipliers,
+                  ...patch.allah.sceneMaxCostMultipliers,
+                },
                 reelEyeChancePercent: {
                   ...current.allah.reelEyeChancePercent,
                   ...patch.allah.reelEyeChancePercent,
