@@ -2,6 +2,11 @@ export const ALLAH_ROWS = 6;
 export const ALLAH_REELS = 5;
 export const ALLAH_MAX_WIN_X = 500_000;
 
+const allahMultiplierNumber = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 0 });
+
+/** Coin faces are stake multipliers, never wallet-currency amounts. */
+export const formatAllahMultiplier = (value: number) => `${allahMultiplierNumber.format(value)}×`;
+
 export type AllahNormalSymbolId =
   | "rosette"
   | "lantern"
@@ -345,7 +350,8 @@ export const ALLAH_COIN_TIERS = Object.keys(
  * Coin and modifier symbols belong to the Mystery feature strip; they cannot
  * leak onto an ordinary initial drop or a Redrop replacement. Ordinary reels
  * contain only pay symbols, the Eye and Scatter. Enhanced modes tune Eye and
- * Scatter independently, while Tricksterspin is deliberately Eye-heavy.
+ * Scatter independently; Tricksterspin raises Eye frequency with a bounded
+ * one/two/rare-three Eye rhythm.
  */
 const normalDurations: Record<AllahFeatureEventType, [number, number]> = {
   "spin-commit": [80, 30],
@@ -834,9 +840,9 @@ function shapeInitialGridForScene(
   if (configuredEyeChance >= 99.999) return;
 
   const desiredEyes = sceneHasFeature(scene) && configuredEyeChance > 0
-    ? mode === "trickster"
-      ? scene === "dream" || scene === "synergy" ? 3 : 2
-      : scene === "dream" || scene === "synergy" ? 2 : 1
+    ? scene === "dream"
+      ? boundedRandom(random) < 0.25 ? 3 : 2
+      : scene === "synergy" ? 2 : 1
     : 0;
   const eyePositions = readingOrder(positionsOf(grid, (cell) => cell.kind === "eye"));
   for (const position of eyePositions.slice(desiredEyes)) {

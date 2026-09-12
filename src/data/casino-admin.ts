@@ -262,7 +262,7 @@ const allahSceneWeights = (
 });
 
 export const DEFAULT_ALLAH_TUNING: AllahTuningSettings = {
-  profileName: "allahin-lutfu-v10-character-scenes",
+  profileName: "allahin-lutfu-v12-trickster-eye-uplift",
   characterScenesEnabled: true,
   sceneWeights: {
     base: allahSceneWeights({
@@ -281,9 +281,9 @@ export const DEFAULT_ALLAH_TUNING: AllahTuningSettings = {
       climb: 10, synergy: 10, dream: 3,
     }),
     trickster: allahSceneWeights({
-      quiet: 4, line: 4, "eye-spark": 15, "coin-rain": 14,
-      "collector-parade": 12, "multiplier-pressure": 10, "global-tension": 8,
-      climb: 12, synergy: 15, dream: 6,
+      quiet: 27, line: 15, "eye-spark": 15, "coin-rain": 10,
+      "collector-parade": 8, "multiplier-pressure": 7, "global-tension": 5,
+      climb: 5, synergy: 6, dream: 2,
     }),
     fate: allahSceneWeights({
       quiet: 0, line: 0, "eye-spark": 0, "coin-rain": 30,
@@ -305,7 +305,7 @@ export const DEFAULT_ALLAH_TUNING: AllahTuningSettings = {
     base: 1.234,
     enhancer: 0.445,
     degen: 2.55,
-    trickster: 1.978,
+    trickster: 9.308,
     fate: 12.56,
     "bonus-buy": 0.05185,
     "super-bonus-buy": 0.00292,
@@ -360,7 +360,7 @@ export const DEFAULT_ALLAH_TUNING: AllahTuningSettings = {
     base: 0.85,
     enhancer: 1.35,
     degen: 5.5,
-    trickster: 14,
+    trickster: 3.5,
     fate: 0,
     "bonus-buy": 0,
     "super-bonus-buy": 0,
@@ -386,7 +386,7 @@ export const DEFAULT_ALLAH_TUNING: AllahTuningSettings = {
     legendary: 0.55,
     mythic: 0.65,
   },
-  tricksterMysteryEyeMultiplier: 3.5,
+  tricksterMysteryEyeMultiplier: 1,
   mysteryWeights: {
     coin: 97.87,
     eye: 0.55,
@@ -1413,6 +1413,15 @@ function loadSettings(): CasinoAdminSettings {
         const legacyMinesProfile =
           id === "mines" &&
           current?.mines?.profileName === "casino-mines-v1-hmac-970";
+        const legacyAllahCharacterProfile =
+          id === "allahin-lutfu" &&
+          [
+            "allahin-lutfu-v7-eye-mystery-reels",
+            "allahin-lutfu-v8-chained-eye-multi-key",
+            "allahin-lutfu-v9-original-paced-features",
+            "allahin-lutfu-v10-character-scenes",
+            "allahin-lutfu-v11-trickster-paced-x-coins",
+          ].includes(current?.allah?.profileName ?? "");
         const currentSlot = legacyNeonProfile || legacySekerhaneProfile
           ? {
               ...(current?.slot ?? {}),
@@ -1497,7 +1506,7 @@ function loadSettings(): CasinoAdminSettings {
               ? {
                   ...defaults.allah,
                   ...current?.allah,
-                  ...(["allahin-lutfu-v7-eye-mystery-reels", "allahin-lutfu-v8-chained-eye-multi-key", "allahin-lutfu-v9-original-paced-features"].includes(current?.allah?.profileName ?? "")
+                  ...(legacyAllahCharacterProfile
                     ? {
                         profileName: defaults.allah.profileName,
                         tricksterMysteryEyeMultiplier: defaults.allah.tricksterMysteryEyeMultiplier,
@@ -1506,11 +1515,15 @@ function loadSettings(): CasinoAdminSettings {
                     : {}),
                   modeCosts: { ...defaults.allah.modeCosts, ...current?.allah?.modeCosts },
                   modePayoutScales: { ...defaults.allah.modePayoutScales, ...current?.allah?.modePayoutScales },
-                  sceneWeights: mergeAllahSceneWeights(defaults.allah.sceneWeights, current?.allah?.sceneWeights),
-                  characterModePayoutScales: {
-                    ...defaults.allah.characterModePayoutScales,
-                    ...current?.allah?.characterModePayoutScales,
-                  },
+                  sceneWeights: legacyAllahCharacterProfile
+                    ? defaults.allah.sceneWeights
+                    : mergeAllahSceneWeights(defaults.allah.sceneWeights, current?.allah?.sceneWeights),
+                  characterModePayoutScales: legacyAllahCharacterProfile
+                    ? defaults.allah.characterModePayoutScales
+                    : {
+                        ...defaults.allah.characterModePayoutScales,
+                        ...current?.allah?.characterModePayoutScales,
+                      },
                   scenePayoutScales: { ...defaults.allah.scenePayoutScales, ...current?.allah?.scenePayoutScales },
                   sceneMaxCostMultipliers: {
                     ...defaults.allah.sceneMaxCostMultipliers,
@@ -1519,6 +1532,9 @@ function loadSettings(): CasinoAdminSettings {
                   reelEyeChancePercent: {
                     ...defaults.allah.reelEyeChancePercent,
                     ...current?.allah?.reelEyeChancePercent,
+                    ...(legacyAllahCharacterProfile
+                      ? { trickster: defaults.allah.reelEyeChancePercent.trickster }
+                      : {}),
                   },
                   reelScatterChancePercent: {
                     ...defaults.allah.reelScatterChancePercent,
@@ -1535,7 +1551,7 @@ function loadSettings(): CasinoAdminSettings {
                   mysteryWeights: {
                     ...defaults.allah.mysteryWeights,
                     ...current?.allah?.mysteryWeights,
-                    ...(["allahin-lutfu-v7-eye-mystery-reels", "allahin-lutfu-v8-chained-eye-multi-key", "allahin-lutfu-v9-original-paced-features"].includes(current?.allah?.profileName ?? "")
+                    ...(legacyAllahCharacterProfile
                       ? {
                           eye: defaults.allah.mysteryWeights.eye,
                           key: defaults.allah.mysteryWeights.key,

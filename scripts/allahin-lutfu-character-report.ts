@@ -19,6 +19,9 @@ type SceneStats = {
   deadModifiers: number;
   collectors: number;
   coins: number;
+  eyes: number;
+  eyeSpins: number;
+  mysteryEyes: number;
 };
 
 for (const mode of paidModes.filter((candidate) => scope === "paid" || scope === "all" || scope === candidate)) {
@@ -31,7 +34,7 @@ for (const mode of paidModes.filter((candidate) => scope === "paid" || scope ===
     );
     const current = byScene.get(result.scene) ?? {
       count: 0, totalX: 0, profitable: 0, featureSpins: 0,
-      deadModifiers: 0, collectors: 0, coins: 0,
+      deadModifiers: 0, collectors: 0, coins: 0, eyes: 0, eyeSpins: 0, mysteryEyes: 0,
     };
     current.count += 1;
     current.totalX += result.grossMultiplier;
@@ -44,6 +47,12 @@ for (const mode of paidModes.filter((candidate) => scope === "paid" || scope ===
     current.coins += result.events.filter(
       (event) => event.type === "mystery-reveal" && event.payload.revealedKind === "coin",
     ).length;
+    const initialEyes = result.initialGrid.flat().filter((cell) => cell.kind === "eye").length;
+    current.eyes += initialEyes;
+    current.eyeSpins += Number(initialEyes > 0);
+    current.mysteryEyes += result.events.filter(
+      (event) => event.type === "mystery-reveal" && event.payload.revealedKind === "eye",
+    ).length;
     byScene.set(result.scene, current);
   }
   const rows = [...byScene.entries()].map(([scene, stats]) => ({
@@ -55,6 +64,9 @@ for (const mode of paidModes.filter((candidate) => scope === "paid" || scope ===
     featureRatePercent: +(stats.featureSpins / stats.count * 100).toFixed(2),
     collectorsPerSpin: +(stats.collectors / stats.count).toFixed(3),
     mysteryCoinsPerSpin: +(stats.coins / stats.count).toFixed(3),
+    initialEyesPerSpin: +(stats.eyes / stats.count).toFixed(3),
+    initialEyeSpinRatePercent: +(stats.eyeSpins / stats.count * 100).toFixed(2),
+    mysteryEyesPerSpin: +(stats.mysteryEyes / stats.count).toFixed(3),
     deadModifiersPerSpin: +(stats.deadModifiers / stats.count).toFixed(3),
   })).sort((left, right) => right.rtpContributionPoints - left.rtpContributionPoints);
   console.log(JSON.stringify({
@@ -63,6 +75,9 @@ for (const mode of paidModes.filter((candidate) => scope === "paid" || scope ===
     spins,
     costX,
     observedRtpPercent: +rows.reduce((sum, row) => sum + row.rtpContributionPoints, 0).toFixed(4),
+    initialEyeSpinRatePercent: +([...byScene.values()].reduce((sum, stats) => sum + stats.eyeSpins, 0) / spins * 100).toFixed(2),
+    initialEyesPerSpin: +([...byScene.values()].reduce((sum, stats) => sum + stats.eyes, 0) / spins).toFixed(3),
+    mysteryEyesPerSpin: +([...byScene.values()].reduce((sum, stats) => sum + stats.mysteryEyes, 0) / spins).toFixed(4),
     scenes: rows,
   }, null, 2));
 }

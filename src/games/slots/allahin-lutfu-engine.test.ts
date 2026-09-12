@@ -12,6 +12,7 @@ import {
   createSeededAllahRandom,
   defaultAllahPersistentState,
   evaluateAllahPaylines,
+  formatAllahMultiplier,
   runAllahSpin,
   type AllahCell,
 } from "./allahin-lutfu-engine";
@@ -68,6 +69,14 @@ describe("Allah’ın Lütfu motoru", () => {
     expect(allahPurchaseCost(10, "fate")).toBe(50_000);
     expect(allahPurchaseCost(10, "bonus-buy")).toBe(2_000);
     expect(allahPurchaseCost(10, "super-bonus-buy")).toBe(10_000);
+  });
+
+  it("coin yüzlerini PR veya ondalık ödeme değil sabit çarpan olarak yazar", () => {
+    expect([1, 2, 5, 750, 1_000].map(formatAllahMultiplier)).toEqual([
+      "1×", "2×", "5×", "750×", "1.000×",
+    ]);
+    expect(formatAllahMultiplier(1.25)).toBe("1×");
+    expect(formatAllahMultiplier(750)).not.toContain("PR");
   });
 
   it("board multiplier yalnız komşu coin alanlarını etkiler", () => {
@@ -326,9 +335,11 @@ describe("Allah’ın Lütfu motoru", () => {
     }
   });
 
-  it("Hilebaz dönüş normal oyundan belirgin biçimde daha fazla Eye ve bonus girişi üretir", () => {
+  it("Hilebaz dönüş Eye frekansını normale göre belirgin ama kontrollü artırır", () => {
     let baseEyes = 0;
     let tricksterEyes = 0;
+    let baseEyeSpins = 0;
+    let tricksterEyeSpins = 0;
     let baseBonuses = 0;
     let tricksterBonuses = 0;
     for (let seed = 1; seed <= 180; seed += 1) {
@@ -340,12 +351,18 @@ describe("Allah’ın Lütfu motoru", () => {
         { wager: 1, mode: "trickster", runId: `trickster-frequency-${seed}` },
         createSeededAllahRandom(seed * 17),
       );
-      baseEyes += base.initialGrid.flat().filter((cell) => cell.kind === "eye").length;
-      tricksterEyes += trickster.initialGrid.flat().filter((cell) => cell.kind === "eye").length;
+      const baseSpinEyes = base.initialGrid.flat().filter((cell) => cell.kind === "eye").length;
+      const tricksterSpinEyes = trickster.initialGrid.flat().filter((cell) => cell.kind === "eye").length;
+      baseEyes += baseSpinEyes;
+      tricksterEyes += tricksterSpinEyes;
+      baseEyeSpins += Number(baseSpinEyes > 0);
+      tricksterEyeSpins += Number(tricksterSpinEyes > 0);
       baseBonuses += base.triggeredBonus ? 1 : 0;
       tricksterBonuses += trickster.triggeredBonus ? 1 : 0;
     }
-    expect(tricksterEyes).toBeGreaterThan(baseEyes * 5);
+    expect(tricksterEyeSpins).toBeGreaterThan(baseEyeSpins * 1.45);
+    expect(tricksterEyeSpins).toBeLessThan(baseEyeSpins * 2);
+    expect(tricksterEyes).toBeGreaterThan(tricksterEyeSpins);
     expect(tricksterBonuses).toBeGreaterThan(baseBonuses);
   });
 

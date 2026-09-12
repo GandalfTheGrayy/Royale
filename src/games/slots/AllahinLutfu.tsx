@@ -34,6 +34,7 @@ import {
   allahPurchaseCost,
   createSeededAllahRandom,
   defaultAllahPersistentState,
+  formatAllahMultiplier,
   prepareAllahSpinPersistent,
   runAllahSpin,
   type AllahBonusState,
@@ -161,14 +162,14 @@ const mysteryFlowImages = [
 
 const mysteryFlowLoop = [...mysteryFlowImages, ...mysteryFlowImages];
 
-function cellVisual(cell: AllahCell, collectedValue = 0, maxWinX = 500_000, wager = 1, payoutScale = 1) {
+function cellVisual(cell: AllahCell, collectedValue = 0, maxWinX = 500_000) {
   if (cell.kind === "symbol")
     return { image: ALLAH_SYMBOLS[cell.symbol].image, label: ALLAH_SYMBOLS[cell.symbol].label };
   if (cell.kind === "coin")
     return {
       image: `/assets/slots/allahin-lutfu/symbols/coin-${cell.tier}.png`,
-      label: `${cell.tier} coin · ${money.format(cell.value * wager * payoutScale)} PR`,
-      value: `${money.format(cell.value * wager * payoutScale)} PR`,
+      label: `${cell.tier} coin · ${formatAllahMultiplier(cell.value)}`,
+      value: formatAllahMultiplier(cell.value),
     };
   if (cell.kind === "eye")
     return { image: eyeImages[cell.variant], label: `${cell.variant} Nur Gözü` };
@@ -178,7 +179,7 @@ function cellVisual(cell: AllahCell, collectedValue = 0, maxWinX = 500_000, wage
     return {
       image: `/assets/slots/allahin-lutfu/symbols/${cell.super ? "super-collector" : "collector"}.png`,
       label: cell.super ? "Çifte Lütuf Toplayıcı" : "Lütuf Toplayıcı",
-      value: collectedValue > 0 ? `${money.format(collectedValue * wager * payoutScale)} PR` : undefined,
+      value: collectedValue > 0 ? formatAllahMultiplier(collectedValue) : undefined,
     };
   if (cell.kind === "upgrader")
     return { image: "/assets/slots/allahin-lutfu/symbols/coin-upgrader.png", label: "Lütuf Yükseltici" };
@@ -195,7 +196,7 @@ function cellVisual(cell: AllahCell, collectedValue = 0, maxWinX = 500_000, wage
   if (cell.kind === "global-key")
     return { image: "/assets/slots/allahin-lutfu/symbols/celestial-key.png", label: "Global Çarpan Anahtarı" };
   if (cell.kind === "empty") return { image: "", label: "Boş alan" };
-  return { image: "/assets/slots/allahin-lutfu/symbols/max-win-coin.png", label: `${money.format(maxWinX * wager)} PR Max Lütuf`, value: "MAX" };
+  return { image: "/assets/slots/allahin-lutfu/symbols/max-win-coin.png", label: `${formatAllahMultiplier(maxWinX)} Max Lütuf`, value: "MAX" };
 }
 
 function eventSound(audio: SlotAudio | null, event: AllahFeatureEvent) {
@@ -266,7 +267,6 @@ export default function AllahinLutfu({
   const [displayKeySlots, setDisplayKeySlots] = useState<Array<number | null>>([null, null, null]);
   const [displayMinTier, setDisplayMinTier] = useState(0);
   const [displayGlobalMultiplier, setDisplayGlobalMultiplier] = useState(1);
-  const [displayPayoutScale, setDisplayPayoutScale] = useState(1);
   const [displayCollectorValues, setDisplayCollectorValues] = useState<Record<string, number>>({});
   const [displayConcealedFeatureIds, setDisplayConcealedFeatureIds] = useState<Set<string>>(new Set());
   const [displayConsumedFeatureIds, setDisplayConsumedFeatureIds] = useState<Set<string>>(new Set());
@@ -407,7 +407,6 @@ export default function AllahinLutfu({
     setDisplayKeySlots([null, null, null]);
     setDisplayMinTier(0);
     setDisplayGlobalMultiplier(1);
-    setDisplayPayoutScale(result.payoutDisplayScale);
     setDisplayCollectorValues({});
     setDisplayConcealedFeatureIds(new Set(result.events[0]?.concealedFeatureIds ?? []));
     setDisplayConsumedFeatureIds(new Set());
@@ -478,7 +477,6 @@ export default function AllahinLutfu({
     setDisplayKeySlots(result.globalKeySlots);
     setDisplayMinTier(result.persistent.minimumCoinTier);
     setDisplayGlobalMultiplier(result.globalMultiplier);
-    setDisplayPayoutScale(result.payoutDisplayScale);
     setDisplayCollectorValues(result.collectorValues);
     setDisplayConcealedFeatureIds(new Set());
     setDisplayConsumedFeatureIds(new Set());
@@ -524,7 +522,7 @@ export default function AllahinLutfu({
       balanceAfter: balanceBefore - cost + result.payout,
       result: {
         telemetryVersion: 1,
-        rngModel: "character-scenes-v10-fixed-auditable",
+        rngModel: "character-scenes-v12-trickster-eye-uplift",
         targetRtp: 96.7,
         referenceBet: wager,
         mode: result.mode,
@@ -838,11 +836,11 @@ export default function AllahinLutfu({
           <div className="allah-grid slot-shell-reels" aria-label="5 reel 6 satır oyun alanı">
             {grid.map((row, rowIndex) =>
               row.map((cell, column) => {
-                const visual = cellVisual(cell, displayCollectorValues[cell.id] ?? 0, tuning.maxWinX, wager, displayPayoutScale);
+                const visual = cellVisual(cell, displayCollectorValues[cell.id] ?? 0, tuning.maxWinX);
                 const key = `${rowIndex}-${column}`;
                 const globalTarget = activeCells.has(key) && activeEvent?.type === "global-row-apply";
                 const appliedValue = globalAppliedValues[cell.id];
-                const displayedValue = appliedValue === undefined ? visual.value : `${money.format(appliedValue * wager * displayPayoutScale)} PR`;
+                const displayedValue = appliedValue === undefined ? visual.value : formatAllahMultiplier(appliedValue);
                 const mysterySequenceActive = activeEvent?.type === "mystery-roll" || activeEvent?.type === "mystery-reveal";
                 const streamsUntilResolved = mysterySequenceActive && cell.kind === "mystery";
                 const modifierIsRolling = activeEvent?.type === "modifier-coin-roll" && activeCells.has(key);
@@ -860,7 +858,7 @@ export default function AllahinLutfu({
                     className={`allah-cell kind-${cell.kind} ${cell.fromMystery ? "mystery-born" : ""} ${activeCells.has(key) ? "event-target" : ""} ${flightSource ? "coin-flight-source" : ""} ${flightTarget ? "coin-flight-target" : ""} ${appliedValue !== undefined ? "global-applied" : ""} ${featureIsConcealed ? "is-feature-concealed" : ""} ${featureIsConsumed ? "is-feature-consumed" : ""} ${featureIsOpening ? "is-feature-opening" : ""} ${visibleColumns.has(column) ? "is-visible" : "is-awaiting"}`}
                     key={cell.id}
                     style={{ "--row": rowIndex, "--column": column } as CSSProperties}
-                    title={featureIsConcealed ? "Mühürlü özellik" : appliedValue === undefined ? visual.label : `${visual.label} · Global ${displayGlobalMultiplier}× → ${money.format(appliedValue * wager * displayPayoutScale)} PR`}
+                    title={featureIsConcealed ? "Mühürlü özellik" : appliedValue === undefined ? visual.label : `${visual.label} · Global ${displayGlobalMultiplier}× → ${formatAllahMultiplier(appliedValue)}`}
                   >
                     {visual.image && <img className="allah-cell-face" src={visual.image} alt="" draggable={false} />}
                     {displayedValue && !featureIsConcealed && !featureIsConsumed && <b className={globalTarget && activeEvent?.type === "global-row-apply" ? "allah-global-new-value" : undefined}>{displayedValue}</b>}
@@ -912,7 +910,7 @@ export default function AllahinLutfu({
                     className={activeEvent.payload.sourceKind === "collector" ? "source-collector" : "source-coin"}
                   >
                     {activeEvent.payload.sourceKind === "collector" && <img src="/assets/slots/allahin-lutfu/symbols/collector.png" alt="" />}
-                    <b>{money.format(Number(activeEvent.payload.value ?? 0) * wager * displayPayoutScale)} PR</b>
+                    <b>{formatAllahMultiplier(Number(activeEvent.payload.value ?? 0))}</b>
                   </i>
                 ))}
               </div>;
@@ -1117,7 +1115,7 @@ export default function AllahinLutfu({
               {([
                 { mode: "enhancer", title: "LÜTUF ARTTIRICI", detail: "Scatter şansı yükselir", image: "/assets/slots/allahin-lutfu/symbols/scatter.png", tone: "purple" },
                 { mode: "degen", title: "DELİ CESARETİ", detail: "Scatter ve Eye birlikte güçlenir", image: "/assets/slots/allahin-lutfu/symbols/eye-gold.png", tone: "purple" },
-                { mode: "trickster", title: "HİLEBAZ DÖNÜŞ", detail: "Eye ağırlıklı Mystery avı", image: "/assets/slots/allahin-lutfu/symbols/mystery-orb.png", tone: "purple" },
+                { mode: "trickster", title: "HİLEBAZ DÖNÜŞ", detail: "Daha sık Eye ve Mystery zinciri", image: "/assets/slots/allahin-lutfu/symbols/mystery-orb.png", tone: "purple" },
                 { mode: "fate", title: "KADERİN HÜKMÜ", detail: "Tam ekran Mystery tek dönüş", image: "/assets/slots/allahin-lutfu/symbols/max-win-coin.png", tone: "purple" },
               ] as const).map((option) => {
                 const cost = allahPurchaseCost(wager, option.mode, tuning.modeCosts);

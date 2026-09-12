@@ -1,4 +1,4 @@
-# Allah'ın Lütfu v10 — Karakter ve RTP uygulaması
+# Allah'ın Lütfu v12 — Karakter, Trickster Eye temposu ve RTP
 
 ## Hedef
 
@@ -21,7 +21,7 @@ Referans oyunun yayımlanan omurgası korunmuştur: 5×6 alan, 28 ödeme çizgis
 | `synergy` | Birkaç sistemin birleşmesi | Upgrader, multiplier, collector ve global key |
 | `dream` | Çok nadir büyük hikâye | En yoğun zincir; ayrı tavan ve çok düşük frekans |
 
-Normal oyunda `quiet + line` yaklaşık %65'tir; yaklaşık %35 tur gerçek bir özellik akışına sahiptir. Daha pahalı Enhancer/Degen/Trickster/Fate modlarında sessiz tur oranı azalır, ama her modun toplam uzun dönem dönüşü kendi maliyetine göre ayrıca ölçeklenir.
+Normal oyunda `quiet + line` yaklaşık %65'tir; yaklaşık %35 tur gerçek bir özellik akışına sahiptir. Trickster'da `quiet + line` %42'ye iner ve turların yaklaşık %58'i Eye taşır. Eye turlarının çoğunda 1 Eye, `synergy` sahnesinde 2 Eye; çok nadir `dream` sahnesinde 3 Eye görülür. Böylece Hilebaz Dönüş normal oyundan belirgin biçimde daha hareketli olur fakat her hücreyi Eye ile dolduran tekdüze bir akışa dönüşmez. Göz sıklığı ile ödeme bütçesi birbirinden ayrıdır; her modun toplam uzun dönem dönüşü kendi maliyetine göre ayrıca ölçeklenir.
 
 ## Tekdüzeliği gideren kurallar
 
@@ -30,7 +30,7 @@ Normal oyunda `quiet + line` yaklaşık %65'tir; yaklaşık %35 tur gerçek bir 
 - `line`, yoğun efekt gerektirmeden küçük ve anlaşılır bir kazanım verir.
 - Hedef coin yoksa board multiplier uzun bekleme, uyanma ve dalga animasyonu oynatmaz; kısa bir "dormant" açıklamasıyla geçer.
 - Eye, ayarlarda zaten bulunan minimum/maksimum hedef adetlerini kullanır ve görünür semboller arasından bu aralığa en yakın olanı seçer.
-- Görseldeki coin ve Collector rakamları aynı ödeme ölçeğini kullanır; ekranda görünen değer ile cüzdana yazılan değer ayrışmaz.
+- Coin, Collector, çarpan uygulaması ve coin uçuşları para birimiyle değil ham çarpanla gösterilir. Coin yüzleri yalnız resmî sabit merdivenden gelir: `1×, 2×, 3×, 4× ... 750× ... 50.000×`.
 - Bonus satın alma profili seviye yükselince değişmez; satın alınan 200× veya 1.000× profil bütün oturum boyunca korunur.
 - Doğrudan 500.000× Max Coin genel sahne tavanını aşabilir; diğer sonuçlar tur karakterinin maliyet tabanlı tavanına uyar.
 
@@ -41,7 +41,7 @@ Normal oyunda `quiet + line` yaklaşık %65'tir; yaklaşık %35 tur gerçek bir 
 | Base | 20.000 tur | %96,69 |
 | Enhancer (3×) | 20.000 tur | %96,72 |
 | Degen (25×) | 20.000 tur | %96,74 |
-| Trickster (75×) | 60.000 tur | %96,73 |
+| Trickster (75×) | 60.000 tur | %96,70; %58,26 Eye'lı tur; 0,667 Eye/tur |
 | Fate (5.000×) | 30.000 tur | %97,12 |
 | Free Bonus Buy (200×) | 3.000 oturum / 30.000 tur | %96,57 |
 | Super Bonus Buy (1.000×) | 3.000 oturum / 30.000 tur | %96,95 |
@@ -62,4 +62,4 @@ Bonus oturum raporu:
 npx vite-node scripts/allahin-lutfu-simulation.mjs 30000 bonus
 ```
 
-Her sonuç telemetriye `scene` ve `rngModel: character-scenes-v10-fixed-auditable` alanlarıyla yazılır. Bu sayede RTP sapması yalnız toplamda değil, hangi karakterin katkı yaptığına göre de incelenebilir.
+Her sonuç telemetriye `scene` ve `rngModel: character-scenes-v12-trickster-eye-uplift` alanlarıyla yazılır. Bu sayede RTP sapması yalnız toplamda değil, hangi karakterin katkı yaptığına göre de incelenebilir.
